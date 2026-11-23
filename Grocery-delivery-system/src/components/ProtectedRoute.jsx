@@ -1,0 +1,27 @@
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
+
+function ProtectedRoute({ allowedRoles = [], children }) {
+  const { user, isAuthenticated, loading } = useAuth()
+  const location = useLocation()
+
+  if (loading) {
+    return (
+      <div className="grid min-h-screen place-content-center bg-slate-50 text-sm text-slate-600">
+        Checking your session…
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
+
+export default ProtectedRoute
