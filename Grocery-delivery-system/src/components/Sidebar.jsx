@@ -5,7 +5,6 @@ import {
   CreditCard,
   Home,
   LogOut,
-  Menu,
   Package,
   Settings,
   ShoppingBag,
@@ -18,13 +17,14 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useLanguage } from '../context/LanguageContext.jsx'
 
 const orderStatuses = [
-  { label: 'All Orders', status: 'all' },
-  { label: 'Pending', status: 'placed' },
-  { label: 'On The Way', status: 'on_the_way' },
-  { label: 'Delivered', status: 'delivered' },
-  { label: 'Returns / Refunds', status: 'canceled' },
+  { translationKey: 'allOrders', status: 'all' },
+  { translationKey: 'pending', status: 'placed' },
+  { translationKey: 'onTheWay', status: 'on_the_way' },
+  { translationKey: 'delivered', status: 'delivered' },
+  { translationKey: 'returnsRefunds', status: 'canceled' },
 ]
 
 function getRouteGroup(pathname) {
@@ -43,6 +43,7 @@ function getRouteGroup(pathname) {
 
 function Sidebar({ open, onClose }) {
   const { logout } = useAuth()
+  const { t } = useLanguage()
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
   const [lastPathname, setLastPathname] = useState(pathname)
@@ -74,8 +75,8 @@ function Sidebar({ open, onClose }) {
       collapsed ? 'lg:justify-center lg:px-2' : ''
     } ${
       isActive
-        ? 'bg-[#1E8E3E] font-semibold text-white'
-        : 'text-white/75 hover:bg-white/10 hover:text-white'
+        ? 'bg-[#1E8E3E] font-semibold text-white shadow-sm'
+        : 'text-gray-600 hover:bg-emerald-50 hover:text-[#0E532B]'
     }`
 
   const groupButtonClass = (group, active) =>
@@ -83,8 +84,8 @@ function Sidebar({ open, onClose }) {
       collapsed ? 'lg:justify-center lg:px-2' : ''
     } ${
       active || openGroup === group
-        ? 'bg-white/10 font-semibold text-white'
-        : 'text-white/75 hover:bg-white/10 hover:text-white'
+        ? 'bg-[#1E8E3E] font-semibold text-white shadow-sm'
+        : 'text-gray-600 hover:bg-emerald-50 hover:text-[#0E532B]'
     }`
 
   const accordion = (group, label, Icon, active, children) => (
@@ -131,21 +132,21 @@ function Sidebar({ open, onClose }) {
       collapsed ? 'lg:justify-center lg:px-2' : ''
     } ${
       active
-        ? 'font-medium text-white'
-        : 'text-white/65 hover:text-white'
+        ? 'font-medium text-[#0E532B]'
+        : 'text-gray-600 hover:bg-emerald-50 hover:text-[#0E532B]'
     }`
 
   return (
     <aside
-      aria-label="Admin sidebar"
-      className={`fixed inset-y-0 left-0 z-40 flex h-screen shrink-0 flex-col bg-[#072916] text-white transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:translate-x-0 ${
+      aria-label={t('adminSection')}
+      className={`fixed inset-y-0 left-0 z-40 flex h-screen shrink-0 flex-col border-r border-gray-200 bg-white text-gray-700 transition-[width,transform] duration-200 lg:sticky lg:top-0 lg:translate-x-0 ${
         collapsed ? 'w-64 lg:w-20' : 'w-64'
       } ${open ? 'translate-x-0' : '-translate-x-full'}`}
     >
-      <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/10 px-3">
+      <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-gray-200 px-3">
         <Link
           to="/admin/dashboard"
-          aria-label="Grocery Delivery dashboard"
+          aria-label={`Grocery Delivery ${t('dashboard')}`}
           onClick={closeAfterNavigation}
           className={`flex min-w-0 items-center gap-3 ${
             collapsed ? 'lg:mx-auto' : ''
@@ -159,12 +160,15 @@ function Sidebar({ open, onClose }) {
             />
           </span>
           <span
-            className={`whitespace-nowrap text-sm font-bold tracking-tight ${
+            className={`flex flex-col text-sm font-bold tracking-tight leading-tight ${
               collapsed ? 'lg:hidden' : ''
             }`}
           >
-            <span className="text-white">GROCERY</span>{' '}
-            <span className="text-[#F04E00]">DELIVERY</span>
+            <span className="whitespace-nowrap">
+              <span className="text-[#0E532B]">GROCERY</span>{' '}
+              <span className="text-[#F04E00]">DELIVERY</span>
+            </span>
+            <span className="text-[#0B4B8C]">SYSTEM</span>
           </span>
         </Link>
         <button
@@ -172,15 +176,15 @@ function Sidebar({ open, onClose }) {
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
           onClick={() => setCollapsed((value) => !value)}
-          className="hidden rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white lg:flex"
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-2xl font-semibold leading-none text-gray-600 transition hover:bg-emerald-50 hover:text-[#0E532B] lg:flex"
         >
-          <Menu aria-hidden="true" size={19} />
+          <span aria-hidden="true">≡</span>
         </button>
         <button
           type="button"
           aria-label="Close navigation menu"
           onClick={closeAfterNavigation}
-          className="rounded-lg p-2 text-white/75 transition hover:bg-white/10 hover:text-white lg:hidden"
+          className="rounded-lg p-2 text-gray-600 transition hover:bg-emerald-50 hover:text-[#0E532B] lg:hidden"
         >
           <X aria-hidden="true" size={19} />
         </button>
@@ -191,16 +195,16 @@ function Sidebar({ open, onClose }) {
         className="min-h-0 flex-1 overflow-y-auto px-3 py-5"
       >
         <p
-          className={`mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-white/45 ${
+          className={`mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#0E532B]/60 ${
             collapsed ? 'lg:hidden' : ''
           }`}
         >
-          Main menu
+          {t('mainMenu')}
         </p>
         <div className="space-y-1">
           <Link
             to="/admin/dashboard"
-            title="Dashboard"
+            title={t('dashboard')}
             onClick={closeAfterNavigation}
             className={linkClass({
               isActive:
@@ -208,15 +212,17 @@ function Sidebar({ open, onClose }) {
             })}
           >
             <Home aria-hidden="true" size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : ''}>Dashboard</span>
+            <span className={collapsed ? 'lg:hidden' : ''}>
+              {t('dashboard')}
+            </span>
           </Link>
 
           {accordion(
             'orders',
-            'Order Management',
+            t('orderManagement'),
             ShoppingBag,
             isOrdersRoute,
-            orderStatuses.map(({ label, status }) => {
+            orderStatuses.map(({ translationKey, status }) => {
               const active =
                 isOrdersRoute && selectedOrderStatus === status
               return (
@@ -229,10 +235,12 @@ function Sidebar({ open, onClose }) {
                   <span
                     aria-hidden="true"
                     className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                      active ? 'bg-[#1E8E3E]' : 'bg-white/35'
+                      active ? 'bg-[#1E8E3E]' : 'bg-gray-300'
                     }`}
                   />
-                  <span className={collapsed ? 'lg:hidden' : ''}>{label}</span>
+                  <span className={collapsed ? 'lg:hidden' : ''}>
+                    {t(translationKey)}
+                  </span>
                 </Link>
               )
             }),
@@ -240,7 +248,7 @@ function Sidebar({ open, onClose }) {
 
           {accordion(
             'products',
-            'Product List',
+            t('productList'),
             Package,
             pathname === '/admin/products' || pathname === '/admin/categories',
             <>
@@ -249,14 +257,18 @@ function Sidebar({ open, onClose }) {
                 onClick={closeAfterNavigation}
                 className={subLinkClass(pathname === '/admin/products')}
               >
-                <span className={collapsed ? 'lg:hidden' : ''}>Products</span>
+                <span className={collapsed ? 'lg:hidden' : ''}>
+                  {t('products')}
+                </span>
               </Link>
               <Link
                 to="/admin/categories"
                 onClick={closeAfterNavigation}
                 className={subLinkClass(pathname === '/admin/categories')}
               >
-                <span className={collapsed ? 'lg:hidden' : ''}>Categories</span>
+                <span className={collapsed ? 'lg:hidden' : ''}>
+                  {t('categories')}
+                </span>
               </Link>
             </>,
           )}
@@ -267,7 +279,9 @@ function Sidebar({ open, onClose }) {
             className={linkClass({ isActive: pathname === '/admin/promotions' })}
           >
             <Tag aria-hidden="true" size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : ''}>Coupon Code</span>
+            <span className={collapsed ? 'lg:hidden' : ''}>
+              {t('couponCode')}
+            </span>
           </Link>
           <Link
             to="/admin/inventory"
@@ -275,7 +289,9 @@ function Sidebar({ open, onClose }) {
             className={linkClass({ isActive: pathname === '/admin/inventory' })}
           >
             <Archive aria-hidden="true" size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : ''}>Inventory</span>
+            <span className={collapsed ? 'lg:hidden' : ''}>
+              {t('inventory')}
+            </span>
           </Link>
           <Link
             to="/admin/payments"
@@ -283,7 +299,9 @@ function Sidebar({ open, onClose }) {
             className={linkClass({ isActive: pathname === '/admin/payments' })}
           >
             <CreditCard aria-hidden="true" size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : ''}>Transactions</span>
+            <span className={collapsed ? 'lg:hidden' : ''}>
+              {t('transactions')}
+            </span>
           </Link>
           <Link
             to="/admin/reviews"
@@ -292,10 +310,10 @@ function Sidebar({ open, onClose }) {
           >
             <Star aria-hidden="true" size={18} className="shrink-0" />
             <span className={`flex-1 ${collapsed ? 'lg:hidden' : ''}`}>
-              Review
+              {t('review')}
             </span>
             <span
-              className={`flex h-5 min-w-5 items-center justify-center rounded-md bg-[#1E8E3E] px-1.5 text-[10px] font-bold text-white ${
+              className={`flex h-5 min-w-5 items-center justify-center rounded-md bg-[#F04E00] px-1.5 text-[10px] font-bold text-white ${
                 collapsed ? 'lg:hidden' : ''
               }`}
             >
@@ -304,13 +322,13 @@ function Sidebar({ open, onClose }) {
           </Link>
         </div>
 
-        <div className="my-5 border-t border-white/10" />
+        <div className="my-5 border-t border-gray-200" />
         <p
-          className={`mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-white/45 ${
+          className={`mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#0E532B]/60 ${
             collapsed ? 'lg:hidden' : ''
           }`}
         >
-          Admin
+          {t('adminSection')}
         </p>
         <div className="space-y-1">
           <Link
@@ -319,11 +337,13 @@ function Sidebar({ open, onClose }) {
             className={linkClass({ isActive: pathname === '/admin/settings' })}
           >
             <Settings aria-hidden="true" size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : ''}>Settings</span>
+            <span className={collapsed ? 'lg:hidden' : ''}>
+              {t('settings')}
+            </span>
           </Link>
           {accordion(
             'users',
-            'Manage Users',
+            t('manageUsers'),
             Users,
             pathname === '/admin/customers' ||
               pathname === '/admin/delivery-staff',
@@ -333,7 +353,9 @@ function Sidebar({ open, onClose }) {
                 onClick={closeAfterNavigation}
                 className={subLinkClass(pathname === '/admin/customers')}
               >
-                <span className={collapsed ? 'lg:hidden' : ''}>Customers</span>
+                <span className={collapsed ? 'lg:hidden' : ''}>
+                  {t('customers')}
+                </span>
               </Link>
               <Link
                 to="/admin/delivery-staff"
@@ -341,7 +363,7 @@ function Sidebar({ open, onClose }) {
                 className={subLinkClass(pathname === '/admin/delivery-staff')}
               >
                 <span className={collapsed ? 'lg:hidden' : ''}>
-                  Delivery Staff
+                  {t('deliveryStaff')}
                 </span>
               </Link>
             </>,
@@ -352,22 +374,24 @@ function Sidebar({ open, onClose }) {
             className={linkClass({ isActive: pathname === '/admin/support' })}
           >
             <CircleHelp aria-hidden="true" size={18} className="shrink-0" />
-            <span className={collapsed ? 'lg:hidden' : ''}>Help</span>
+            <span className={collapsed ? 'lg:hidden' : ''}>{t('help')}</span>
           </Link>
         </div>
       </nav>
 
-      <div className="sticky bottom-0 z-10 mt-auto min-h-16 shrink-0 border-t border-white/10 bg-[#072916] p-3">
+      <div className="sticky bottom-0 z-10 mt-auto min-h-16 shrink-0 border-t border-gray-200 bg-white p-3">
         <button
           type="button"
           onClick={handleLogout}
-          title="Logout"
-          className={`flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-white/75 transition-colors hover:bg-white/5 hover:text-[#F04E00] ${
+          title={t('logout')}
+          className={`flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-emerald-50 hover:text-[#0E532B] ${
             collapsed ? 'lg:justify-center lg:px-2' : ''
           }`}
         >
           <LogOut aria-hidden="true" size={18} className="shrink-0" />
-          <span className={collapsed ? 'lg:hidden' : ''}>Logout</span>
+          <span className={collapsed ? 'lg:hidden' : ''}>
+            {t('logout')}
+          </span>
         </button>
       </div>
     </aside>

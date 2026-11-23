@@ -20,8 +20,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import { categories as categoryOptions } from '../../data/mockData.js'
 import usePersistentState from '../../hooks/usePersistentState.js'
+import formatCurrency from '../../utils/formatCurrency.js'
 
 const initialProducts = [
   { id: 'gds-frt-01', name: 'Red Apples', sku: 'GDS-FRT-01', category: 'Fruits & Vegetables', unit: '1 kg', price: 185, compareAtPrice: 220, stock: 32, lowStockThreshold: 8, image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=800&q=85', description: 'Crisp, sweet red apples selected fresh from the orchard.', active: true, featured: true },
@@ -59,7 +61,7 @@ const statusFor = (product) =>
       ? 'Low Stock'
       : 'In Stock'
 
-const money = (value) => `${Number(value || 0).toFixed(2)} ETB`
+const money = formatCurrency
 
 function ProductImage({ src, name, className = '' }) {
   const [failedSrc, setFailedSrc] = useState('')
@@ -75,6 +77,7 @@ function ProductImage({ src, name, className = '' }) {
 }
 
 function Products() {
+  const { t } = useLanguage()
   const [products, setProducts] = usePersistentState('admin-products', initialProducts)
   const [managedCategories] = usePersistentState(
     'admin-categories',
@@ -213,7 +216,7 @@ function Products() {
 
   const renderStock = (product, compact = false) => {
     const status = statusFor(product)
-    const color = status === 'In Stock' ? 'bg-[#1E8E3E]' : status === 'Low Stock' ? 'bg-amber-500' : 'bg-rose-500'
+    const color = status === 'In Stock' ? 'bg-[#1E8E3E]' : 'bg-[#F04E00]'
     const width = product.stock <= 0 ? 0 : Math.min(100, Math.max(8, (Number(product.stock) / Math.max(12, Number(product.lowStockThreshold) * 3)) * 100))
     return (
       <div className={compact ? '' : 'min-w-[136px]'}>
@@ -237,7 +240,7 @@ function Products() {
     <div className={`flex items-center ${compact ? 'gap-1' : 'justify-end gap-0.5'}`}>
       <button type="button" aria-label={`Edit ${product.name}`} onClick={() => openEditModal(product)} className="rounded-lg p-2 text-slate-500 transition hover:bg-emerald-50 hover:text-[#0E532B]"><Pencil size={16} /></button>
       {!compact && <button type="button" aria-label={`Duplicate ${product.name}`} onClick={() => duplicateProduct(product)} className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"><Copy size={16} /></button>}
-      <button type="button" aria-label={`Delete ${product.name}`} onClick={() => setDeleteTarget(product)} className="rounded-lg p-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"><Trash2 size={16} /></button>
+      <button type="button" aria-label={`Delete ${product.name}`} onClick={() => setDeleteTarget(product)} className="rounded-lg p-2 text-slate-500 transition hover:bg-orange-50 hover:text-[#F04E00]"><Trash2 size={16} /></button>
     </div>
   )
 
@@ -248,7 +251,7 @@ function Products() {
         description="Manage your grocery catalog, pricing, discounts, and live inventory"
         action={
           <div className="flex items-center gap-2">
-            <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <button type="button" onClick={exportCsv} className="inline-flex items-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-3.5 py-2.5 text-sm font-semibold text-[#0B4B8C] shadow-sm transition hover:bg-[#0B4B8C] hover:text-white">
               <Download size={16} /> <span className="hidden sm:inline">Export CSV</span>
             </button>
             <button type="button" onClick={openAddModal} className="inline-flex items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]">
@@ -261,21 +264,21 @@ function Products() {
       <section aria-label="Product statistics" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: 'Total Products', value: counts.total, icon: ShoppingBasket, tone: 'bg-[#F0F7F1] text-[#0E532B]' },
-          { label: 'In Stock', value: counts.inStock, icon: Package, tone: 'bg-emerald-50 text-emerald-700' },
-          { label: 'Low Stock Alert', value: counts.low, icon: ArrowDownUp, tone: 'bg-amber-50 text-amber-700', filter: 'Low Stock' },
-          { label: 'Out of Stock', value: counts.out, icon: X, tone: 'bg-rose-50 text-rose-700', filter: 'Out of Stock' },
+          { label: 'In Stock', value: counts.inStock, icon: Package, tone: 'bg-emerald-50 text-[#1E8E3E]' },
+          { label: 'Low Stock Alert', value: counts.low, icon: ArrowDownUp, tone: 'bg-orange-50 text-[#F04E00]', filter: 'Low Stock' },
+          { label: 'Out of Stock', value: counts.out, icon: X, tone: 'bg-orange-50 text-[#F04E00]', filter: 'Out of Stock' },
         ].map(({ label, value, icon: Icon, tone, filter }) => {
           const Card = filter ? 'button' : 'article'
           return (
-            <Card key={label} type={filter ? 'button' : undefined} onClick={filter ? () => setStatusFilter(stockFilter === filter ? 'All' : filter) : undefined} className={`flex w-full items-center justify-between rounded-2xl border bg-white p-4 text-left shadow-sm transition sm:p-5 ${filter ? 'border-slate-200 hover:border-slate-300 hover:shadow' : 'border-slate-200'}`}>
-              <div><p className="text-sm font-medium text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p></div>
+            <Card key={label} type={filter ? 'button' : undefined} onClick={filter ? () => setStatusFilter(stockFilter === filter ? 'All' : filter) : undefined} className={`flex w-full items-center justify-between rounded-2xl border bg-white p-4 text-left shadow-sm transition sm:p-5 ${filter ? 'border-gray-100 hover:border-slate-300 hover:shadow' : 'border-gray-100'}`}>
+              <div><p className="text-sm font-medium text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold tracking-tight text-[#0E532B]">{value}</p></div>
               <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone}`}><Icon size={20} /></span>
             </Card>
           )
         })}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="space-y-4 border-b border-slate-100 p-4 sm:p-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <label className="relative min-w-0 flex-1">
@@ -298,7 +301,7 @@ function Products() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div role="group" aria-label="Filter by stock status" className="flex flex-wrap gap-1.5">
               {['All', 'In Stock', 'Low Stock', 'Out of Stock'].map((status) => (
-                <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${stockFilter === status ? 'bg-[#0E532B] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{status}</button>
+                <button key={status} type="button" onClick={() => setStatusFilter(status)} className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${stockFilter === status ? 'bg-[#1E8E3E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{t(status)}</button>
               ))}
             </div>
             <span className="text-xs font-medium text-slate-500">{filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found</span>
@@ -309,8 +312,8 @@ function Products() {
           <div className="flex flex-col gap-3 border-b border-emerald-100 bg-[#F0F7F1] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <p className="text-sm font-semibold text-[#0E532B]">{selectedIds.length} selected</p>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50"><Trash2 size={14} /> Delete Selected</button>
-              <button type="button" onClick={() => { setProducts((current) => current.map((product) => selectedIds.includes(product.id) ? { ...product, stock: 0, active: false } : product)); setSelectedIds([]) }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Mark Out of Stock</button>
+              <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-[#F04E00] hover:bg-orange-50"><Trash2 size={14} /> Delete Selected</button>
+              <button type="button" onClick={() => { setProducts((current) => current.map((product) => selectedIds.includes(product.id) ? { ...product, stock: 0, active: false } : product)); setSelectedIds([]) }} className="rounded-lg border border-[#0B4B8C]/30 bg-white px-3 py-2 text-xs font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">Mark Out of Stock</button>
               <button type="button" aria-label="Clear selection" onClick={() => setSelectedIds([])} className="rounded-lg p-2 text-slate-500 hover:bg-white"><X size={15} /></button>
             </div>
           </div>
@@ -319,7 +322,7 @@ function Products() {
         {view === 'table' ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] text-left text-sm">
-              <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-slate-500">
+              <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-[#0E532B]/75">
                 <tr>
                   <th className="w-12 px-4 py-3.5"><input type="checkbox" aria-label="Select all visible products" checked={visibleSelected} onChange={selectVisible} className="h-4 w-4 rounded border-slate-300 accent-[#1E8E3E]" /></th>
                   <th className="px-3 py-3.5 font-semibold">Product</th><th className="px-4 py-3.5 font-semibold">Category</th><th className="px-4 py-3.5 font-semibold">Price</th><th className="px-4 py-3.5 font-semibold">Stock</th><th className="px-4 py-3.5 font-semibold">Status</th><th className="px-4 py-3.5 font-semibold">Active</th><th className="px-4 py-3.5 text-right font-semibold">Actions</th>
@@ -328,20 +331,20 @@ function Products() {
               <tbody className="divide-y divide-slate-100">
                 {pageProducts.map((product) => {
                   const status = statusFor(product)
-                  const statusTone = status === 'In Stock' ? 'bg-emerald-50 text-emerald-700' : status === 'Low Stock' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
+                  const statusTone = status === 'In Stock' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'
                   return (
                     <tr key={product.id} className="transition hover:bg-slate-50/70">
                       <td className="px-4 py-3.5"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selectedIds.includes(product.id)} onChange={() => toggleSelection(product.id)} className="h-4 w-4 rounded border-slate-300 accent-[#1E8E3E]" /></td>
                       <td className="px-3 py-3.5">
                         <div className="flex items-center gap-3">
                           <ProductImage src={product.image} name={product.name} className="h-12 w-12 shrink-0 rounded-xl object-cover shadow-sm" />
-                          <div className="min-w-0"><p className="truncate font-semibold text-slate-900">{product.name}</p><p className="mt-0.5 text-xs text-slate-500">{product.sku} <span className="mx-1 text-slate-300">·</span>{product.unit}</p></div>
+                          <div className="min-w-0"><p className="truncate font-semibold text-[#0E532B]">{product.name}</p><p className="mt-0.5 text-xs text-slate-500"><span className="text-[#0B4B8C]">{product.sku}</span> <span className="mx-1 text-slate-300">·</span>{product.unit}</p></div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5"><span className="inline-flex max-w-[170px] rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{product.category}</span></td>
-                      <td className="px-4 py-3.5"><div className="whitespace-nowrap font-semibold text-slate-900">{money(product.price)}</div>{product.compareAtPrice > product.price && <div className="mt-1 flex items-center gap-1.5 whitespace-nowrap"><span className="text-xs text-slate-400 line-through">{money(product.compareAtPrice)}</span><span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-[#F04E00]">Sale</span></div>}</td>
+                      <td className="px-4 py-3.5"><div className="whitespace-nowrap font-semibold text-[#0E532B]">{money(product.price)}</div>{product.compareAtPrice > product.price && <div className="mt-1 flex items-center gap-1.5 whitespace-nowrap"><span className="text-xs text-slate-400 line-through">{money(product.compareAtPrice)}</span><span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-[#F04E00]">Sale</span></div>}</td>
                       <td className="px-4 py-3.5">{renderStock(product)}</td>
-                      <td className="px-4 py-3.5"><span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone}`}>{status}</span></td>
+                      <td className="px-4 py-3.5"><span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${statusTone}`}>{t(status)}</span></td>
                       <td className="px-4 py-3.5"><button type="button" role="switch" aria-checked={Boolean(product.active)} aria-label={`${product.active ? 'Deactivate' : 'Activate'} ${product.name}`} onClick={() => updateProduct(product.id, { active: !product.active })} className={`relative h-6 w-11 rounded-full transition ${product.active ? 'bg-[#1E8E3E]' : 'bg-slate-300'}`}><span className={`absolute top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow transition-all ${product.active ? 'left-[22px]' : 'left-0.5'}`}>{product.active && <Check size={11} className="text-[#1E8E3E]" />}</span></button></td>
                       <td className="px-4 py-3.5">{renderActions(product)}</td>
                     </tr>
@@ -355,22 +358,22 @@ function Products() {
           <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
             {pageProducts.map((product) => {
               const status = statusFor(product)
-              const tone = status === 'In Stock' ? 'text-emerald-700' : status === 'Low Stock' ? 'text-amber-700' : 'text-rose-700'
+              const tone = status === 'In Stock' ? 'text-[#1E8E3E]' : 'text-[#F04E00]'
               return (
-                <article key={product.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg">
+                <article key={product.id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
                   <div className="relative h-48 bg-slate-50">
                     <ProductImage src={product.image} name={product.name} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
                     {product.compareAtPrice > product.price && <span className="absolute left-3 top-3 rounded-full bg-[#F04E00] px-2.5 py-1 text-xs font-bold text-white">Sale</span>}
-                    <button type="button" aria-label={`${product.featured ? 'Remove' : 'Mark'} ${product.name} ${product.featured ? 'from' : 'as'} featured`} onClick={() => updateProduct(product.id, { featured: !product.featured })} className={`absolute right-3 top-3 rounded-full bg-white/95 p-2 shadow-sm ${product.featured ? 'text-amber-500' : 'text-slate-400 hover:text-amber-500'}`}><Star size={16} fill={product.featured ? 'currentColor' : 'none'} /></button>
+                    <button type="button" aria-label={`${product.featured ? 'Remove' : 'Mark'} ${product.name} ${product.featured ? 'from' : 'as'} featured`} onClick={() => updateProduct(product.id, { featured: !product.featured })} className={`absolute right-3 top-3 rounded-full bg-white/95 p-2 shadow-sm ${product.featured ? 'text-[#F04E00]' : 'text-slate-400 hover:text-[#F04E00]'}`}><Star size={16} fill={product.featured ? 'currentColor' : 'none'} /></button>
                   </div>
                   <div className="p-4">
                     <span className="rounded-full bg-[#F0F7F1] px-2.5 py-1 text-[11px] font-semibold text-[#0E532B]">{product.category}</span>
                     <div className="mt-3 flex items-start justify-between gap-2">
-                      <div><h3 className="font-semibold text-slate-900">{product.name}</h3><p className="mt-1 text-xs text-slate-500">{product.sku} · {product.unit}</p></div>
+                      <div><h3 className="font-semibold text-[#0E532B]">{product.name}</h3><p className="mt-1 text-xs text-slate-500"><span className="text-[#0B4B8C]">{product.sku}</span> · {product.unit}</p></div>
                       <button type="button" aria-label={`${product.featured ? 'Unfeature' : 'Feature'} ${product.name}`} onClick={() => updateProduct(product.id, { featured: !product.featured })} className="hidden"><Star size={14} /></button>
                     </div>
-                    <div className="mt-3 flex items-baseline gap-2"><span className="font-bold text-slate-900">{money(product.price)}</span>{product.compareAtPrice > product.price && <span className="text-xs text-slate-400 line-through">{money(product.compareAtPrice)}</span>}</div>
-                    <div className="mt-4">{renderStock(product, true)}<p className={`mt-1.5 text-xs font-semibold ${tone}`}>{status}</p></div>
+                    <div className="mt-3 flex items-baseline gap-2"><span className="font-bold text-[#0E532B]">{money(product.price)}</span>{product.compareAtPrice > product.price && <span className="text-xs text-slate-400 line-through">{money(product.compareAtPrice)}</span>}</div>
+                    <div className="mt-4">{renderStock(product, true)}<p className={`mt-1.5 text-xs font-semibold ${tone}`}>{t(status)}</p></div>
                     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2">{renderActions(product, true)}<button type="button" role="switch" aria-checked={Boolean(product.active)} aria-label={`${product.active ? 'Deactivate' : 'Activate'} ${product.name}`} onClick={() => updateProduct(product.id, { active: !product.active })} className={`relative h-5 w-9 rounded-full transition ${product.active ? 'bg-[#1E8E3E]' : 'bg-slate-300'}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${product.active ? 'left-[18px]' : 'left-0.5'}`} /></button></div>
                   </div>
                 </article>
@@ -383,9 +386,9 @@ function Products() {
         <footer className="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-xs text-slate-500">Showing {filteredProducts.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredProducts.length)} of {filteredProducts.length} products</p>
           <div className="flex items-center gap-2">
-            <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={15} /> Previous</button>
+            <button type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))} className="inline-flex items-center gap-1 rounded-lg border border-[#0B4B8C]/30 px-3 py-2 text-xs font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"><ChevronLeft size={15} /> Previous</button>
             <span className="px-1 text-xs text-slate-500">Page {page} of {pageCount}</span>
-            <button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Next <ChevronRight size={15} /></button>
+            <button type="button" disabled={page >= pageCount} onClick={() => setPage((current) => Math.min(pageCount, current + 1))} className="inline-flex items-center gap-1 rounded-lg border border-[#0B4B8C]/30 px-3 py-2 text-xs font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white disabled:cursor-not-allowed disabled:opacity-40">Next <ChevronRight size={15} /></button>
           </div>
         </footer>
       </section>
@@ -449,7 +452,7 @@ function Products() {
             <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
               <label className="inline-flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={draft.featured} onChange={(event) => setDraft((current) => ({ ...current, featured: event.target.checked }))} className="h-4 w-4 accent-[#1E8E3E]" /> Featured product</label>
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={closeProductModal} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="button" onClick={closeProductModal} className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">Cancel</button>
                 <button type="submit" className="rounded-lg bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#0E532B]">{editingProduct ? 'Save changes' : 'Add product'}</button>
               </div>
             </div>
@@ -461,8 +464,8 @@ function Products() {
         <Modal title="Delete product?" onClose={() => setDeleteTarget(null)} size="max-w-md">
           <p className="text-sm text-slate-600">Delete <span className="font-semibold text-slate-900">{deleteTarget.name}</span> from your catalog? This action cannot be undone.</p>
           <div className="mt-6 flex justify-end gap-2">
-            <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">Cancel</button>
-            <button type="button" onClick={() => { setProducts((current) => current.filter((product) => product.id !== deleteTarget.id)); setSelectedIds((current) => current.filter((id) => id !== deleteTarget.id)); setPage(1); setDeleteTarget(null) }} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">Delete product</button>
+            <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">Cancel</button>
+            <button type="button" onClick={() => { setProducts((current) => current.filter((product) => product.id !== deleteTarget.id)); setSelectedIds((current) => current.filter((id) => id !== deleteTarget.id)); setPage(1); setDeleteTarget(null) }} className="rounded-lg bg-[#F04E00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#C54100]">Delete product</button>
           </div>
         </Modal>
       )}

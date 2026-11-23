@@ -16,39 +16,45 @@ import {
   Wallet,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../../context/LanguageContext.jsx'
+import formatCurrency from '../../utils/formatCurrency.js'
 
 const kpis = [
   {
-    title: 'Total Revenue',
-    value: '350,420 ETB',
-    trend: '20.4% From last month',
+    titleKey: 'totalRevenue',
+    value: formatCurrency(350420),
+    trendValue: '20.4%',
+    trendKey: 'fromLastMonth',
     direction: 'up',
     color: '#1E8E3E',
     values: [17, 24, 21, 33, 28, 39, 36, 48, 44, 58, 54, 68],
     to: '/admin/reports',
   },
   {
-    title: 'Total Orders',
+    titleKey: 'totalOrders',
     value: '15.5k',
-    trend: '10.4% From last month',
+    trendValue: '10.4%',
+    trendKey: 'fromLastMonth',
     direction: 'up',
     color: '#1E8E3E',
     values: [22, 18, 30, 25, 38, 34, 43, 40, 55, 49, 63, 70],
     to: '/admin/orders',
   },
   {
-    title: 'Total New Customer',
+    titleKey: 'totalNewCustomer',
     value: '2,153',
-    trend: '4.04% Visitors decreased',
+    trendValue: '4.04%',
+    trendKey: 'visitorsDecreased',
     direction: 'down',
-    color: '#DC4C4C',
+    color: '#F04E00',
     values: [67, 59, 64, 48, 52, 43, 46, 34, 40, 29, 34, 23],
     to: '/admin/customers',
   },
   {
-    title: 'Repeat Purchase Rate',
+    titleKey: 'repeatPurchaseRate',
     value: '35%',
-    trend: '10.4% From last month',
+    trendValue: '10.4%',
+    trendKey: 'fromLastMonth',
     direction: 'up',
     color: '#1E8E3E',
     values: [20, 25, 19, 34, 30, 40, 35, 44, 42, 55, 53, 67],
@@ -57,10 +63,10 @@ const kpis = [
 ]
 
 const sellingProducts = [
-  { rank: '01.', emoji: '🥑', name: 'Fresh Hass Avocados', sold: '558 Items Sold' },
-  { rank: '02.', emoji: '🍅', name: 'Organic Red Tomatoes', sold: '360 Items Sold' },
-  { rank: '03.', emoji: '🌾', name: 'White Teff Flour (5kg)', sold: '185 Items Sold' },
-  { rank: '04.', emoji: '🥛', name: 'Farm Fresh Milk (1L)', sold: '325 Items Sold' },
+  { rank: '01.', emoji: '🥑', name: 'Fresh Hass Avocados', sold: 558 },
+  { rank: '02.', emoji: '🍅', name: 'Organic Red Tomatoes', sold: 360 },
+  { rank: '03.', emoji: '🌾', name: 'White Teff Flour (5kg)', sold: 185 },
+  { rank: '04.', emoji: '🥛', name: 'Farm Fresh Milk (1L)', sold: 325 },
 ]
 
 const initialOrders = [
@@ -74,29 +80,22 @@ const initialOrders = [
 ]
 
 const transactions = [
-  { method: 'Telebirr Payment Received', date: 'Today, 10:42 AM', amount: '+580.50 ETB', icon: Smartphone, tone: 'bg-blue-50 text-[#0B4B8C]', positive: true },
-  { method: 'CBE Birr Transfer', date: 'Today, 09:18 AM', amount: '+360.00 ETB', icon: Landmark, tone: 'bg-emerald-50 text-[#1E8E3E]', positive: true },
-  { method: 'Chapa Card Payment', date: 'Yesterday, 06:35 PM', amount: '+940.00 ETB', icon: CreditCard, tone: 'bg-violet-50 text-violet-700', positive: true },
-  { method: 'Cash on Delivery', date: 'Yesterday, 04:22 PM', amount: '+760.00 ETB', icon: Banknote, tone: 'bg-amber-50 text-amber-700', positive: true },
-  { method: 'Awash Birr Transfer', date: 'Nov 21, 02:10 PM', amount: '+425.50 ETB', icon: Wallet, tone: 'bg-orange-50 text-[#F04E00]', positive: true },
-  { method: 'Telebirr Refund Issued', date: 'Nov 21, 11:03 AM', amount: '-185.00 ETB', icon: CircleDollarSign, tone: 'bg-rose-50 text-rose-700', positive: false },
-  { method: 'CBE Birr Transfer', date: 'Nov 20, 05:46 PM', amount: '+1,250.00 ETB', icon: Landmark, tone: 'bg-emerald-50 text-[#1E8E3E]', positive: true },
-  { method: 'Cash on Delivery', date: 'Nov 20, 01:15 PM', amount: '+315.00 ETB', icon: Banknote, tone: 'bg-amber-50 text-amber-700', positive: true },
+  { method: 'Telebirr Payment Received', date: 'Today, 10:42 AM', amount: `+${formatCurrency(580.5)}`, icon: Smartphone, tone: 'bg-blue-50 text-[#0B4B8C]', positive: true },
+  { method: 'CBE Birr Transfer', date: 'Today, 09:18 AM', amount: `+${formatCurrency(360)}`, icon: Landmark, tone: 'bg-emerald-50 text-[#1E8E3E]', positive: true },
+  { method: 'Chapa Card Payment', date: 'Yesterday, 06:35 PM', amount: `+${formatCurrency(940)}`, icon: CreditCard, tone: 'bg-blue-50 text-[#0B4B8C]', positive: true },
+  { method: 'Cash on Delivery', date: 'Yesterday, 04:22 PM', amount: `+${formatCurrency(760)}`, icon: Banknote, tone: 'bg-emerald-50 text-[#1E8E3E]', positive: true },
+  { method: 'Awash Birr Transfer', date: 'Nov 21, 02:10 PM', amount: `+${formatCurrency(425.5)}`, icon: Wallet, tone: 'bg-orange-50 text-[#F04E00]', positive: true },
+  { method: 'Telebirr Refund Issued', date: 'Nov 21, 11:03 AM', amount: `-${formatCurrency(185)}`, icon: CircleDollarSign, tone: 'bg-orange-50 text-[#F04E00]', positive: false },
+  { method: 'CBE Birr Transfer', date: 'Nov 20, 05:46 PM', amount: `+${formatCurrency(1250)}`, icon: Landmark, tone: 'bg-emerald-50 text-[#1E8E3E]', positive: true },
+  { method: 'Cash on Delivery', date: 'Nov 20, 01:15 PM', amount: `+${formatCurrency(315)}`, icon: Banknote, tone: 'bg-emerald-50 text-[#1E8E3E]', positive: true },
 ]
 
 const salesSeries = [
-  { name: 'Revenue', color: '#1E8E3E', values: [31, 39, 30, 42, 38, 47, 42] },
-  { name: 'Orders', color: '#0B4B8C', values: [22, 30, 24, 27, 35, 32, 39] },
+  { nameKey: 'revenue', color: '#1E8E3E', values: [31, 39, 30, 42, 38, 47, 42] },
+  { nameKey: 'orders', color: '#0B4B8C', values: [22, 30, 24, 27, 35, 32, 39] },
 ]
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const chart = { left: 48, right: 544, top: 28, bottom: 174 }
-
-function formatEtb(amount) {
-  return `${new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount)} ETB`
-}
 
 function getSparklinePath(values, width = 126, height = 48) {
   const max = Math.max(...values)
@@ -116,31 +115,32 @@ function getSparklinePath(values, width = 126, height = 48) {
 }
 
 function SparklineCard({ item }) {
+  const { t } = useLanguage()
   const TrendIcon = item.direction === 'up' ? ArrowUp : ArrowDown
 
   return (
     <article className="flex min-h-[150px] items-stretch justify-between gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex min-w-0 flex-col justify-between">
         <div>
-          <p className="text-xs font-medium text-gray-500">{item.title}</p>
-          <p className="mt-1 text-xl font-bold tracking-tight text-gray-900 sm:text-2xl xl:text-lg">
+          <p className="text-xs font-medium text-gray-500">{t(item.titleKey)}</p>
+          <p className="mt-1 text-xl font-bold tracking-tight text-[#0E532B] sm:text-2xl xl:text-lg">
             {item.value}
           </p>
         </div>
         <p
           className={`mt-3 flex items-center gap-1 text-[11px] font-medium ${
-            item.direction === 'up' ? 'text-[#1E8E3E]' : 'text-rose-600'
+            item.direction === 'up' ? 'text-[#1E8E3E]' : 'text-[#F04E00]'
           }`}
         >
           <TrendIcon aria-hidden="true" size={14} />
-          {item.trend}
+          {item.trendValue} {t(item.trendKey)}
         </p>
       </div>
       <div className="flex shrink-0 flex-col items-end justify-between">
         <svg
           viewBox="0 0 126 48"
           role="img"
-          aria-label={`${item.title} trend`}
+          aria-label={`${t(item.titleKey)} trend`}
           className="h-10 w-20 shrink-0"
         >
           <path
@@ -153,9 +153,9 @@ function SparklineCard({ item }) {
         </svg>
         <Link
           to={item.to}
-          className="rounded-full bg-[#1E8E3E] px-3 py-1 text-[10px] font-semibold text-white transition hover:bg-[#187333]"
+          className="rounded-full border border-[#0B4B8C]/30 px-3 py-1 text-[10px] font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
         >
-          Details
+          {t('details')}
         </Link>
       </div>
     </article>
@@ -172,6 +172,7 @@ function getLinePath(points) {
 }
 
 function SalesReport() {
+  const { t } = useLanguage()
   const pointsFor = (values) =>
     values.map((value, index) => ({
       x: chart.left + (index * (chart.right - chart.left)) / (values.length - 1),
@@ -189,12 +190,14 @@ function SalesReport() {
     <article className="h-full rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Sales Report for this week</h2>
+          <h2 className="text-base font-bold text-[#0E532B]">
+            {t('salesReportThisWeek')}
+          </h2>
           <div className="mt-2 flex items-center gap-4 text-[11px] text-gray-500">
             {salesSeries.map((series) => (
               <span key={series.name} className="inline-flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: series.color }} />
-                {series.name}
+                {t(series.nameKey)}
               </span>
             ))}
           </div>
@@ -326,6 +329,28 @@ function SalesReport() {
 }
 
 function SelectPill({ ariaLabel, value, options, green = false, onChange }) {
+  const { t } = useLanguage()
+
+  const getOptionLabel = (option) => {
+    const optionKeys = {
+      'This week': 'thisWeek',
+      'This Week': 'thisWeek',
+      'Last week': 'lastWeek',
+      'Last Week': 'lastWeek',
+      'This month': 'thisMonth',
+      'This Month': 'thisMonth',
+      'Show All': 'showAll',
+      Pending: 'pending',
+      Confirm: 'confirm',
+      Delivered: 'delivered',
+    }
+    const itemsPerPage = option.match(/^Items per page: (\d+)$/)
+    if (itemsPerPage) {
+      return `${t('itemsPerPage')}: ${itemsPerPage[1]}`
+    }
+    return t(optionKeys[option] || option)
+  }
+
   return (
     <span
       className={`relative inline-flex items-center rounded-full ${
@@ -333,14 +358,14 @@ function SelectPill({ ariaLabel, value, options, green = false, onChange }) {
       }`}
     >
       <select
-        aria-label={ariaLabel}
+        aria-label={t(ariaLabel)}
         defaultValue={value}
         onChange={(event) => onChange?.(event.target.value)}
         className="appearance-none rounded-full bg-transparent py-2 pl-3 pr-7 text-[11px] font-semibold outline-none"
       >
         {options.map((option) => (
           <option key={option} value={option}>
-            {option}
+            {getOptionLabel(option)}
           </option>
         ))}
       </select>
@@ -354,12 +379,18 @@ function SelectPill({ ariaLabel, value, options, green = false, onChange }) {
 }
 
 function TopSellingProducts() {
+  const { t } = useLanguage()
+
   return (
     <article className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Top Selling Products</h2>
-          <p className="mt-1 text-xs text-gray-500">Most purchased this week</p>
+          <h2 className="text-base font-bold text-[#0E532B]">
+            {t('topSellingProducts')}
+          </h2>
+          <p className="mt-1 text-xs text-gray-500">
+            {t('mostPurchasedThisWeek')}
+          </p>
         </div>
         <button
           type="button"
@@ -381,14 +412,16 @@ function TopSellingProducts() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-gray-800">{product.name}</p>
-              <p className="mt-0.5 text-[10px] text-gray-500">{product.sold}</p>
+              <p className="mt-0.5 text-[10px] text-gray-500">
+                {product.sold} {t('itemsSold')}
+              </p>
             </div>
             <Link
               to="/admin/products"
               aria-label={`Details for ${product.name}`}
-              className="shrink-0 rounded-full border border-[#1E8E3E] px-2 py-1 text-[10px] font-semibold text-[#1E8E3E] transition hover:bg-emerald-50"
+              className="shrink-0 rounded-full border border-[#0B4B8C]/30 px-2 py-1 text-[10px] font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
             >
-              Details
+              {t('details')}
             </Link>
           </li>
         ))}
@@ -401,12 +434,13 @@ function TopSellingProducts() {
 }
 
 function OrderSummary() {
+  const { t } = useLanguage()
   const radius = 58
   const circumference = 2 * Math.PI * radius
   const segments = [
-    { label: 'Completed', value: 60, color: '#1E8E3E' },
-    { label: 'New Order', value: 30, color: '#0B4B8C' },
-    { label: 'Pending', value: 10, color: '#F04E00' },
+    { translationKey: 'completed', value: 60, color: '#1E8E3E' },
+    { translationKey: 'newOrder', value: 30, color: '#0B4B8C' },
+    { translationKey: 'pending', value: 10, color: '#F04E00' },
   ]
   let offset = 0
 
@@ -414,8 +448,12 @@ function OrderSummary() {
     <article className="flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Order Summary</h2>
-          <p className="mt-1 text-xs text-gray-500">Current order status</p>
+          <h2 className="text-base font-bold text-[#0E532B]">
+            {t('orderSummary')}
+          </h2>
+          <p className="mt-1 text-xs text-gray-500">
+            {t('currentOrderStatus')}
+          </p>
         </div>
         <button
           type="button"
@@ -427,9 +465,9 @@ function OrderSummary() {
       </div>
       <div className="my-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
         {segments.map((segment) => (
-          <span key={segment.label} className="inline-flex items-center gap-1.5 whitespace-nowrap text-gray-600">
+          <span key={segment.translationKey} className="inline-flex items-center gap-1.5 whitespace-nowrap text-gray-600">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: segment.color }} />
-            {segment.label} {segment.value}%
+            {t(segment.translationKey)} {segment.value}%
           </span>
         ))}
       </div>
@@ -461,7 +499,7 @@ function OrderSummary() {
             )
           })}
           <text x="80" y="68" textAnchor="middle" className="fill-gray-400" fontSize="11">
-            Total Orders
+            {t('totalOrders')}
           </text>
           <text x="80" y="90" textAnchor="middle" fill="currentColor" className="text-2xl font-bold text-gray-800">
             100%
@@ -480,6 +518,7 @@ function initials(name) {
 }
 
 function RecentOrders() {
+  const { t } = useLanguage()
   const [orders, setOrders] = useState(initialOrders)
   const [statusFilter, setStatusFilter] = useState('Show All')
   const [openActionId, setOpenActionId] = useState(null)
@@ -499,12 +538,16 @@ function RecentOrders() {
   return (
     <article
       id="recent-orders"
-      className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm lg:col-span-8"
+      className="rounded-2xl border border-gray-100 bg-white shadow-sm lg:col-span-8"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 sm:px-5">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Recent Orders</h2>
-          <p className="mt-1 text-xs text-gray-500">Latest grocery purchases</p>
+          <h2 className="text-base font-bold text-[#0E532B]">
+            {t('recentOrders')}
+          </h2>
+          <p className="mt-1 text-xs text-gray-500">
+            {t('latestGroceryPurchases')}
+          </p>
         </div>
         <div className="flex items-center gap-1.5">
           <SelectPill
@@ -530,36 +573,36 @@ function RecentOrders() {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[780px] text-left text-xs">
-          <thead className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-500">
+          <thead className="bg-gray-50 text-[10px] uppercase tracking-wider text-[#0E532B]/75">
             <tr>
-              <th scope="col" className="px-4 py-3 font-semibold sm:px-5">Order ID</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Customer Name</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Product</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Amount</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Status</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Action</th>
+              <th scope="col" className="px-3 py-3 font-semibold">{t('orderId')}</th>
+              <th scope="col" className="px-3 py-3 font-semibold">{t('customerName')}</th>
+              <th scope="col" className="px-3 py-3 font-semibold">{t('product')}</th>
+              <th scope="col" className="px-3 py-3 font-semibold">{t('amount')}</th>
+              <th scope="col" className="px-3 py-3 font-semibold">{t('status')}</th>
+              <th scope="col" className="px-3 py-3 font-semibold">{t('action')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredOrders.map((order, index) => {
               const statusTone = {
-                Pending: 'bg-amber-50 text-amber-700',
-                Confirm: 'bg-emerald-50 text-emerald-700',
-                Delivered: 'bg-blue-50 text-blue-700',
+                Pending: 'bg-orange-50 text-[#F04E00]',
+                Confirm: 'bg-emerald-50 text-[#1E8E3E]',
+                Delivered: 'bg-blue-50 text-[#0B4B8C]',
               }[order.status]
               const avatarColors = [
-                'bg-emerald-100 text-emerald-800',
-                'bg-blue-100 text-blue-800',
-                'bg-amber-100 text-amber-800',
-                'bg-violet-100 text-violet-800',
+                'bg-emerald-100 text-[#0E532B]',
+                'bg-blue-100 text-[#0B4B8C]',
+                'bg-orange-100 text-[#F04E00]',
+                'bg-[#F0F7F1] text-[#0E532B]',
               ]
 
               return (
                 <tr key={order.id} className="transition hover:bg-gray-50/70">
-                  <td className="whitespace-nowrap px-4 py-3.5 font-semibold text-gray-800 sm:px-5">
+                  <td className="whitespace-nowrap px-3 py-3 font-semibold text-[#0B4B8C]">
                     {order.id}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3.5">
+                  <td className="whitespace-nowrap px-3 py-3">
                     <span className="inline-flex items-center gap-2 text-gray-700">
                       <span className={`flex h-7 w-7 items-center justify-center rounded-full text-[9px] font-bold ${avatarColors[index % avatarColors.length]}`}>
                         {initials(order.customer)}
@@ -567,23 +610,23 @@ function RecentOrders() {
                       {order.customer}
                     </span>
                   </td>
-                  <td className="max-w-[170px] truncate px-3 py-3.5 text-gray-600">
+                  <td className="max-w-[170px] truncate px-3 py-3 text-gray-600">
                     {order.product}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3.5 font-medium text-gray-800">
-                    {formatEtb(order.amount)}
+                  <td className="whitespace-nowrap px-3 py-3 font-semibold text-[#0E532B]">
+                    {formatCurrency(order.amount)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3.5">
+                  <td className="whitespace-nowrap px-3 py-3">
                     <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusTone}`}>
-                      {order.status}
+                      {t(order.status)}
                     </span>
                   </td>
-                  <td className="relative whitespace-nowrap px-3 py-3.5">
+                  <td className="relative whitespace-nowrap px-3 py-3">
                     <span className="inline-flex items-center gap-1">
                       <Link
                         to="/admin/orders?status=all"
                         aria-label={`View ${order.id}`}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-[#0B4B8C]"
+                        className="rounded-md border border-[#0B4B8C]/30 p-1.5 text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white"
                       >
                         <Eye aria-hidden="true" size={15} />
                       </Link>
@@ -591,7 +634,7 @@ function RecentOrders() {
                         type="button"
                         aria-label={`Delete ${order.id}`}
                         onClick={() => deleteOrder(order.id)}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600"
+                        className="rounded-md p-1.5 text-gray-400 hover:bg-orange-50 hover:text-[#F04E00]"
                       >
                         <Trash2 aria-hidden="true" size={15} />
                       </button>
@@ -614,7 +657,7 @@ function RecentOrders() {
                         <Link
                           to="/admin/orders?status=all"
                           onClick={() => setOpenActionId(null)}
-                          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-[#0B4B8C] hover:bg-blue-50"
                         >
                           <Eye aria-hidden="true" size={13} />
                           View order
@@ -622,7 +665,7 @@ function RecentOrders() {
                         <button
                           type="button"
                           onClick={() => deleteOrder(order.id)}
-                          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-rose-600 hover:bg-rose-50"
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-[#F04E00] hover:bg-orange-50"
                         >
                           <Trash2 aria-hidden="true" size={13} />
                           Delete order
@@ -675,10 +718,14 @@ function RecentOrders() {
 }
 
 function TransactionHistory() {
+  const { t } = useLanguage()
+
   return (
     <article className="flex min-h-[440px] flex-col rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5 lg:col-span-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold text-gray-900">Transaction History</h2>
+        <h2 className="text-base font-bold text-[#0E532B]">
+          {t('transactionHistory')}
+        </h2>
         <SelectPill
           ariaLabel="Transaction history period"
           value="This Week"
@@ -698,8 +745,8 @@ function TransactionHistory() {
             <span
               className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
                 positive
-                  ? 'bg-emerald-50 text-emerald-700'
-                  : 'bg-rose-50 text-rose-700'
+                  ? 'bg-emerald-50 text-[#1E8E3E]'
+                  : 'bg-orange-50 text-[#F04E00]'
               }`}
             >
               {amount}

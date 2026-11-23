@@ -19,7 +19,9 @@ import {
   X,
 } from 'lucide-react'
 import { Modal } from '../../components/admin/AdminUI.jsx'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import usePersistentState from '../../hooks/usePersistentState.js'
+import formatCurrency from '../../utils/formatCurrency.js'
 
 const initialInventory = [
   {
@@ -166,8 +168,7 @@ const initialInventory = [
 
 const statusFilters = ['All', 'In Stock', 'Low Stock', 'Out of Stock', 'Expiring Soon']
 const movementOptions = ['Stock In (+)', 'Damaged/Spoiled (-)', 'Expired (-)']
-const money = (amount) =>
-  `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(amount)} ETB`
+const money = formatCurrency
 
 function formatMovementTime(timestamp) {
   const elapsedMinutes = Math.max(0, Math.floor((Date.now() - new Date(timestamp).getTime()) / 60000))
@@ -190,6 +191,7 @@ function getFreshness(item) {
 }
 
 function Inventory() {
+  const { t } = useLanguage()
   const [inventory, setInventory] = usePersistentState('admin-warehouse-inventory', initialInventory)
   const [movements, setMovements] = usePersistentState('admin-warehouse-movements', [])
   const [search, setSearch] = useState('')
@@ -327,10 +329,12 @@ function Inventory() {
         <div>
           <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#1E8E3E]">
             <span className="h-2 w-2 rounded-full bg-[#1E8E3E]" />
-            GROCERY DELIVERY <span className="text-slate-300">/</span> WAREHOUSE
+            <span className="text-[#0E532B]">GROCERY</span>{' '}
+            <span className="text-[#F04E00]">DELIVERY</span>{' '}
+            <span className="text-slate-300">/</span> WAREHOUSE
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[#0E532B] sm:text-[30px]">
-            Inventory Management
+            {t('inventoryManagement')}
           </h1>
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
             Monitor live warehouse stock levels, expiry dates, stock value, and restock incoming supplies
@@ -340,7 +344,7 @@ function Inventory() {
           <button
             type="button"
             onClick={exportCsv}
-            className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[#1E8E3E] hover:text-[#0E532B]"
+            className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-4 text-sm font-semibold text-[#0B4B8C] shadow-sm transition hover:bg-[#0B4B8C] hover:text-white"
           >
             <Download size={17} /> Export Stock CSV
           </button>
@@ -355,7 +359,7 @@ function Inventory() {
       </header>
 
       <section aria-label="Inventory overview" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs font-semibold text-slate-500 sm:text-sm">Total Stock Value</p>
@@ -384,30 +388,30 @@ function Inventory() {
         <button
           type="button"
           onClick={() => setStatusFilter(statusFilter === 'Low Stock' ? 'All' : 'Low Stock')}
-          className={`rounded-2xl border p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'Low Stock' ? 'border-amber-300 bg-amber-100' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'}`}
+          className={`rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'Low Stock' ? 'ring-2 ring-[#F04E00]/20' : 'hover:border-orange-200'}`}
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-amber-800 sm:text-sm">Low Stock Alerts</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-amber-900">{lowCount}</p>
-              <p className="mt-1.5 text-xs text-amber-800/75">At or below reorder point</p>
+              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">Low Stock Alerts</p>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{lowCount}</p>
+              <p className="mt-1.5 text-xs text-slate-500">At or below reorder point</p>
             </div>
-            <span className="rounded-xl bg-white/80 p-2.5 text-amber-700"><AlertTriangle size={19} /></span>
+            <span className="rounded-xl bg-orange-50 p-2.5 text-[#F04E00]"><AlertTriangle size={19} /></span>
           </div>
-          <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-amber-800">
+          <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#F04E00]">
             View low stock <ArrowUpRight size={14} />
           </div>
         </button>
         <button
           type="button"
           onClick={() => setStatusFilter(statusFilter === 'critical' ? 'All' : 'critical')}
-          className={`rounded-2xl border p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'critical' ? 'border-orange-300 bg-orange-100' : 'border-orange-200 bg-orange-50 hover:bg-orange-100'}`}
+          className={`rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'critical' ? 'ring-2 ring-[#F04E00]/20' : 'hover:border-orange-200'}`}
         >
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs font-semibold text-[#B53B05] sm:text-sm">Out of Stock / Expiring</p>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-[#B53B05]">{criticalCount}</p>
-              <p className="mt-1.5 text-xs text-[#B53B05]/75">Needs attention today</p>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{criticalCount}</p>
+              <p className="mt-1.5 text-xs text-slate-500">Needs attention today</p>
             </div>
             <span className="rounded-xl bg-white/80 p-2.5 text-[#F04E00]"><CircleAlert size={19} /></span>
           </div>
@@ -429,7 +433,7 @@ function Inventory() {
                   className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${activeTab === tab ? 'bg-white text-[#0E532B] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                 >
                   {tab === 'Stock Levels' ? <Boxes size={16} /> : <ArrowDownUp size={16} />}
-                  {tab}
+                  {t(tab === 'Stock Levels' ? 'stockLevels' : 'movementLog')}
                 </button>
               ))}
             </div>
@@ -466,10 +470,10 @@ function Inventory() {
                   type="button"
                   key={filter}
                   onClick={() => setStatusFilter(filter)}
-                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === filter ? 'bg-[#0E532B] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === filter ? 'bg-[#1E8E3E] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                 >
-                  {filter}
-                  {filter === 'Low Stock' && <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800">{lowCount}</span>}
+                  {t(filter)}
+                  {filter === 'Low Stock' && <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] text-[#F04E00]">{lowCount}</span>}
                 </button>
               ))}
               {statusFilter === 'critical' && (
@@ -488,7 +492,7 @@ function Inventory() {
         {activeTab === 'Stock Levels' ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1280px] text-left">
-              <thead className="bg-[#F8FAF8] text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+              <thead className="bg-[#F8FAF8] text-[10px] font-bold uppercase tracking-[0.1em] text-[#0E532B]/75">
                 <tr>
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-4 py-3.5">Category</th>
@@ -515,42 +519,42 @@ function Inventory() {
                             className="h-12 w-12 shrink-0 rounded-xl bg-slate-100 object-cover"
                           />
                           <div className="min-w-[190px]">
-                            <p className="text-sm font-semibold text-slate-800">{item.name}</p>
-                            <p className="mt-0.5 text-[11px] text-slate-400">{item.sku} <span className="px-1">·</span> {item.supplier}</p>
+                            <p className="text-sm font-semibold text-[#0E532B]">{item.name}</p>
+                            <p className="mt-0.5 text-[11px] text-slate-400"><span className="text-[#0B4B8C]">{item.sku}</span> <span className="px-1">·</span> {item.supplier}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4 text-xs font-medium text-slate-600">{item.category}</td>
                       <td className="w-[185px] px-4 py-4">
                         <div className="flex items-baseline gap-1.5">
-                          <span className={`text-sm font-bold ${stockStatus === 'Out of Stock' ? 'text-[#F04E00]' : stockStatus === 'Low Stock' ? 'text-amber-700' : 'text-slate-800'}`}>{item.stock}</span>
+                          <span className="text-sm font-bold text-[#0E532B]">{item.stock}</span>
                           <span className="text-xs text-slate-500">{item.unit}</span>
                           <span className="ml-auto text-[10px] text-slate-400">/ {item.capacity}</span>
                         </div>
                         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
                           <div
-                            className={`h-full rounded-full ${stockStatus === 'Out of Stock' ? 'bg-[#F04E00]' : stockStatus === 'Low Stock' ? 'bg-amber-500' : 'bg-[#1E8E3E]'}`}
+                            className={`h-full rounded-full ${stockStatus === 'Out of Stock' || stockStatus === 'Low Stock' ? 'bg-[#F04E00]' : 'bg-[#1E8E3E]'}`}
                             style={{ width: `${progress}%` }}
                           />
                         </div>
                         <p className="mt-1.5 text-[10px] text-slate-400">Min: {item.minimum} {item.unit}</p>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${freshness === 'Fresh' ? 'bg-[#EAF5EC] text-[#0E722F]' : freshness === 'Expiring Soon' ? 'bg-amber-50 text-amber-800' : 'bg-orange-50 text-[#B53B05]'}`}>
+                        <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${freshness === 'Fresh' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'}`}>
                           {freshness === 'Fresh' ? <Leaf size={12} /> : <Clock3 size={12} />}
-                          {freshness}
+                          {t(freshness)}
                         </span>
                         <p className="mt-1.5 text-[10px] text-slate-400">
                           {item.expiryDays < 0 ? 'Expired' : item.expiryDays === 0 ? 'Expires today' : item.expiryDays === 1 ? 'Expires tomorrow' : `${freshness === 'Fresh' ? 'Fresh' : 'Expires'} ${item.expiryDays}d`}
                         </p>
                       </td>
                       <td className="px-4 py-4">
-                        <p className="whitespace-nowrap text-sm font-semibold text-slate-800">{money(item.stock * item.unitCost)}</p>
-                        <p className="mt-1 whitespace-nowrap text-[10px] text-slate-400">{money(item.unitCost)} / {item.unit}</p>
+                        <p className="whitespace-nowrap text-sm font-semibold text-[#0E532B]">{money(item.stock * item.unitCost)}</p>
+                        <p className="mt-1 whitespace-nowrap text-[10px] text-[#0E532B]">{money(item.unitCost)} / {item.unit}</p>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${stockStatus === 'In Stock' ? 'bg-[#EAF5EC] text-[#0E722F]' : stockStatus === 'Low Stock' ? 'bg-amber-50 text-amber-800' : 'bg-orange-50 text-[#B53B05]'}`}>
-                          {stockStatus}
+                        <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${stockStatus === 'In Stock' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'}`}>
+                          {t(stockStatus)}
                         </span>
                       </td>
                       <td className="px-4 py-4">
@@ -575,7 +579,7 @@ function Inventory() {
                           <button
                             type="button"
                             onClick={() => openMovementModal(item.id)}
-                            className="h-8 rounded-lg border border-slate-200 px-2.5 text-xs font-semibold text-slate-600 transition hover:border-[#1E8E3E] hover:text-[#0E532B]"
+                            className="h-8 rounded-lg border border-[#0B4B8C]/30 px-2.5 text-xs font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
                           >
                             Adjust
                           </button>
@@ -595,7 +599,7 @@ function Inventory() {
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <h2 className="text-sm font-bold text-slate-800">Recent stock movements</h2>
+                <h2 className="text-sm font-bold text-[#0E532B]">Recent stock movements</h2>
                 <p className="mt-1 text-xs text-slate-500">Audit trail of warehouse restocks and adjustments</p>
               </div>
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{movements.length} entries</span>
@@ -695,7 +699,7 @@ function Inventory() {
             </div>
             {formError && <p role="alert" className="text-xs font-medium text-[#B53B05]">{formError}</p>}
             <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={() => setModalItemId(null)} className="h-10 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button>
+              <button type="button" onClick={() => setModalItemId(null)} className="h-10 rounded-xl border border-[#0B4B8C]/30 px-4 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">Cancel</button>
               <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white hover:bg-[#0E532B]">
                 <Check size={16} /> Save movement
               </button>

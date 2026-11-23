@@ -96,14 +96,14 @@ function Footer() {
                 className="flex items-center gap-3 text-sm text-gray-200 transition hover:text-white"
               >
                 <Phone aria-hidden="true" size={16} className="shrink-0 text-brand-orange" />
-                +251 912 345 678
+                +251 962714305
               </a>
               <a
-                href="mailto:support@grocerydelivery.et"
+                href="mailto:desualegngood136@gmail.com"
                 className="flex items-center gap-3 break-all text-sm text-gray-200 transition hover:text-white"
               >
                 <Mail aria-hidden="true" size={16} className="shrink-0 text-brand-orange" />
-                support@grocerydelivery.et
+                desualegngood136@gmail.com
               </a>
               <p className="flex items-start gap-3 text-sm text-gray-200">
                 <MapPin aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-brand-orange" />

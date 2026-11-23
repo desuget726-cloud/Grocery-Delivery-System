@@ -1,4 +1,4 @@
-import { Apple, Eye, EyeOff, Globe, Leaf, LockKeyhole, Mail } from 'lucide-react'
+import { Apple, ArrowLeft, Eye, EyeOff, Globe, Leaf, LockKeyhole, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import freshBowl from '../../assets/fresh-bowl.svg'
@@ -59,7 +59,16 @@ function Login() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#143322] p-4 sm:p-6">
-      <section className="grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-2">
+      <section className="relative grid w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl md:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="absolute right-4 top-4 z-10 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+        >
+          <ArrowLeft aria-hidden="true" size={16} />
+          Back
+        </button>
+
         <div className="relative hidden min-h-[640px] overflow-hidden md:block">
           <img
             src={freshBowl}

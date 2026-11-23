@@ -15,6 +15,7 @@ import {
 import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import usePersistentState from '../../hooks/usePersistentState.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
@@ -29,10 +30,10 @@ const statusTabs = [
 
 const statusColors = {
   Placed: 'bg-orange-50 text-[#F04E00]',
-  Processing: 'bg-blue-50 text-blue-700',
-  'On The Way': 'bg-violet-50 text-violet-700',
-  Delivered: 'bg-emerald-50 text-[#1E8E3E]',
-  Canceled: 'bg-rose-50 text-rose-700',
+  Processing: 'bg-blue-50 text-[#0B4B8C]',
+  'On The Way': 'bg-blue-50 text-[#0B4B8C]',
+  Delivered: 'bg-blue-50 text-[#0B4B8C]',
+  Canceled: 'bg-orange-50 text-[#F04E00]',
 }
 
 const orderStatuses = statusTabs.slice(1).map(({ label }) => label)
@@ -161,6 +162,7 @@ const initialOrders = [
 ]
 
 function Orders() {
+  const { t } = useLanguage()
   const [orders, setOrders] = usePersistentState('admin-grocery-orders', initialOrders)
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
@@ -230,7 +232,7 @@ function Orders() {
         description="Track grocery orders, update fulfillment, and coordinate Addis Ababa deliveries."
       />
 
-      <section className="mb-6 rounded-2xl bg-[#0E532B] p-5 text-white">
+      <section className="mb-6 rounded-2xl bg-gradient-to-r from-[#0E532B] to-[#1E8E3E] p-5 text-white">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
             label="Total Orders"
@@ -263,7 +265,7 @@ function Orders() {
             label="Active Riders"
             value={riders.filter((rider) => rider.available).length}
             icon={Bike}
-            iconClass="bg-amber-400 text-amber-950"
+            iconClass="bg-[#F04E00] text-white"
             detail="available delivery staff"
           />
         </div>
@@ -293,7 +295,7 @@ function Orders() {
                     : 'bg-white text-slate-600 ring-1 ring-gray-200 hover:text-[#0E532B]'
                 }`}
               >
-                {label}
+                {t(label)}
                 <span className="ml-1.5 opacity-75">{count}</span>
               </button>
             )
@@ -336,7 +338,7 @@ function Orders() {
       <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1120px] text-left text-sm">
-            <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-slate-500">
+            <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-[#0E532B]/75">
               <tr>
                 <th scope="col" className="px-4 py-3.5 font-semibold">Order ID</th>
                 <th scope="col" className="px-4 py-3.5 font-semibold">Customer</th>
@@ -371,7 +373,7 @@ function Orders() {
                   <td className="whitespace-nowrap px-4 py-4 text-slate-600">
                     {order.items.reduce((total, item) => total + item.quantity, 0)} items
                   </td>
-                  <td className="whitespace-nowrap px-4 py-4 font-semibold text-slate-800">
+                  <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#0E532B]">
                     {formatCurrency(order.total)}
                   </td>
                   <td className="px-4 py-4">
@@ -413,7 +415,7 @@ function Orders() {
                         statusColors[order.status] ?? 'bg-slate-100 text-slate-700'
                       }`}
                     >
-                      {order.status}
+                      {t(order.status)}
                     </span>
                     <label className="sr-only" htmlFor={`status-${order.id}`}>
                       Update status for {order.id}
@@ -468,7 +470,7 @@ function Orders() {
           <div className="space-y-5">
             <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl bg-emerald-50 p-4">
               <div>
-                <p className="font-semibold text-slate-900">{selectedOrder.customerName}</p>
+                <p className="font-semibold text-[#0E532B]">{selectedOrder.customerName}</p>
                 <a
                   href={`tel:${selectedOrder.customerPhone}`}
                   className="mt-1 inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-[#1E8E3E]"
@@ -487,7 +489,7 @@ function Orders() {
             </div>
 
             <section>
-              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-[#0E532B]">
                 <PackageCheck aria-hidden="true" size={17} className="text-[#1E8E3E]" />
                 Grocery items
               </h3>
@@ -516,7 +518,7 @@ function Orders() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <section className="rounded-xl border border-gray-100 p-3">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-[#0E532B]">
                   <MapPin aria-hidden="true" size={16} className="text-[#1E8E3E]" />
                   Delivery address
                 </h3>
@@ -525,7 +527,7 @@ function Orders() {
                 </p>
               </section>
               <section className="rounded-xl border border-gray-100 p-3">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-[#0E532B]">
                   <CreditCard aria-hidden="true" size={16} className="text-[#1E8E3E]" />
                   Payment method
                 </h3>
@@ -564,7 +566,7 @@ function SummaryCardContent({ label, value, icon: Icon, iconClass, detail }) {
     <div className="flex items-center justify-between gap-3">
       <div>
         <p className="text-sm font-medium text-slate-500">{label}</p>
-        <p className="mt-1 text-2xl font-bold tracking-tight text-slate-900">{value}</p>
+        <p className="mt-1 text-2xl font-bold tracking-tight text-[#0E532B]">{value}</p>
         {detail && <p className="mt-0.5 text-xs text-slate-500">{detail}</p>}
       </div>
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>

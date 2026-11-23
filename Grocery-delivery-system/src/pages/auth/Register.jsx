@@ -176,13 +176,14 @@ function Register() {
 
       <section className="flex min-h-screen flex-col bg-white px-5 py-6 sm:px-10 sm:py-8 lg:px-12">
         <div className="flex justify-end">
-          <Link
-            to="/"
+          <button
+            type="button"
+            onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-sm font-medium text-slate-500 transition hover:text-[#4D7C0F]"
           >
             <ArrowLeft aria-hidden="true" size={16} />
-            Back to Home
-          </Link>
+            Back
+          </button>
         </div>
 
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-8">

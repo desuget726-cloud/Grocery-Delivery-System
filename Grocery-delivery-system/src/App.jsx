@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { CartProvider } from './context/CartContext.jsx'
+import { LanguageProvider } from './context/LanguageContext.jsx'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import CustomerLayout from './layouts/CustomerLayout.jsx'
 import DeliveryLayout from './layouts/DeliveryLayout.jsx'
@@ -17,6 +18,8 @@ import AdminProducts from './pages/admin/Products.jsx'
 import AdminReports from './pages/admin/Reports.jsx'
 import AdminReviews from './pages/admin/Reviews.jsx'
 import AdminSettings from './pages/admin/Settings.jsx'
+import AdminSupport from './pages/admin/Support.jsx'
+import AdminNotifications from './pages/admin/Notifications.jsx'
 import AssignedOrders from './pages/delivery/AssignedOrders.jsx'
 import DeliveryDetails from './pages/delivery/DeliveryDetails.jsx'
 import DeliveryDashboard from './pages/delivery/Dashboard.jsx'
@@ -45,95 +48,100 @@ function NotFound() {
 
 function App() {
   return (
-    <CartProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
+    <LanguageProvider>
+      <CartProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="login" element={<LoginPage />} />
+              <Route path="register" element={<RegisterPage />} />
 
-            <Route path="/" element={<CustomerLayout />}>
-              <Route index element={<Home />} />
-              <Route path="shop" element={<Shop />} />
-              <Route path="products/:productId" element={<ProductDetails />} />
-              <Route path="cart" element={<Cart />} />
+              <Route path="/" element={<CustomerLayout />}>
+                <Route index element={<Home />} />
+                <Route path="shop" element={<Shop />} />
+                <Route path="products/:productId" element={<ProductDetails />} />
+                <Route path="cart" element={<Cart />} />
+                <Route
+                  path="checkout"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <Checkout />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="my-orders"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <MyOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="my-orders/:orderId"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <MyOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="profile"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer']}>
+                      <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+              </Route>
+
               <Route
-                path="checkout"
+                path="admin"
                 element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <Checkout />
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <AdminLayout />
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route index element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="promotions" element={<AdminCoupons />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="payments" element={<AdminPayments />} />
+                <Route path="customers" element={<AdminCustomers />} />
+                <Route path="delivery-staff" element={<DeliveryStaff />} />
+                <Route path="inventory" element={<AdminInventory />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="reviews" element={<AdminReviews />} />
+                <Route path="settings" element={<AdminSettings />} />
+                <Route path="support" element={<AdminSupport />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+              </Route>
+
               <Route
-                path="my-orders"
+                path="delivery"
                 element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <MyOrders />
+                  <ProtectedRoute allowedRoles={['delivery']}>
+                    <DeliveryLayout />
                   </ProtectedRoute>
                 }
-              />
-              <Route
-                path="my-orders/:orderId"
-                element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <MyOrders />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="profile"
-                element={
-                  <ProtectedRoute allowedRoles={['customer']}>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-            </Route>
+              >
+                <Route index element={<DeliveryDashboard />} />
+                <Route path="dashboard" element={<DeliveryDashboard />} />
+                <Route path="assigned-orders" element={<AssignedOrders />} />
+                <Route path="details/:orderId" element={<DeliveryDetails />} />
+                <Route path="orders/:orderId" element={<DeliveryDetails />} />
+                <Route path="history" element={<DeliveryHistory />} />
+              </Route>
 
-            <Route
-              path="admin"
-              element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="categories" element={<AdminCategories />} />
-              <Route path="promotions" element={<AdminCoupons />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="payments" element={<AdminPayments />} />
-              <Route path="customers" element={<AdminCustomers />} />
-              <Route path="delivery-staff" element={<DeliveryStaff />} />
-              <Route path="inventory" element={<AdminInventory />} />
-              <Route path="reports" element={<AdminReports />} />
-              <Route path="reviews" element={<AdminReviews />} />
-              <Route path="settings" element={<AdminSettings />} />
-            </Route>
-
-            <Route
-              path="delivery"
-              element={
-                <ProtectedRoute allowedRoles={['delivery']}>
-                  <DeliveryLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<DeliveryDashboard />} />
-              <Route path="dashboard" element={<DeliveryDashboard />} />
-              <Route path="assigned-orders" element={<AssignedOrders />} />
-              <Route path="orders/:orderId" element={<DeliveryDetails />} />
-              <Route path="history" element={<DeliveryHistory />} />
-            </Route>
-
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </CartProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </CartProvider>
+    </LanguageProvider>
   )
 }
 

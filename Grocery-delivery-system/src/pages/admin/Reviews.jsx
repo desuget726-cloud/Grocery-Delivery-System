@@ -12,6 +12,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import usePersistentState from '../../hooks/usePersistentState.js'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 
 const daysAgo = (days) => {
   const date = new Date()
@@ -158,7 +159,7 @@ function StarRating({ rating, size = 16 }) {
           key={star}
           aria-hidden="true"
           size={size}
-          className={star <= rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-100 text-slate-200'}
+          className={star <= rating ? 'fill-[#F04E00] text-[#F04E00]' : 'fill-slate-100 text-slate-200'}
         />
       ))}
     </span>
@@ -166,6 +167,7 @@ function StarRating({ rating, size = 16 }) {
 }
 
 function Reviews() {
+  const { t } = useLanguage()
   const [reviews, setReviews] = usePersistentState('admin-customer-reviews', initialReviews)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -240,12 +242,15 @@ function Reviews() {
   return (
     <div className="mx-auto max-w-[1440px]">
       <header className="mb-6">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#1E8E3E]">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]">
           <span className="h-2 w-2 rounded-full bg-[#1E8E3E]" />
-          GROCERY DELIVERY <span className="text-slate-300">/</span> CUSTOMER VOICE
+          <span className="font-bold text-[#0E532B]">GROCERY</span>{' '}
+          <span className="font-bold text-[#F04E00]">DELIVERY</span>{' '}
+          <span className="font-bold text-[#0B4B8C]">SYSTEM</span>
+          <span className="text-slate-300">/</span> CUSTOMER VOICE
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-[#0E532B] sm:text-[30px]">
-          Customer Reviews &amp; Ratings
+          {t('customerReviewsRatings')}
         </h1>
         <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
           Monitor product freshness feedback, delivery speed ratings, moderate pending reviews, and reply to buyers
@@ -253,7 +258,7 @@ function Reviews() {
       </header>
 
       <section aria-label="Ratings overview" className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-5 sm:p-6">
+        <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm lg:col-span-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-slate-600">Overall rating</p>
@@ -264,8 +269,8 @@ function Reviews() {
               <div className="mt-2"><StarRating rating={5} size={19} /></div>
               <p className="mt-2 text-xs text-slate-500">Based on 248 verified reviews</p>
             </div>
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
-              <Star size={21} className="fill-amber-400 text-amber-400" />
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-[#F04E00]">
+              <Star size={21} className="fill-[#F04E00] text-[#F04E00]" />
             </span>
           </div>
           <div className="mt-5 space-y-2.5">
@@ -279,7 +284,7 @@ function Reviews() {
               <div key={stars} className="flex items-center gap-2.5 text-xs">
                 <span className="w-6 shrink-0 font-semibold text-slate-600">{stars}★</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${percentage}%` }} />
+                  <div className="h-full rounded-full bg-[#F04E00]" style={{ width: `${percentage}%` }} />
                 </div>
                 <span className="w-8 shrink-0 text-right text-slate-500">{percentage}%</span>
               </div>
@@ -288,27 +293,27 @@ function Reviews() {
         </article>
 
         <div className="grid grid-cols-2 gap-4 lg:col-span-7">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-slate-500 sm:text-sm">Total Reviews</span>
               <span className="rounded-xl bg-[#EAF1F9] p-2 text-[#0B4B8C]"><MessageSquareText size={17} /></span>
             </div>
-            <p className="mt-4 text-3xl font-bold tracking-tight text-slate-900">{totalReviews}</p>
+            <p className="mt-4 text-3xl font-bold tracking-tight text-[#0E532B]">{totalReviews}</p>
             <p className="mt-1 text-xs text-slate-500">Verified customer feedback</p>
             <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#0B4B8C]"><ThumbsUp size={13} /> All time</div>
           </article>
           <button
             type="button"
             onClick={() => setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending')}
-            className={`rounded-2xl border p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'Pending' ? 'border-amber-300 bg-amber-100' : 'border-amber-200 bg-amber-50 hover:bg-amber-100'}`}
+            className={`rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'Pending' ? 'ring-2 ring-[#F04E00]/20' : 'hover:border-orange-200'}`}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-amber-800 sm:text-sm">Pending Approval</span>
-              <span className="rounded-xl bg-white/80 p-2 text-amber-700"><MessageSquareText size={17} /></span>
+              <span className="text-xs font-semibold text-[#F04E00] sm:text-sm">Pending Approval</span>
+              <span className="rounded-xl bg-orange-50 p-2 text-[#F04E00]"><MessageSquareText size={17} /></span>
             </div>
-            <p className="mt-4 text-3xl font-bold tracking-tight text-amber-900">{pendingCount}</p>
-            <p className="mt-1 text-xs text-amber-800/75">Awaiting moderation</p>
-            <div className="mt-4 text-[11px] font-semibold text-amber-800">Review pending feedback →</div>
+            <p className="mt-4 text-3xl font-bold tracking-tight text-[#0E532B]">{pendingCount}</p>
+            <p className="mt-1 text-xs text-slate-500">Awaiting moderation</p>
+            <div className="mt-4 text-[11px] font-semibold text-[#F04E00]">Review pending feedback →</div>
           </button>
           <button
             type="button"
@@ -316,22 +321,22 @@ function Reviews() {
               setRatingFilter('1–2 Stars')
               setStatusFilter('All')
             }}
-            className="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-left shadow-sm transition hover:bg-orange-100 sm:p-5"
+            className="rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition hover:border-orange-200 sm:p-5"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#B53B05] sm:text-sm">Low Rating Alerts (1–2★)</span>
+              <span className="text-xs font-semibold text-[#F04E00] sm:text-sm">Low Rating Alerts (1–2★)</span>
               <span className="rounded-xl bg-white/80 p-2 text-[#F04E00]"><Star size={17} className="fill-orange-200" /></span>
             </div>
-            <p className="mt-4 text-3xl font-bold tracking-tight text-[#B53B05]">{lowRatingCount}</p>
-            <p className="mt-1 text-xs text-[#B53B05]/75">Needs a thoughtful response</p>
-            <div className="mt-4 text-[11px] font-semibold text-[#B53B05]">View low ratings →</div>
+            <p className="mt-4 text-3xl font-bold tracking-tight text-[#0E532B]">{lowRatingCount}</p>
+            <p className="mt-1 text-xs text-slate-500">Needs a thoughtful response</p>
+            <div className="mt-4 text-[11px] font-semibold text-[#F04E00]">View low ratings →</div>
           </button>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs font-semibold text-slate-500 sm:text-sm">Delivery Experience Avg</span>
               <span className="rounded-xl bg-[#EAF5EC] p-2 text-[#1E8E3E]"><CheckCheck size={17} /></span>
             </div>
-            <p className="mt-4 flex items-baseline gap-1 text-3xl font-bold tracking-tight text-[#0E532B]">4.9 <span className="text-base text-amber-400">★</span></p>
+            <p className="mt-4 flex items-baseline gap-1 text-3xl font-bold tracking-tight text-[#0E532B]">4.9 <span className="text-base text-[#F04E00]">★</span></p>
             <p className="mt-1 text-xs text-slate-500">Rider speed &amp; care</p>
             <div className="mt-4 text-[11px] font-semibold text-[#1E8E3E]">Excellent customer experience</div>
           </article>
@@ -356,17 +361,17 @@ function Reviews() {
               {reviewStatusFilters.map((filter) => {
                 const label =
                   filter === 'Pending'
-                    ? `Pending (${pendingCount})`
+                    ? `${t(filter)} (${pendingCount})`
                     : filter === 'Needs Reply'
-                      ? `Needs Reply (${needsReplyCount})`
-                      : filter
+                      ? `${t('needsReply')} (${needsReplyCount})`
+                      : t(filter)
                 return (
                   <button
                     type="button"
                     key={filter}
                     onClick={() => setStatusFilter(filter)}
                     aria-pressed={statusFilter === filter}
-                    className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === filter ? 'bg-[#0E532B] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                    className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === filter ? 'bg-[#1E8E3E] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                   >
                     {label}
                   </button>
@@ -390,7 +395,7 @@ function Reviews() {
 
       <section aria-label="Customer review feed" className="space-y-4">
         {visibleReviews.map((review) => (
-          <article key={review.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
+          <article key={review.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
             <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex min-w-0 items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EAF5EC] text-xs font-bold text-[#0E532B]">
@@ -398,22 +403,22 @@ function Reviews() {
                 </span>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-sm font-bold text-slate-800">{review.customer}</h2>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#EAF5EC] px-2 py-0.5 text-[10px] font-semibold text-[#0E722F]">
+                    <h2 className="text-sm font-bold text-[#0E532B]">{review.customer}</h2>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[#1E8E3E]">
                       <Check size={11} /> Verified Purchase
                     </span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400">
-                    <span>Order <span className="font-semibold text-slate-600">{review.orderId}</span></span>
+                    <span>Order <span className="font-semibold text-[#0B4B8C]">{review.orderId}</span></span>
                     <span aria-hidden="true">·</span>
                     <time dateTime={review.date}>{formatReviewDate(review.date)}</time>
                     <span aria-hidden="true">·</span>
-                    <span className="text-slate-400">{review.id}</span>
+                    <span className="text-[#0B4B8C]">{review.id}</span>
                   </div>
                 </div>
               </div>
-              <span className={`self-start rounded-full px-2.5 py-1 text-[11px] font-semibold ${review.status === 'Pending' ? 'bg-amber-50 text-amber-800' : review.status === 'Published' ? 'bg-[#EAF5EC] text-[#0E722F]' : 'bg-slate-100 text-slate-600'}`}>
-                {review.status}
+              <span className={`self-start rounded-full px-2.5 py-1 text-[11px] font-semibold ${review.status === 'Pending' ? 'bg-orange-50 text-[#F04E00]' : review.status === 'Published' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-slate-100 text-slate-600'}`}>
+                {t(review.status)}
               </span>
             </div>
 
@@ -481,7 +486,7 @@ function Reviews() {
                 <button
                   type="button"
                   onClick={() => setReplyingTo(replyingTo === review.id ? null : review.id)}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-[#1E8E3E] hover:text-[#0E532B]"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#0B4B8C]/30 px-3 text-xs font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
                 >
                   <MessageSquareText size={14} /> {replyingTo === review.id ? 'Close Reply' : review.reply ? 'Reply Again' : 'Reply'}
                 </button>
@@ -508,7 +513,7 @@ function Reviews() {
                   type="button"
                   onClick={() => deleteReview(review)}
                   aria-label={`Delete review from ${review.customer}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-orange-50 hover:text-[#F04E00]"
                 >
                   <Trash2 size={15} />
                 </button>

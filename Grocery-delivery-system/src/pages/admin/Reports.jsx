@@ -1,11 +1,13 @@
 import { Download, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AdminPageHeader, StatCard, StatusBadge } from '../../components/admin/AdminUI.jsx'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import { loadOrders, products as initialProducts } from '../../data/mockData.js'
 import usePersistentState from '../../hooks/usePersistentState.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 function Reports() {
+  const { t } = useLanguage()
   const [orders] = usePersistentState('grocery-orders', loadOrders)
   const [products] = usePersistentState('admin-products', initialProducts)
   const todayDate = new Date()
@@ -94,14 +96,14 @@ function Reports() {
           <button
             type="button"
             onClick={exportReport}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
           >
             <Download aria-hidden="true" size={17} /> Export CSV
           </button>
         }
       />
 
-      <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
+      <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
         <label className="text-sm font-medium text-slate-700">
           From
           <input
@@ -109,7 +111,7 @@ function Reports() {
             value={startDate}
             max={endDate}
             onChange={(event) => setStartDate(event.target.value)}
-            className="mt-1.5 block rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            className="mt-1.5 block rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1E8E3E]"
           />
         </label>
         <label className="text-sm font-medium text-slate-700">
@@ -120,7 +122,7 @@ function Reports() {
             min={startDate}
             max={today}
             onChange={(event) => setEndDate(event.target.value)}
-            className="mt-1.5 block rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+            className="mt-1.5 block rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-[#1E8E3E]"
           />
         </label>
         <p className="text-sm text-slate-500 sm:ml-auto">
@@ -135,16 +137,16 @@ function Reports() {
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="font-bold text-slate-900">Sales over time</h2>
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="font-bold text-[#0E532B]">{t('salesOverTime')}</h2>
           <p className="mt-1 text-sm text-slate-500">Order revenue by delivery date</p>
           {dailySales.length > 0 ? (
             <div className="mt-7 flex h-56 items-end gap-3 overflow-x-auto border-b border-l border-slate-100 px-3">
               {dailySales.map(({ date, amount }) => (
                 <div key={date} className="flex h-full min-w-12 flex-1 flex-col items-center justify-end gap-2">
-                  <span className="text-[10px] text-slate-500">{formatCurrency(amount)}</span>
+                  <span className="text-[10px] font-semibold text-[#0E532B]">{formatCurrency(amount)}</span>
                   <div
-                    className="w-full max-w-14 rounded-t-lg bg-emerald-500"
+                    className="w-full max-w-14 rounded-t-lg bg-[#1E8E3E]"
                     style={{ height: `${Math.max(4, (amount / chartMax) * 70)}%` }}
                     title={`${date}: ${formatCurrency(amount)}`}
                   />
@@ -159,8 +161,8 @@ function Reports() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <h2 className="font-bold text-slate-900">Category performance</h2>
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+          <h2 className="font-bold text-[#0E532B]">{t('categoryPerformance')}</h2>
           <p className="mt-1 text-sm text-slate-500">Sales by grocery category</p>
           {categoryPerformance.length > 0 ? (
             <div className="mt-5 space-y-4">
@@ -168,11 +170,11 @@ function Reports() {
                 <div key={category}>
                   <div className="mb-1.5 flex justify-between gap-3 text-sm">
                     <span className="font-medium text-slate-700">{category}</span>
-                    <span className="text-slate-500">{formatCurrency(sales)} · {units} units</span>
+                    <span className="font-semibold text-[#0E532B]">{formatCurrency(sales)} · {units} units</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className="h-full rounded-full bg-emerald-500"
+                      className="h-full rounded-full bg-[#1E8E3E]"
                       style={{ width: `${Math.max(4, (sales / Math.max(1, ...categoryPerformance.map((item) => item.sales))) * 100)}%` }}
                     />
                   </div>
@@ -187,14 +189,14 @@ function Reports() {
         </section>
       </div>
 
-      <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="font-bold text-slate-900">Delivery efficiency</h2>
+          <h2 className="font-bold text-[#0E532B]">{t('deliveryEfficiency')}</h2>
           <p className="mt-1 text-sm text-slate-500">Fulfillment status in the selected period</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-[#0E532B]/75">
               <tr><th className="px-5 py-3 font-semibold">Status</th><th className="px-5 py-3 font-semibold">Orders</th><th className="px-5 py-3 font-semibold">Share</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

@@ -16,19 +16,22 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
+import { useLanguage } from '../context/LanguageContext.jsx'
+import LanguageSwitcher from './LanguageSwitcher.jsx'
 import SearchBar from './SearchBar.jsx'
 
 const navigation = [
-  { label: 'Home', to: '/', end: true, icon: Home },
-  { label: 'Shop', to: '/shop' },
-  { label: 'Categories', to: '/shop#categories' },
-  { label: 'My Orders', to: '/my-orders' },
-  { label: 'Offers', to: '/shop?offers=true', badge: 'Hot' },
-  { label: 'About Us', to: '/about' },
-  { label: 'Contact Us', to: '/contact' },
+  { translationKey: 'home', to: '/', end: true, icon: Home },
+  { translationKey: 'shop', to: '/shop' },
+  { translationKey: 'categories', to: '/shop#categories' },
+  { translationKey: 'myOrders', to: '/my-orders' },
+  { translationKey: 'offers', to: '/shop?offers=true', badge: 'Hot' },
+  { translationKey: 'aboutUs', to: '/about' },
+  { translationKey: 'contactUs', to: '/contact' },
 ]
 
 function Navbar() {
+  const { t } = useLanguage()
   const { totalItems } = useCart()
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
@@ -43,12 +46,12 @@ function Navbar() {
 
   const renderNavigation = (mobile = false) => (
     <nav
-      aria-label="Main navigation"
+      aria-label={t('mainMenu')}
       className={mobile ? 'flex flex-col gap-1 py-2' : 'flex items-center justify-center gap-1'}
     >
-      {navigation.map(({ label, to, end, icon: Icon, badge }) => (
+      {navigation.map(({ translationKey, to, end, icon: Icon, badge }) => (
         <NavLink
-          key={label}
+          key={translationKey}
           to={to}
           end={end}
           onClick={() => setMobileMenuOpen(false)}
@@ -61,7 +64,7 @@ function Navbar() {
           }
         >
           {Icon && <Icon aria-hidden="true" size={16} />}
-          <span>{label}</span>
+          <span>{t(translationKey)}</span>
           {badge && (
             <span className="rounded-full bg-[#F04E00] px-1.5 py-0.5 text-[9px] font-bold uppercase leading-none text-white">
               {badge}
@@ -79,7 +82,8 @@ function Navbar() {
           <p className="flex items-center gap-2">
             <Truck aria-hidden="true" size={15} className="text-[#F04E00]" />
             <span>
-              Free delivery on orders over <strong className="text-[#FF9B70]">500 ETB</strong>
+              {t('freeDeliveryOver')}{' '}
+              <strong className="text-[#FF9B70]">500 ETB</strong>
             </span>
           </p>
           <div className="hidden items-center gap-5 lg:flex">
@@ -93,6 +97,7 @@ function Navbar() {
               <MapPin aria-hidden="true" size={13} /> Addis Ababa, Ethiopia
             </span>
           </div>
+          <LanguageSwitcher className="shrink-0" />
         </div>
       </div>
 
@@ -129,7 +134,7 @@ function Navbar() {
                   <span className="max-w-20 truncate text-xs sm:max-w-28 sm:text-sm">{user.fullName}</span>
                   {user.role === 'admin' && (
                     <span className="rounded-full bg-[#F04E00]/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[#F04E00]">
-                      Admin
+                      {t('adminRole')}
                     </span>
                   )}
                   <ChevronDown aria-hidden="true" size={15} className="hidden sm:block" />
@@ -146,7 +151,7 @@ function Navbar() {
                         onClick={() => setAccountMenuOpen(false)}
                         className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50"
                       >
-                        Admin Dashboard
+                        {t('dashboard')}
                       </Link>
                     )}
                     <Link
@@ -155,7 +160,7 @@ function Navbar() {
                       onClick={() => setAccountMenuOpen(false)}
                       className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
                     >
-                      Profile
+                      {t('profile')}
                     </Link>
                     <Link
                       role="menuitem"
@@ -163,7 +168,7 @@ function Navbar() {
                       onClick={() => setAccountMenuOpen(false)}
                       className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
                     >
-                      My Orders
+                      {t('myOrders')}
                     </Link>
                     <button
                       role="menuitem"
@@ -171,7 +176,7 @@ function Navbar() {
                       onClick={handleLogout}
                       className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"
                     >
-                      Logout
+                      {t('logout')}
                     </button>
                   </div>
                 )}
@@ -182,7 +187,7 @@ function Navbar() {
                 className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50 sm:gap-2 sm:px-3"
               >
                 <UserRound aria-hidden="true" size={19} />
-                <span className="hidden sm:inline">Login / Register</span>
+                <span className="hidden sm:inline">{t('loginRegister')}</span>
               </Link>
             )}
 
@@ -194,12 +199,12 @@ function Navbar() {
                 <Heart aria-hidden="true" size={20} />
                 <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-[#F04E00]" />
               </span>
-              <span className="hidden xl:inline">Wishlist</span>
+              <span className="hidden xl:inline">{t('wishlist')}</span>
             </Link>
 
             <Link
               to="/cart"
-              aria-label={`Cart, ${totalItems} ${totalItems === 1 ? 'item' : 'items'}`}
+              aria-label={`${t('cart')}, ${totalItems} ${totalItems === 1 ? 'item' : 'items'}`}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50 sm:gap-2 sm:px-3"
             >
               <span className="relative">
@@ -208,7 +213,7 @@ function Navbar() {
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               </span>
-              <span className="hidden xl:inline">Cart</span>
+              <span className="hidden xl:inline">{t('cart')}</span>
             </Link>
           </div>
         </div>
@@ -218,7 +223,7 @@ function Navbar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex min-h-11 items-center justify-between md:justify-center">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#0E532B] md:hidden">
-              Browse
+              {t('shop')}
             </span>
             <div className="hidden w-full md:block">{renderNavigation()}</div>
             <button

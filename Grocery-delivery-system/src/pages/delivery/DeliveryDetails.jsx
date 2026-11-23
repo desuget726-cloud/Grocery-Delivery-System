@@ -1,225 +1,334 @@
-import { ArrowLeft, Check, CheckCircle2, MapPin, Navigation, PackageCheck, Phone } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  MapPin,
+  Navigation,
+  Phone,
+  PackageCheck,
+  WalletCards,
+  CircleDollarSign,
+} from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { StatusBadge } from '../../components/admin/AdminUI.jsx'
-import { loadOrders } from '../../data/mockData.js'
-import usePersistentState from '../../hooks/usePersistentState.js'
-import formatCurrency from '../../utils/formatCurrency.js'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useLanguage } from '../../context/LanguageContext.jsx'
+
+const mockOrder = {
+  id: 'GDS-2538',
+  status: 'Out for Delivery',
+  customerName: 'Abebe Kebede',
+  customerPhone: '+251 911 234 567',
+  address: 'Bole Medhanialem, Near Edna Mall, Addis Ababa',
+  distance: '2.4 km',
+  eta: '10 mins',
+  paymentMethod: 'Cash on Delivery',
+  amount: '680.00',
+  items: [
+    { id: 'avocados', name: 'Fresh Hass Avocados', unit: '2 kg' },
+    { id: 'milk', name: 'Farm Fresh Milk', unit: '2 L' },
+    { id: 'teff', name: 'White Teff Flour', unit: '5 kg' },
+  ],
+}
+
+const progressSteps = ['Accepted', 'Picked Up', 'Out for Delivery', 'Delivered']
 
 function DeliveryDetails() {
+  const { t } = useLanguage()
   const { orderId } = useParams()
-  const [orders, setOrders] = usePersistentState('grocery-orders', loadOrders)
+  const navigate = useNavigate()
   const [checkedItems, setCheckedItems] = useState([])
-  const [deliveryNote, setDeliveryNote] = useState('')
   const [otp, setOtp] = useState('')
-  const order = orders.find((item) => item.id === orderId)
+  const [deliveryNote, setDeliveryNote] = useState('')
+  const [otpError, setOtpError] = useState('')
+  const [success, setSuccess] = useState(false)
 
-  if (!order) {
-    return (
-      <section className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Delivery not found</h1>
-        <Link to="/delivery/assigned-orders" className="mt-4 inline-block font-semibold text-emerald-700">
-          Return to assigned orders
-        </Link>
-      </section>
-    )
-  }
+  const order =
+    orderId === 'GDS-2539'
+      ? {
+          ...mockOrder,
+          id: 'GDS-2539',
+          status: 'Ready for Pickup',
+          customerName: 'Selam Tesfaye',
+          customerPhone: '+251 911 345 678',
+          address: 'Guinea Conakry Street, Kazanchis, Addis Ababa',
+          distance: '3.1 km',
+          eta: '15 mins',
+          paymentMethod: 'Telebirr',
+          amount: '1240.00',
+        }
+      : orderId && orderId !== 'GDS-2538'
+        ? {
+            ...mockOrder,
+            id: orderId,
+            status: orderId === 'GDS-2540' ? 'Out for Delivery' : 'Ready for Pickup',
+            customerName: orderId === 'GDS-2540' ? 'Yared Lemma' : 'Meron Assefa',
+            customerPhone:
+              orderId === 'GDS-2540' ? '+251 922 456 789' : '+251 933 567 890',
+            address:
+              orderId === 'GDS-2540'
+                ? 'Sunshine Real Estate, Sarbet, Addis Ababa'
+                : 'Around Megenagna Square, Addis Ababa',
+            distance: orderId === 'GDS-2540' ? '4.8 km' : '5.3 km',
+            eta: orderId === 'GDS-2540' ? '22 mins' : '25 mins',
+            paymentMethod: orderId === 'GDS-2540' ? 'Cash on Delivery' : 'Telebirr',
+            amount: orderId === 'GDS-2540' ? '920.00' : '840.00',
+          }
+        : mockOrder
 
-  const isDelivered = order.status === 'Delivered'
-  const isCancelled = order.status === 'Cancelled'
-  const isOutForDelivery = order.status === 'Out for Delivery'
-  const updateDeliveryStatus = () => {
-    const now = new Date().toISOString()
-    setOrders((current) =>
-      current.map((item) =>
-        item.id === order.id
-          ? isOutForDelivery
-            ? {
-                ...item,
-                status: 'Delivered',
-                deliveredAt: now,
-                deliveryEarnings: item.deliveryEarnings || 8.5,
-                deliveryNote: deliveryNote.trim(),
-                deliveryOtp: otp.trim(),
-              }
-            : { ...item, status: 'Out for Delivery', pickedUpAt: now }
-          : item,
-      ),
-    )
+  const currentStep =
+    order.status === 'Accepted'
+      ? 0
+      : order.status === 'Ready for Pickup'
+        ? 1
+        : order.status === 'Out for Delivery'
+          ? 2
+          : 3
+
+  const verifyAndDeliver = () => {
+    if (otp !== '1234') {
+      setOtpError('Enter the demo OTP 1234 to verify this delivery.')
+      return
+    }
+    setOtpError('')
+    setSuccess(true)
+    window.setTimeout(() => navigate('/delivery/history'), 1200)
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 pb-24 sm:px-6 lg:px-8">
       <Link
         to="/delivery/assigned-orders"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700"
+        className="inline-flex items-center gap-2 text-sm font-bold text-[#0E532B]"
       >
-        <ArrowLeft aria-hidden="true" size={17} /> Assigned orders
+        <ArrowLeft aria-hidden="true" size={17} /> {t('assignedDeliveries')}
       </Link>
 
-      <header className="flex items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Delivery {order.id}
-          </p>
-          <h1 className="mt-1 text-xl font-bold text-slate-900">
-            {order.customerName || 'Customer'}
-          </h1>
+      <header className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+              {t('delivery')}
+            </p>
+            <h1 className="mt-1 text-xl font-extrabold text-[#0B4B8C]">{order.id}</h1>
+          </div>
+          <span className="rounded-full bg-[#0B4B8C]/10 px-3 py-1.5 text-xs font-bold text-[#0B4B8C]">
+            {t(order.status)}
+          </span>
         </div>
-        <StatusBadge status={order.status} />
+
+        <ol className="mt-5 grid grid-cols-4" aria-label="Delivery progress">
+          {progressSteps.map((step, index) => (
+            <li key={step} className="relative flex flex-col items-center text-center">
+              {index < progressSteps.length - 1 && (
+                <span
+                  className={`absolute left-1/2 top-3 h-0.5 w-full ${
+                    index < currentStep ? 'bg-[#1E8E3E]' : 'bg-slate-200'
+                  }`}
+                />
+              )}
+              <span
+                className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 ${
+                  index <= currentStep
+                    ? 'border-[#1E8E3E] bg-[#1E8E3E] text-white'
+                    : 'border-slate-300 bg-white text-slate-300'
+                }`}
+              >
+                {index < currentStep ? <Check aria-hidden="true" size={13} /> : index + 1}
+              </span>
+              <span
+                className={`mt-2 text-[10px] font-bold sm:text-xs ${
+                  index <= currentStep ? 'text-[#0E532B]' : 'text-slate-400'
+                }`}
+              >
+                {t(step)}
+              </span>
+            </li>
+          ))}
+        </ol>
       </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-bold text-slate-900">Customer</h2>
-            <p className="mt-1 text-sm text-slate-600">{order.customerName || 'Customer'}</p>
-            <p className="mt-1 text-sm text-slate-500">{order.customerPhone || 'Phone not provided'}</p>
+      <section className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <h2 className="font-extrabold text-slate-900">
+            {t('customerNavigation')}
+          </h2>
+          <div className="mt-4 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-bold text-slate-900">{order.customerName}</p>
+              <p className="mt-1 text-sm font-medium text-slate-500">{order.customerPhone}</p>
+            </div>
+            <a
+              href={`tel:${order.customerPhone.replaceAll(' ', '')}`}
+              aria-label={`Call ${order.customerName}`}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-[#0B4B8C]/10 text-[#0B4B8C]"
+            >
+              <Phone aria-hidden="true" size={19} />
+            </a>
           </div>
-          <a
-            href={`tel:${order.customerPhone || ''}`}
-            aria-label={`Call ${order.customerName || 'customer'}`}
-            aria-disabled={!order.customerPhone}
-            className={`flex h-12 w-12 items-center justify-center rounded-full ${
-              order.customerPhone
-                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
-                : 'pointer-events-none bg-slate-100 text-slate-400'
-            }`}
-          >
-            <Phone aria-hidden="true" size={20} />
-          </a>
-        </div>
-      </section>
+          <div className="mt-4 flex items-start gap-2 text-sm text-slate-700">
+            <MapPin aria-hidden="true" size={18} className="mt-0.5 shrink-0 text-[#F04E00]" />
+            {order.address}
+          </div>
+        </article>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div className="flex items-start gap-3 p-5">
-          <MapPin aria-hidden="true" size={20} className="mt-0.5 shrink-0 text-emerald-700" />
-          <div>
-            <h2 className="font-bold text-slate-900">Delivery address</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              {order.deliveryAddress || 'Address not provided'}
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address)}`}
+          target="_blank"
+          rel="noreferrer"
+          className="relative flex min-h-44 overflow-hidden rounded-2xl border border-[#0B4B8C]/10 bg-[#0B4B8C]/5 p-5"
+        >
+          <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(30deg,#0B4B8C_12%,transparent_12.5%,transparent_87%,#0B4B8C_87.5%),linear-gradient(150deg,#0B4B8C_12%,transparent_12.5%,transparent_87%,#0B4B8C_87.5%)] [background-size:48px 84px]" />
+          <div className="relative m-auto text-center">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#0B4B8C] text-white shadow-lg">
+              <Navigation aria-hidden="true" size={22} />
+            </span>
+            <p className="mt-3 font-extrabold text-[#0B4B8C]">{order.distance} • Est. {order.eta}</p>
+            <p className="mt-1 text-xs font-bold text-slate-500">
+              {t('openRouteInMaps')}
             </p>
           </div>
-        </div>
-        <div className="flex h-36 items-center justify-center border-t border-slate-100 bg-slate-100">
-          <div className="text-center text-slate-500">
-            <Navigation aria-hidden="true" size={25} className="mx-auto text-emerald-700" />
-            <p className="mt-2 text-sm font-medium">Map preview</p>
-            <p className="mt-1 text-xs">{order.distance || order.deliveryAddress}</p>
-          </div>
-        </div>
+        </a>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex items-center justify-between gap-3">
+      {order.paymentMethod === 'Cash on Delivery' ? (
+        <section className="flex items-center gap-3 rounded-2xl bg-[#F04E00]/10 p-5 text-[#F04E00]">
+          <WalletCards aria-hidden="true" size={28} />
           <div>
-            <h2 className="font-bold text-slate-900">Verify grocery items</h2>
-            <p className="mt-1 text-sm text-slate-500">{order.items.length} items in this order</p>
+            <p className="text-xs font-bold uppercase tracking-wide">
+              {t('paymentCollection')}
+            </p>
+            <p className="mt-1 font-extrabold">
+              {t('collectCashFromCustomer')} {order.amount} ETB
+            </p>
           </div>
-          <PackageCheck aria-hidden="true" size={21} className="text-emerald-700" />
-        </div>
-        <ul className="mt-3 divide-y divide-slate-100">
-          {order.items.map((item) => {
-            const checked = checkedItems.includes(item.id)
-            return (
-              <li key={item.id} className="flex items-center gap-3 py-3">
-                <button
-                  type="button"
-                  aria-label={`${checked ? 'Uncheck' : 'Verify'} ${item.name}`}
-                  aria-pressed={checked}
-                  onClick={() =>
-                    setCheckedItems((current) =>
-                      checked
-                        ? current.filter((id) => id !== item.id)
-                        : [...current, item.id],
-                    )
-                  }
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
-                    checked
-                      ? 'border-emerald-600 bg-emerald-600 text-white'
-                      : 'border-slate-300 bg-white text-transparent'
-                  }`}
-                >
-                  <Check aria-hidden="true" size={15} />
-                </button>
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-medium ${checked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                    {item.name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500">{item.unit}</p>
-                </div>
-                <span className="text-sm font-semibold text-slate-700">× {item.quantity}</span>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <div className="flex justify-between text-sm text-slate-600">
-          <span>Order total</span>
-          <span className="font-bold text-slate-900">{formatCurrency(order.total)}</span>
-        </div>
-        {order.paymentMethod === 'Cash on Delivery' && (
-          <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-            Collect {formatCurrency(order.total)} from the customer.
-          </p>
-        )}
-      </section>
-
-      {!isDelivered && !isCancelled && (
-        <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5">
-          {isOutForDelivery && (
-            <>
-              <label className="block text-sm font-medium text-slate-700">
-                Delivery note <span className="font-normal text-slate-400">(optional)</span>
-                <textarea
-                  value={deliveryNote}
-                  onChange={(event) => setDeliveryNote(event.target.value)}
-                  rows="2"
-                  placeholder="Add a note about this delivery..."
-                  className="mt-1.5 w-full resize-y rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-500"
-                />
-              </label>
-              <label className="block text-sm font-medium text-slate-700">
-                Customer OTP <span className="font-normal text-slate-400">(optional)</span>
-                <input
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={(event) => setOtp(event.target.value)}
-                  placeholder="Enter delivery code"
-                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-500"
-                />
-              </label>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={updateDeliveryStatus}
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 font-bold text-white transition hover:bg-emerald-700"
-          >
-            {isOutForDelivery ? (
-              <>
-                <CheckCircle2 aria-hidden="true" size={19} /> Mark as Delivered
-              </>
-            ) : (
-              <>
-                <PackageCheck aria-hidden="true" size={19} /> Mark as Picked Up
-              </>
-            )}
-          </button>
+        </section>
+      ) : (
+        <section className="flex items-center gap-3 rounded-2xl bg-[#1E8E3E]/10 p-5 text-[#1E8E3E]">
+          <CircleDollarSign aria-hidden="true" size={28} />
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide">
+              {t('paymentComplete')}
+            </p>
+            <p className="mt-1 font-extrabold">{t('alreadyPaidViaTelebirr')}</p>
+          </div>
         </section>
       )}
 
-      {isDelivered && (
-        <p role="status" className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800">
-          <CheckCircle2 aria-hidden="true" size={19} /> Delivery completed
-        </p>
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-extrabold text-slate-900">
+              {t('groceryItemsVerification')}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {checkedItems.length} of {order.items.length} items verified
+            </p>
+          </div>
+          <PackageCheck aria-hidden="true" size={22} className="text-[#1E8E3E]" />
+        </div>
+        <div className="mt-3 divide-y divide-slate-100">
+          {order.items.map((item) => {
+            const checked = checkedItems.includes(item.id)
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-pressed={checked}
+                onClick={() =>
+                  setCheckedItems((current) =>
+                    checked
+                      ? current.filter((id) => id !== item.id)
+                      : [...current, item.id],
+                  )
+                }
+                className="flex w-full items-center gap-3 py-3 text-left"
+              >
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md border ${
+                    checked
+                      ? 'border-[#1E8E3E] bg-[#1E8E3E] text-white'
+                      : 'border-slate-300 bg-white'
+                  }`}
+                >
+                  {checked && <Check aria-hidden="true" size={15} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-sm font-bold ${checked ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+                    {item.name}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-slate-500">{item.unit}</span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {order.status === 'Out for Delivery' && (
+        <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <h2 className="font-extrabold text-slate-900">
+            {t('customerOtpVerification')}
+          </h2>
+          <label className="mt-4 block text-sm font-bold text-slate-700">
+            {t('deliveryOtp')}
+            <input
+              inputMode="numeric"
+              maxLength={4}
+              value={otp}
+              onChange={(event) => {
+                setOtp(event.target.value.replace(/\D/g, '').slice(0, 4))
+                setOtpError('')
+              }}
+              placeholder="••••"
+              className="mt-2 block h-12 w-full rounded-xl border border-slate-300 px-4 text-center text-lg font-extrabold tracking-[0.5em] outline-none focus:border-[#1E8E3E]"
+            />
+            <span className="mt-2 block text-xs font-semibold text-[#0B4B8C]">
+              {t('demoOtp')}: 1234
+            </span>
+          </label>
+          {otpError && <p className="mt-2 text-sm font-semibold text-[#F04E00]">{otpError}</p>}
+
+          <label className="mt-4 block text-sm font-bold text-slate-700">
+            {t('deliveryNote')}{' '}
+            <span className="font-normal text-slate-400">
+              ({t('optional')})
+            </span>
+            <textarea
+              value={deliveryNote}
+              onChange={(event) => setDeliveryNote(event.target.value)}
+              rows="3"
+              placeholder="Add a note about this delivery..."
+              className="mt-2 w-full resize-none rounded-xl border border-slate-300 px-4 py-3 font-normal outline-none focus:border-[#1E8E3E]"
+            />
+          </label>
+
+          {success ? (
+            <p
+              role="status"
+              className="mt-4 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E]/10 font-bold text-[#1E8E3E]"
+            >
+              <CheckCircle2 aria-hidden="true" size={19} /> {t('deliveryCompletedSuccessfully')}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={verifyAndDeliver}
+              className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-3 font-bold text-white hover:bg-[#0E532B]"
+            >
+              <CheckCircle2 aria-hidden="true" size={19} /> {t('verifyMarkDelivered')}
+            </button>
+          )}
+        </section>
       )}
-      {isCancelled && (
-        <p role="status" className="rounded-2xl bg-slate-100 p-4 text-center text-sm font-semibold text-slate-600">
-          This delivery was cancelled.
-        </p>
+
+      {order.status !== 'Out for Delivery' && (
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-3 font-bold text-white"
+        >
+          <PackageCheck aria-hidden="true" size={19} /> Continue Pickup Process
+        </button>
       )}
     </div>
   )

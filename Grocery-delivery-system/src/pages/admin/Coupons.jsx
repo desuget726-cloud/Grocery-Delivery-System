@@ -14,7 +14,9 @@ import {
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 import usePersistentState from '../../hooks/usePersistentState.js'
+import formatCurrency from '../../utils/formatCurrency.js'
 
 const localDateString = (date) => {
   const year = date.getFullYear()
@@ -112,7 +114,7 @@ const statusFor = (coupon, today = localDateString(new Date())) => {
 
 const discountLabel = (coupon) => {
   if (coupon.discountType === 'freeDelivery') return 'Free Delivery'
-  if (coupon.discountType === 'fixed') return `${Number(coupon.discountValue).toLocaleString('en-US')} ETB Off`
+  if (coupon.discountType === 'fixed') return `${formatCurrency(Number(coupon.discountValue))} Off`
   return `${Number(coupon.discountValue)}% Off`
 }
 
@@ -125,8 +127,7 @@ const formatDate = (date) => {
   }).format(new Date(`${date}T12:00:00`))
 }
 
-const formatMoney = (amount) =>
-  `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(amount) || 0)} ETB`
+const formatMoney = formatCurrency
 
 function UsageMeter({ used, limit }) {
   const safeLimit = Math.max(0, Number(limit) || 0)
@@ -152,16 +153,17 @@ function UsageMeter({ used, limit }) {
 }
 
 function CouponStatus({ status }) {
+  const { t } = useLanguage()
   const tones = {
     Active: 'bg-emerald-50 text-[#1E8E3E]',
-    Scheduled: 'bg-blue-50 text-blue-700',
+    Scheduled: 'bg-blue-50 text-[#0B4B8C]',
     Expired: 'bg-slate-100 text-slate-500',
-    Paused: 'bg-amber-50 text-amber-700',
+    Paused: 'bg-slate-100 text-slate-600',
   }
 
   return (
     <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${tones[status]}`}>
-      {status}
+      {t(status)}
     </span>
   )
 }
@@ -184,6 +186,7 @@ function ActiveSwitch({ coupon, onToggle, compact = false }) {
 }
 
 function Coupons() {
+  const { t } = useLanguage()
   const [coupons, setCoupons] = usePersistentState('admin-coupons', initialCoupons)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -320,7 +323,7 @@ function Coupons() {
         aria-label={`Delete ${coupon.code}`}
         title="Delete coupon"
         onClick={() => setDeleteTarget(coupon)}
-        className="rounded-lg p-2 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600"
+        className="rounded-lg p-2 text-slate-500 transition hover:bg-orange-50 hover:text-[#F04E00]"
       >
         <Trash2 aria-hidden="true" size={16} />
       </button>
@@ -364,15 +367,15 @@ function Coupons() {
 
       <section aria-label="Coupon statistics" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: 'Active Coupons', value: totals.active, icon: Ticket, tone: 'bg-emerald-50 text-[#1E8E3E]' },
-          { label: 'Total Redemptions', value: totals.redemptions.toLocaleString('en-US'), icon: UsersRound, tone: 'bg-blue-50 text-blue-700' },
-          { label: 'Total Discount Given (ETB)', value: formatMoney(totals.discountGiven), icon: CircleDollarSign, tone: 'bg-orange-50 text-[#F04E00]' },
-          { label: 'Expiring Soon', value: totals.expiringSoon, icon: Clock3, tone: 'bg-amber-50 text-amber-700' },
-        ].map(({ label, value, icon: Icon, tone }) => (
-          <article key={label} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          { labelKey: 'activeCoupons', value: totals.active, icon: Ticket, tone: 'bg-emerald-50 text-[#1E8E3E]' },
+          { labelKey: 'totalRedemptions', value: totals.redemptions.toLocaleString('en-US'), icon: UsersRound, tone: 'bg-blue-50 text-[#0B4B8C]' },
+          { labelKey: 'totalDiscountGiven', value: formatMoney(totals.discountGiven), icon: CircleDollarSign, tone: 'bg-orange-50 text-[#F04E00]' },
+          { labelKey: 'expiringSoon', value: totals.expiringSoon, icon: Clock3, tone: 'bg-orange-50 text-[#F04E00]' },
+        ].map(({ labelKey, value, icon: Icon, tone }) => (
+          <article key={labelKey} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-500">{label}</p>
-              <p className="mt-1 truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{value}</p>
+              <p className="text-sm font-medium text-slate-500">{t(labelKey)}</p>
+              <p className="mt-1 truncate text-xl font-bold tracking-tight text-[#0E532B] sm:text-2xl">{value}</p>
             </div>
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}>
               <Icon aria-hidden="true" size={19} />
@@ -381,7 +384,7 @@ function Coupons() {
         ))}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="space-y-4 border-b border-slate-100 p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <label className="relative min-w-0 sm:w-80">
@@ -406,9 +409,9 @@ function Coupons() {
                 type="button"
                 aria-pressed={statusFilter === status}
                 onClick={() => setStatusFilter(status)}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === status ? 'bg-[#0E532B] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === status ? 'bg-[#1E8E3E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
-                {status}
+                {t(status)}
               </button>
             ))}
           </div>
@@ -425,7 +428,7 @@ function Coupons() {
 
         <div className="hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[1150px] text-left text-sm">
-            <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-slate-500">
+            <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-[#0E532B]/75">
               <tr>
                 <th scope="col" className="px-4 py-3.5 font-semibold">Coupon Code</th>
                 <th scope="col" className="px-4 py-3.5 font-semibold">Discount</th>
@@ -637,12 +640,12 @@ function Coupons() {
               />
               Enable coupon
             </label>
-            {formError && <p role="alert" className="text-sm font-medium text-rose-600">{formError}</p>}
+            {formError && <p role="alert" className="text-sm font-medium text-[#F04E00]">{formError}</p>}
             <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
               >
                 Cancel
               </button>
@@ -667,14 +670,14 @@ function Coupons() {
             <button
               type="button"
               onClick={() => setDeleteTarget(null)}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
+              className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={confirmDelete}
-              className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700"
+              className="rounded-lg bg-[#F04E00] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#C54100]"
             >
               Delete coupon
             </button>

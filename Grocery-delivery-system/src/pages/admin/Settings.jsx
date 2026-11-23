@@ -18,6 +18,7 @@ import {
   Truck,
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 
 const STORAGE_KEY = 'grocery_admin_settings'
 
@@ -89,12 +90,12 @@ const DEFAULT_SETTINGS = {
 }
 
 const settingTabs = [
-  { id: 'store', label: 'Store Profile', icon: Store },
-  { id: 'delivery', label: 'Delivery & Zones', icon: Truck },
-  { id: 'payments', label: 'Payments & Tax', icon: CreditCard },
-  { id: 'rules', label: 'Orders & Inventory', icon: SlidersHorizontal },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'security', label: 'Security', icon: ShieldCheck },
+  { id: 'store', translationKey: 'storeProfile', icon: Store },
+  { id: 'delivery', translationKey: 'deliveryZones', icon: Truck },
+  { id: 'payments', translationKey: 'paymentsTax', icon: CreditCard },
+  { id: 'rules', translationKey: 'ordersInventory', icon: SlidersHorizontal },
+  { id: 'notifications', translationKey: 'notifications', icon: Bell },
+  { id: 'security', translationKey: 'securityTab', icon: ShieldCheck },
 ]
 
 function loadSettings() {
@@ -197,10 +198,10 @@ function ToggleRow({ label, description, checked, onChange }) {
 
 function Card({ title, description, children, className = '' }) {
   return (
-    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
+    <section className={`rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
       {(title || description) && (
         <div className="mb-5">
-          {title && <h2 className="text-sm font-bold text-slate-800">{title}</h2>}
+          {title && <h2 className="text-sm font-bold text-[#0E532B]">{title}</h2>}
           {description && <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>}
         </div>
       )}
@@ -210,6 +211,7 @@ function Card({ title, description, children, className = '' }) {
 }
 
 function Settings() {
+  const { t } = useLanguage()
   const [settings, setSettings] = useState(loadSettings)
   const [activeTab, setActiveTab] = useState('store')
   const [toast, setToast] = useState(null)
@@ -338,9 +340,9 @@ function Settings() {
       </Card>
 
       <Card title="Store availability" description="Pause online ordering during planned maintenance or outside operating hours.">
-        <div className={`mb-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${settings.storeProfile.isOpen ? 'border-[#B9DDBF] bg-[#F0F7F1]' : 'border-amber-200 bg-amber-50'}`}>
+        <div className={`mb-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${settings.storeProfile.isOpen ? 'border-[#B9DDBF] bg-[#F0F7F1]' : 'border-orange-200 bg-orange-50'}`}>
           <div>
-            <p className={`text-sm font-bold ${settings.storeProfile.isOpen ? 'text-[#0E532B]' : 'text-amber-900'}`}>
+            <p className={`text-sm font-bold ${settings.storeProfile.isOpen ? 'text-[#0E532B]' : 'text-[#F04E00]'}`}>
               {settings.storeProfile.isOpen ? 'Store Open' : 'Maintenance Mode'}
             </p>
             <p className="mt-1 text-xs text-slate-600">
@@ -430,7 +432,7 @@ function Settings() {
                   delivery: { ...current.delivery, zones: current.delivery.zones.filter((item) => item.id !== zone.id) },
                 }))}
                 aria-label={`Remove ${zone.name} zone`}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-orange-50 hover:text-[#F04E00]"
               >
                 <Trash2 size={14} />
               </button>
@@ -442,9 +444,9 @@ function Settings() {
           <div className="grid gap-2 sm:grid-cols-[1fr_150px_auto]">
             <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder="New zone name" aria-label="New zone name" className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
             <input type="number" min="0" value={zoneFee} onChange={(event) => setZoneFee(event.target.value)} placeholder="Fee (ETB)" aria-label="New zone delivery fee" className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
-            <button type="submit" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#0E532B] px-4 text-xs font-semibold text-white hover:bg-[#1E8E3E]"><Plus size={14} /> Add Zone</button>
+            <button type="submit" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#1E8E3E] px-4 text-xs font-semibold text-white hover:bg-[#0E532B]"><Plus size={14} /> Add Zone</button>
           </div>
-          {zoneError && <p role="alert" className="mt-2 text-xs text-[#B53B05]">{zoneError}</p>}
+          {zoneError && <p role="alert" className="mt-2 text-xs text-[#F04E00]">{zoneError}</p>}
         </form>
       </Card>
 
@@ -475,7 +477,7 @@ function Settings() {
       <section key={title} className="rounded-xl border border-slate-200 p-4">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
-            <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+            <h3 className="text-sm font-bold text-[#0E532B]">{title}</h3>
             <p className="mt-0.5 text-[11px] text-slate-500">{settings.payments[gateway].active ? 'Available at checkout' : 'Disabled at checkout'}</p>
           </div>
           <button
@@ -510,7 +512,7 @@ function Settings() {
                   <select value={settings.payments.chapa.mode} onChange={(event) => updateNested('payments', 'chapa', 'mode', event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1E8E3E]">
                     <option>Test</option><option>Live</option>
                   </select>
-                  <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${settings.payments.chapa.mode === 'Live' ? 'bg-[#EAF5EC] text-[#0E722F]' : 'bg-amber-50 text-amber-800'}`}>
+                  <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${settings.payments.chapa.mode === 'Live' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'}`}>
                     {settings.payments.chapa.mode} mode
                   </span>
                 </label>
@@ -606,10 +608,10 @@ function Settings() {
             {showPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
             {showPasswords ? 'Hide passwords' : 'Show passwords'}
           </button>
-          {passwordError && <p role="alert" className="text-xs font-medium text-[#B53B05]">{passwordError}</p>}
-          {passwordNotice && <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">{passwordNotice}</p>}
+          {passwordError && <p role="alert" className="text-xs font-medium text-[#F04E00]">{passwordError}</p>}
+          {passwordNotice && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-[#1E8E3E]">{passwordNotice}</p>}
           <div>
-            <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0E532B] px-4 text-sm font-semibold text-white hover:bg-[#1E8E3E]">
+            <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white hover:bg-[#0E532B]">
               <KeyRound size={15} /> Validate Password Change
             </button>
           </div>
@@ -632,7 +634,7 @@ function Settings() {
               <p className="mt-1 text-xs text-slate-500">Addis Ababa, Ethiopia <span className="px-1">·</span> Active Now</p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-[#EAF5EC] px-2.5 py-1 text-[10px] font-bold text-[#0E722F] sm:self-center">
+          <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-[#1E8E3E] sm:self-center">
             <span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" /> CURRENT SESSION
           </span>
         </div>
@@ -664,35 +666,42 @@ function Settings() {
       {toast && (
         <div
           role="status"
-          className={`fixed right-5 top-20 z-50 flex max-w-sm items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg ${toast.type === 'success' ? 'bg-[#1E8E3E]' : 'bg-[#B53B05]'}`}
+          className={`fixed right-5 top-20 z-50 flex max-w-sm items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg ${toast.type === 'success' ? 'bg-[#1E8E3E]' : 'bg-[#F04E00]'}`}
         >
           {toast.type === 'success' ? <Check size={17} /> : <AlertCircle size={17} />}
           {toast.message}
         </div>
       )}
       <header className="mb-6">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#1E8E3E]">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]">
           <span className="h-2 w-2 rounded-full bg-[#1E8E3E]" />
-          GROCERY DELIVERY <span className="text-slate-300">/</span> ADMIN SETTINGS
+          <span className="font-bold text-[#0E532B]">GROCERY</span>{' '}
+          <span className="font-bold text-[#F04E00]">DELIVERY</span>{' '}
+          <span className="font-bold text-[#0B4B8C]">SYSTEM</span>
+          <span className="text-slate-300">/</span> ADMIN SETTINGS
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#0E532B] sm:text-[30px]">Settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[#0E532B] sm:text-[30px]">
+          {t('settings')}
+        </h1>
         <p className="mt-1.5 text-sm leading-6 text-slate-500">Configure your store, fulfillment, payments, notifications, and account security.</p>
       </header>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <nav aria-label="Settings sections" className="w-full shrink-0 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm lg:sticky lg:top-24 lg:w-64">
-          <p className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Settings menu</p>
+        <nav aria-label="Settings sections" className="w-full shrink-0 rounded-2xl border border-gray-100 bg-white p-2 shadow-sm lg:sticky lg:top-24 lg:w-64">
+          <p className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+            {t('settings')}
+          </p>
           <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
-            {settingTabs.map(({ id, label, icon: Icon }) => (
+            {settingTabs.map(({ id, translationKey, icon: Icon }) => (
               <button
                 type="button"
                 key={id}
                 onClick={() => setActiveTab(id)}
                 aria-current={activeTab === id ? 'page' : undefined}
-                className={`flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition sm:text-sm ${activeTab === id ? 'bg-[#0E532B] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-[#0E532B]'}`}
+                className={`flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition sm:text-sm ${activeTab === id ? 'bg-[#1E8E3E] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-[#0E532B]'}`}
               >
                 <Icon size={17} className="shrink-0" />
-                <span>{label}</span>
+                <span>{t(translationKey)}</span>
               </button>
             ))}
           </div>
@@ -701,7 +710,11 @@ function Settings() {
         <main className="min-w-0 flex-1">
           <div className="mb-4 flex items-center gap-2">
             {ActiveTabIcon && <ActiveTabIcon size={18} className="text-[#1E8E3E]" />}
-            <h2 className="text-lg font-bold text-slate-800">{activeTabInfo?.label}</h2>
+            <h2 className="text-lg font-bold text-[#0E532B]">
+              {activeTabInfo?.translationKey
+                ? t(activeTabInfo.translationKey)
+                : null}
+            </h2>
           </div>
           {renderActivePanel()}
         </main>
@@ -711,7 +724,7 @@ function Settings() {
         <button
           type="button"
           onClick={resetDefaults}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#F04E00]"
         >
           <RotateCcw size={15} /> Reset Defaults
         </button>

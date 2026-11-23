@@ -1,128 +1,180 @@
-import { CheckCircle2, Clock3, MapPin, XCircle } from 'lucide-react'
+import { CheckCircle2, CircleDollarSign, MapPin, Wallet, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { StatusBadge } from '../../components/admin/AdminUI.jsx'
-import { loadOrders } from '../../data/mockData.js'
-import usePersistentState from '../../hooks/usePersistentState.js'
-import formatCurrency from '../../utils/formatCurrency.js'
+import { useLanguage } from '../../context/LanguageContext.jsx'
 
-const COURIER_NAME = 'Jamie Brooks'
-const filters = ['All', 'Delivered', 'Cancelled']
-const DELIVERY_EARNING = 8.5
+const history = [
+  {
+    id: 'GDS-2531',
+    customer: 'Hiwot Alemu',
+    neighborhood: 'Bole',
+    address: 'Bole Atlas, Addis Ababa',
+    status: 'Delivered',
+    payment: 'Cash on Delivery',
+    earnings: 80,
+    tip: 20,
+    timestamp: '2026-11-23T18:42:00',
+  },
+  {
+    id: 'GDS-2529',
+    customer: 'Yonatan Bekele',
+    neighborhood: 'Kazanchis',
+    address: 'Guinea Conakry Street, Addis Ababa',
+    status: 'Delivered',
+    payment: 'Telebirr',
+    earnings: 75,
+    tip: 15,
+    timestamp: '2026-11-23T16:18:00',
+  },
+  {
+    id: 'GDS-2527',
+    customer: 'Liya Girma',
+    neighborhood: 'CMC',
+    address: 'Sunshine Real Estate, Addis Ababa',
+    status: 'Canceled',
+    payment: 'Cash on Delivery',
+    earnings: 0,
+    tip: 0,
+    timestamp: '2026-11-23T14:05:00',
+  },
+  {
+    id: 'GDS-2524',
+    customer: 'Daniel Haile',
+    neighborhood: 'Sarbet',
+    address: 'Bisrate Gebriel, Addis Ababa',
+    status: 'Delivered',
+    payment: 'Cash on Delivery',
+    earnings: 70,
+    tip: 10,
+    timestamp: '2026-11-22T19:30:00',
+  },
+]
+
+const filters = ['All', 'Delivered', 'Canceled']
 
 function History() {
-  const [orders] = usePersistentState('grocery-orders', loadOrders)
+  const { t } = useLanguage()
   const [filter, setFilter] = useState('All')
-  const completedOrders = orders.filter(
-    (order) =>
-      order.deliveryStaff === COURIER_NAME &&
-      ['Delivered', 'Cancelled'].includes(order.status),
+  const visible = useMemo(
+    () => history.filter((order) => filter === 'All' || order.status === filter),
+    [filter],
   )
-  const visibleOrders = useMemo(
-    () =>
-      [...completedOrders]
-        .filter((order) => filter === 'All' || order.status === filter)
-        .sort(
-          (a, b) =>
-            new Date(b.deliveredAt || b.date) - new Date(a.deliveredAt || a.date),
-        ),
-    [completedOrders, filter],
-  )
-  const earnings = completedOrders
-    .filter((order) => order.status === 'Delivered')
-    .reduce(
-      (sum, order) => sum + Number(order.deliveryEarnings || DELIVERY_EARNING),
-      0,
-    )
+  const delivered = history.filter((order) => order.status === 'Delivered')
+  const earned = delivered.reduce((sum, order) => sum + order.earnings + order.tip, 0)
+  const codSettled = delivered
+    .filter((order) => order.payment === 'Cash on Delivery')
+    .reduce((sum) => sum + 680, 0)
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <header className="mb-5">
-        <p className="text-sm font-semibold text-emerald-700">Your completed work</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">Delivery history</h1>
+    <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8">
+      <header>
+        <p className="text-sm font-semibold text-[#1E8E3E]">
+          {t('yourCompletedWork')}
+        </p>
+        <h1 className="mt-1 text-2xl font-extrabold text-slate-900">
+          {t('deliveryHistory')}
+        </h1>
       </header>
 
-      <section className="mb-5 grid grid-cols-2 gap-3">
-        <article className="rounded-2xl border border-slate-200 bg-white p-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-            <CheckCircle2 aria-hidden="true" size={19} />
-          </span>
-          <p className="mt-3 text-sm text-slate-500">Completed deliveries</p>
-          <p className="mt-1 text-xl font-bold text-slate-900">
-            {completedOrders.filter((order) => order.status === 'Delivered').length}
-          </p>
-        </article>
-        <article className="rounded-2xl border border-slate-200 bg-white p-4">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-            <Clock3 aria-hidden="true" size={19} />
-          </span>
-          <p className="mt-3 text-sm text-slate-500">Total earnings</p>
-          <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(earnings)}</p>
-        </article>
+      <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {[
+          {
+            labelKey: 'totalCompletedTrips',
+            value: String(delivered.length),
+            icon: CheckCircle2,
+            tone: 'bg-[#1E8E3E]/10 text-[#1E8E3E]',
+          },
+          {
+            labelKey: 'totalEarned',
+            value: `${earned.toFixed(2)} ETB`,
+            icon: CircleDollarSign,
+            tone: 'bg-[#0E532B]/10 text-[#0E532B]',
+          },
+          {
+            labelKey: 'codCashSettled',
+            value: `${codSettled.toFixed(2)} ETB`,
+            icon: Wallet,
+            tone: 'bg-[#F04E00]/10 text-[#F04E00]',
+          },
+        ].map(({ labelKey, value, icon: Icon, tone }) => (
+          <article key={labelKey} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+            <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${tone}`}>
+              <Icon aria-hidden="true" size={20} />
+            </span>
+            <p className="mt-4 text-sm text-slate-500">{t(labelKey)}</p>
+            <p className="mt-1 text-xl font-extrabold text-slate-900">{value}</p>
+          </article>
+        ))}
       </section>
 
-      <div className="mb-4 flex gap-2">
+      <div className="mt-6 flex gap-2">
         {filters.map((item) => (
           <button
             key={item}
             type="button"
             onClick={() => setFilter(item)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
+            className={`rounded-full px-4 py-2 text-sm font-bold ${
               filter === item
-                ? 'bg-emerald-600 text-white'
-                : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'
+                ? 'bg-[#0E532B] text-white'
+                : 'border border-slate-200 bg-white text-slate-600'
             }`}
           >
-            {item}
+            {t(item)}
           </button>
         ))}
       </div>
 
-      {visibleOrders.length > 0 ? (
-        <div className="space-y-3">
-          {visibleOrders.map((order) => (
-            <Link
-              key={order.id}
-              to={`/delivery/orders/${order.id}`}
-              className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 sm:p-5"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Order {order.id}
-                  </p>
-                  <h2 className="mt-1 font-bold text-slate-900">
-                    {order.customerName || 'Customer'}
-                  </h2>
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        {visible.map((order) => (
+          <Link
+            key={order.id}
+            to={`/delivery/details/${order.id}`}
+            className="block rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[#1E8E3E]/30"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-extrabold text-[#0B4B8C]">{order.id}</p>
+                <h2 className="mt-1 font-bold text-slate-900">{order.customer}</h2>
+              </div>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${
+                  order.status === 'Delivered'
+                    ? 'bg-[#1E8E3E]/10 text-[#1E8E3E]'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {order.status === 'Delivered'
+                  ? <CheckCircle2 aria-hidden="true" size={14} />
+                  : <XCircle aria-hidden="true" size={14} />}
+                {t(order.status)}
+              </span>
+            </div>
+            <p className="mt-3 flex items-start gap-2 text-sm text-slate-600">
+              <MapPin aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-[#0B4B8C]" />
+              {order.neighborhood} • {order.address}
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+              <div>
+                <p className="text-xs text-slate-500">
+                  {order.status === 'Delivered'
+                    ? new Date(order.timestamp).toLocaleString([], {
+                        dateStyle: 'medium',
+                        timeStyle: 'short',
+                      })
+                    : 'Canceled delivery'}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">{order.payment}</p>
+              </div>
+              {order.status === 'Delivered' && (
+                <div className="text-right">
+                  <p className="text-sm font-extrabold text-[#0E532B]">+{order.earnings.toFixed(2)} ETB</p>
+                  <p className="mt-1 text-xs font-bold text-[#F04E00]">Tip +{order.tip.toFixed(2)} ETB</p>
                 </div>
-                <StatusBadge status={order.status} />
-              </div>
-              <p className="mt-3 flex items-start gap-2 text-sm text-slate-600">
-                <MapPin aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-emerald-700" />
-                <span>{order.deliveryAddress || 'Address not provided'}</span>
-              </p>
-              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-sm">
-                <span className="text-slate-500">
-                  {new Date(order.deliveredAt || order.date).toLocaleDateString()}
-                </span>
-                {order.status === 'Delivered' ? (
-                  <span className="font-semibold text-emerald-700">
-                    +{formatCurrency(order.deliveryEarnings || DELIVERY_EARNING)}
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-slate-500">
-                    <XCircle aria-hidden="true" size={15} /> No earnings
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <section className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center">
-          <p className="text-sm text-slate-500">No {filter === 'All' ? 'completed or cancelled' : filter.toLowerCase()} deliveries in your history yet.</p>
-        </section>
-      )}
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
