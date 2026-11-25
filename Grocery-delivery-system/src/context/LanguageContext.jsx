@@ -84,10 +84,15 @@ export function LanguageProvider({ children }) {
   }, [language])
 
   const t = useCallback(
-    (key) =>
-      getTranslation(translations[language], key) ??
-      getTranslation(translations.en, key) ??
-      key,
+    (key) => {
+      const value =
+        getTranslation(translations[language], key) ??
+        getTranslation(translations.en, key) ??
+        key
+      return key === 'transactions' && typeof value === 'string'
+        ? `${value.charAt(0).toUpperCase()}${value.slice(1)}`
+        : value
+    },
     [language],
   )
 

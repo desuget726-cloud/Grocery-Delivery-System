@@ -51,6 +51,7 @@ function Sidebar({ open, onClose }) {
   const [openGroup, setOpenGroup] = useState(() => getRouteGroup(pathname))
   const isOrdersRoute = pathname === '/admin/orders'
   const selectedOrderStatus = new URLSearchParams(search).get('status') ?? 'all'
+  const transactionsLabel = t('transactions')
 
   if (pathname !== lastPathname) {
     setLastPathname(pathname)
@@ -300,7 +301,7 @@ function Sidebar({ open, onClose }) {
           >
             <CreditCard aria-hidden="true" size={18} className="shrink-0" />
             <span className={collapsed ? 'lg:hidden' : ''}>
-              {t('transactions')}
+              {transactionsLabel}
             </span>
           </Link>
           <Link

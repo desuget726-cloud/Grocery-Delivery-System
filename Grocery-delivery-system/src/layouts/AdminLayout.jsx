@@ -103,6 +103,19 @@ const quickActions = [
   { translationKey: 'recordStockIn', href: '/admin/inventory', icon: Boxes },
 ]
 
+const STORE_SETTINGS_KEY = 'grocery_admin_settings'
+
+function getStoreIsOpen() {
+  try {
+    const savedSettings = window.localStorage.getItem(STORE_SETTINGS_KEY)
+    if (!savedSettings) return true
+    return JSON.parse(savedSettings)?.storeProfile?.isOpen !== false
+  } catch (error) {
+    console.error('Unable to load store availability:', error)
+    return true
+  }
+}
+
 function getPageTitle(pathname, t) {
   const segments = pathname.split('/').filter(Boolean)
   const segment = segments.length > 1 ? segments[segments.length - 1] : 'dashboard'
@@ -117,6 +130,7 @@ function AdminLayout() {
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [notifications, setNotifications] = useAdminNotifications()
+  const [storeIsOpen, setStoreIsOpen] = useState(getStoreIsOpen)
   const unreadCount = notifications.filter((notification) => notification.unread).length
   const { language, setLanguage, t } = useLanguage()
   const { logout, user } = useAuth()
@@ -128,6 +142,23 @@ function AdminLayout() {
   const notificationsRef = useRef(null)
   const languageRef = useRef(null)
   const profileRef = useRef(null)
+
+  useEffect(() => {
+    const syncStoreStatus = (event) => {
+      if (event.type === 'grocery-store-status-change') {
+        setStoreIsOpen(event.detail?.isOpen !== false)
+      } else if (event.key === STORE_SETTINGS_KEY || event.key === null) {
+        setStoreIsOpen(getStoreIsOpen())
+      }
+    }
+
+    window.addEventListener('grocery-store-status-change', syncStoreStatus)
+    window.addEventListener('storage', syncStoreStatus)
+    return () => {
+      window.removeEventListener('grocery-store-status-change', syncStoreStatus)
+      window.removeEventListener('storage', syncStoreStatus)
+    }
+  }, [])
 
   const pageTitle = getPageTitle(location.pathname, t)
   const searchResults = useMemo(() => {
@@ -248,13 +279,17 @@ function AdminLayout() {
             </div>
             <Link
               to="/admin/settings"
-              className="hidden items-center gap-1.5 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-[#1E8E3E] transition hover:bg-emerald-100 xl:flex"
+              className={`hidden items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium transition xl:flex ${
+                storeIsOpen
+                  ? 'border-emerald-200 bg-emerald-50 text-[#1E8E3E] hover:bg-emerald-100'
+                  : 'border-orange-200 bg-orange-50 text-[#F04E00] hover:bg-orange-100'
+              }`}
             >
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#1E8E3E] opacity-40" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-[#1E8E3E]" />
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-40 ${storeIsOpen ? 'bg-[#1E8E3E]' : 'bg-[#F04E00]'}`} />
+                <span className={`relative inline-flex h-2 w-2 rounded-full ${storeIsOpen ? 'bg-[#1E8E3E]' : 'bg-[#F04E00]'}`} />
               </span>
-              {t('storeOpen')}
+              {t(storeIsOpen ? 'storeOpen' : 'Store Closed')}
             </Link>
           </div>
 

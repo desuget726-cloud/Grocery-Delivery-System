@@ -1,4 +1,4 @@
-import { Clock3, Mail, MapPin, Phone, Send } from 'lucide-react'
+import { Clock3, Mail, MapPin, Navigation, Phone, Send, Star } from 'lucide-react'
 import { useState } from 'react'
 
 const STORAGE_KEY = 'grocery_support_tickets'
@@ -336,6 +336,77 @@ function ContactUs() {
           </form>
         </section>
       </div>
+
+      <section className="mt-10 overflow-hidden rounded-3xl border border-gray-200/80 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1E8E3E]/10 text-[#1E8E3E]">
+              <MapPin aria-hidden="true" size={20} />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold text-[#0E532B]">Find Us on the Map</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Main Grocery Delivery Hub &amp; Dispatch Center — Bole Road, Addis Ababa
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Bole+Road,+Addis+Ababa,+Ethiopia"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl bg-[#0B4B8C] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#083c70]"
+          >
+            Open in Google Maps ↗
+          </a>
+        </div>
+
+        <div className="relative h-[380px] w-full bg-gray-100 sm:h-[420px]">
+          <iframe
+            title="Grocery Delivery System hub on Google Maps"
+            className="h-full w-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src="https://maps.google.com/maps?q=Bole%20Road,%20Addis%20Ababa,%20Ethiopia&t=&z=14&ie=UTF8&iwloc=&output=embed"
+          />
+
+          <div className="absolute left-4 top-4 z-10 hidden max-w-xs rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-lg backdrop-blur-sm sm:block">
+            <h3 className="text-base leading-tight">
+              <span className="font-extrabold text-[#0E532B]">GROCERY</span>{' '}
+              <span className="font-extrabold text-[#F04E00]">DELIVERY</span>{' '}
+              <span className="font-semibold text-gray-800">Hub</span>
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Bole Road, Addis Ababa, Ethiopia
+            </p>
+            <div className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+              <span>4.8</span>
+              <Star aria-hidden="true" size={15} className="fill-[#F04E00] text-[#F04E00]" />
+              <span className="font-normal text-gray-500">(37 reviews)</span>
+            </div>
+            <div className="mt-4 flex items-center gap-2">
+              <a
+                href="https://www.google.com/maps/search/?api=1&query=Bole+Road,+Addis+Ababa,+Ethiopia"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#0B4B8C] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#1E8E3E]"
+              >
+                Open in Maps
+                <span aria-hidden="true" className="text-[#A7E0B4]">↗</span>
+              </a>
+              <a
+                href="https://www.google.com/maps/dir/?api=1&destination=Bole+Road,+Addis+Ababa,+Ethiopia"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Get directions to the Grocery Delivery System hub"
+                title="Directions"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1E8E3E] text-white transition hover:bg-[#0E532B]"
+              >
+                <Navigation aria-hidden="true" size={16} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

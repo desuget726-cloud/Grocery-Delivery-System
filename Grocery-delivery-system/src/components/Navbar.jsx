@@ -40,6 +40,14 @@ function Navbar() {
   const navigate = useNavigate()
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const userInitials =
+    user?.fullName
+      ?.trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((namePart) => namePart[0])
+      .join('')
+      .toUpperCase() || 'U'
 
   const handleLogout = () => {
     logout()
@@ -124,90 +132,20 @@ function Navbar() {
             <SearchBar />
           </div>
 
-          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
-            {isAuthenticated ? (
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-expanded={accountMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => setAccountMenuOpen((open) => !open)}
-                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:gap-2 sm:px-3"
-                >
-                  <UserRound aria-hidden="true" size={19} className="text-[#0E532B]" />
-                  <span className="max-w-20 truncate text-xs sm:max-w-28 sm:text-sm">{user.fullName}</span>
-                  {user.role === 'admin' && (
-                    <span className="rounded-full bg-[#F04E00]/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-[#F04E00]">
-                      {t('adminRole')}
-                    </span>
-                  )}
-                  <ChevronDown aria-hidden="true" size={15} className="hidden sm:block" />
-                </button>
-                {accountMenuOpen && (
-                  <div
-                    role="menu"
-                    className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-gray-100 bg-white p-1.5 shadow-xl"
-                  >
-                    {user.role === 'admin' && (
-                      <Link
-                        role="menuitem"
-                        to="/admin/dashboard"
-                        onClick={() => setAccountMenuOpen(false)}
-                        className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50"
-                      >
-                        {t('dashboard')}
-                      </Link>
-                    )}
-                    <Link
-                      role="menuitem"
-                      to="/profile"
-                      onClick={() => setAccountMenuOpen(false)}
-                      className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
-                    >
-                      {t('profile')}
-                    </Link>
-                    <Link
-                      role="menuitem"
-                      to="/my-orders"
-                      onClick={() => setAccountMenuOpen(false)}
-                      className="block rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
-                    >
-                      {t('myOrders')}
-                    </Link>
-                    <button
-                      role="menuitem"
-                      type="button"
-                      onClick={handleLogout}
-                      className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50"
-                    >
-                      {t('logout')}
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link
-                to="/login"
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50 sm:gap-2 sm:px-3"
-              >
-                <UserRound aria-hidden="true" size={19} />
-                <span className="hidden sm:inline">{t('loginRegister')}</span>
-              </Link>
-            )}
-
+          <div className="flex items-center gap-4 shrink-0 lg:gap-6">
             <Link
               to="/wishlist"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B] sm:gap-2 sm:px-3"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-medium text-gray-700 transition hover:text-[#0E532B]"
             >
-              <span className="relative">
+              <span className="relative inline-flex">
                 <Heart aria-hidden="true" size={20} />
-                {wishlistCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F04E00] px-1 text-[10px] font-bold leading-none text-white">
+                {wishlistCount >= 0 && (
+                  <span className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#F04E00] text-white text-[10px] font-bold flex items-center justify-center">
                     {wishlistCount > 99 ? '99+' : wishlistCount}
                   </span>
                 )}
               </span>
-              <span className="hidden xl:inline">{t('wishlist')}</span>
+              <span>{t('wishlist')}</span>
             </Link>
 
             <button
@@ -216,16 +154,119 @@ function Navbar() {
               aria-expanded={isCartOpen}
               aria-label={`${t('cart')}, ${totalItems} ${totalItems === 1 ? 'item' : 'items'}`}
               onClick={openCart}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50 sm:gap-2 sm:px-3"
+              className="inline-flex min-h-10 items-center gap-2 rounded-lg text-sm font-semibold text-gray-700 transition hover:text-[#0E532B]"
             >
-              <span className="relative">
+              <span className="relative inline-flex">
                 <ShoppingCart aria-hidden="true" size={21} />
-                <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F04E00] px-1 text-[10px] font-bold leading-none text-white">
+                <span className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#1E8E3E] text-white text-[10px] font-bold flex items-center justify-center">
                   {totalItems > 99 ? '99+' : totalItems}
                 </span>
               </span>
-              <span className="hidden xl:inline">{t('cart')}</span>
+              <span>{t('cart')}</span>
             </button>
+
+            <span aria-hidden="true" className="hidden h-6 w-px bg-gray-200 sm:block" />
+
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-expanded={accountMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setAccountMenuOpen((open) => !open)}
+                  className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                >
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt=""
+                      className="h-8 w-8 shrink-0 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0E532B] text-xs font-bold text-white">
+                      {userInitials}
+                    </span>
+                  )}
+                  <span className="max-w-24 truncate sm:max-w-32">{user.fullName}</span>
+                  <ChevronDown aria-hidden="true" size={16} className="shrink-0 text-gray-500" />
+                </button>
+                {accountMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-gray-100 bg-white py-2 shadow-xl"
+                  >
+                    <div className="border-b border-gray-100 px-4 pb-3 pt-1">
+                      <p className="truncate text-sm font-bold text-[#0E532B]">{user.fullName}</p>
+                      <p className="mt-0.5 truncate text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        role="menuitem"
+                        to="/profile"
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
+                      >
+                        {t('profile')}
+                      </Link>
+                      <Link
+                        role="menuitem"
+                        to="/my-orders"
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
+                      >
+                        {t('myOrders')}
+                      </Link>
+                      <Link
+                        role="menuitem"
+                        to="/wishlist"
+                        onClick={() => setAccountMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-emerald-50 hover:text-[#0E532B]"
+                      >
+                        {t('wishlist')}
+                      </Link>
+                      {user.role === 'admin' && (
+                        <Link
+                          role="menuitem"
+                          to="/admin/dashboard"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="block px-4 py-2.5 text-sm font-medium text-[#0E532B] hover:bg-emerald-50"
+                        >
+                          Admin Dashboard
+                        </Link>
+                      )}
+                      {user.role === 'delivery' && (
+                        <Link
+                          role="menuitem"
+                          to="/delivery/dashboard"
+                          onClick={() => setAccountMenuOpen(false)}
+                          className="block px-4 py-2.5 text-sm font-medium text-[#0E532B] hover:bg-emerald-50"
+                        >
+                          Rider Dashboard
+                        </Link>
+                      )}
+                    </div>
+                    <div className="border-t border-gray-100 pt-1">
+                      <button
+                        role="menuitem"
+                        type="button"
+                        onClick={handleLogout}
+                        className="block w-full px-4 py-2.5 text-left text-sm font-semibold text-[#F04E00] hover:bg-orange-50"
+                      >
+                        {t('logout')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-[#0E532B] transition hover:bg-gray-100"
+              >
+                <UserRound aria-hidden="true" size={19} />
+                <span>{t('loginRegister')}</span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

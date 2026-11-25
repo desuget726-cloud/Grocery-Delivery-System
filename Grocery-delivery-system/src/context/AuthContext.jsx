@@ -3,6 +3,8 @@ import { createContext, useContext, useState } from 'react'
 const AuthContext = createContext(null)
 const AUTH_STORAGE_KEY = 'grocery-auth'
 const REGISTERED_USERS_KEY = 'registeredUsers'
+const MOCK_PASSWORDS_STORAGE_KEY = 'grocery_mock_passwords'
+const PROFILES_STORAGE_KEY = 'grocery_profiles'
 const roles = ['customer', 'admin', 'delivery']
 const mockUsers = [
   {
@@ -69,6 +71,35 @@ function readAuthRecord(storage, storageName) {
   return record
 }
 
+function loadSavedProfiles() {
+  const savedProfiles = window.localStorage.getItem(PROFILES_STORAGE_KEY)
+  if (!savedProfiles) return {}
+
+  const parsedProfiles = JSON.parse(savedProfiles)
+  if (!parsedProfiles || Array.isArray(parsedProfiles) || typeof parsedProfiles !== 'object') {
+    throw new TypeError('Saved profile data must be an object')
+  }
+  return parsedProfiles
+}
+
+function restoreSavedProfile(user) {
+  try {
+    const savedProfile = loadSavedProfiles()[user.id]
+    if (!savedProfile || typeof savedProfile !== 'object') return user
+
+    return {
+      ...user,
+      ...(typeof savedProfile.fullName === 'string' && { fullName: savedProfile.fullName }),
+      ...(typeof savedProfile.email === 'string' && { email: savedProfile.email }),
+      ...(typeof savedProfile.phone === 'string' && { phone: savedProfile.phone }),
+      ...(typeof savedProfile.avatar === 'string' && { avatar: savedProfile.avatar }),
+    }
+  } catch (error) {
+    console.error('Unable to load saved profile data:', error)
+    return user
+  }
+}
+
 function loadAuthRecord() {
   if (typeof window === 'undefined') {
     return { user: null, token: null }
@@ -77,7 +108,7 @@ function loadAuthRecord() {
   try {
     const savedAuth = readAuthRecord(window.localStorage, 'local')
     if (savedAuth) {
-      return savedAuth
+      return { ...savedAuth, user: restoreSavedProfile(savedAuth.user) }
     }
   } catch (error) {
     console.error('Unable to load authentication from localStorage:', error)
@@ -86,7 +117,7 @@ function loadAuthRecord() {
   try {
     const savedAuth = readAuthRecord(window.sessionStorage, 'session')
     if (savedAuth) {
-      return savedAuth
+      return { ...savedAuth, user: restoreSavedProfile(savedAuth.user) }
     }
   } catch (error) {
     console.error('Unable to load authentication from sessionStorage:', error)
@@ -98,9 +129,11 @@ function loadAuthRecord() {
 function persistAuthRecord(record, rememberMe) {
   const durableStorage = rememberMe ? window.localStorage : window.sessionStorage
   const otherStorage = rememberMe ? window.sessionStorage : window.localStorage
+  const persistedRecord = { ...record, user: { ...record.user } }
+  delete persistedRecord.user.avatar
 
-  durableStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(record))
-  durableStorage.setItem('token', record.token)
+  durableStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(persistedRecord))
+  durableStorage.setItem('token', persistedRecord.token)
   otherStorage.removeItem(AUTH_STORAGE_KEY)
   otherStorage.removeItem('token')
 }
@@ -134,6 +167,17 @@ function loadRegisteredUsers() {
   )
 }
 
+function loadMockPasswords() {
+  const savedPasswords = window.localStorage.getItem(MOCK_PASSWORDS_STORAGE_KEY)
+  if (!savedPasswords) return {}
+
+  const parsedPasswords = JSON.parse(savedPasswords)
+  if (!parsedPasswords || Array.isArray(parsedPasswords) || typeof parsedPasswords !== 'object') {
+    throw new TypeError('Saved mock password data must be an object')
+  }
+  return parsedPasswords
+}
+
 export function AuthProvider({ children }) {
   const [authRecord, setAuthRecord] = useState(loadAuthRecord)
   const [loading, setLoading] = useState(false)
@@ -146,9 +190,11 @@ export function AuthProvider({ children }) {
       }
 
       const normalizedEmail = email.trim().toLowerCase()
+      const savedMockPasswords = loadMockPasswords()
       const matchingMockUser = mockUsers.find(
         (mockUser) =>
-          mockUser.email === normalizedEmail && mockUser.password === password,
+          mockUser.email === normalizedEmail &&
+          (savedMockPasswords[mockUser.id] ?? mockUser.password) === password,
       )
       const matchingRegisteredUser = matchingMockUser
         ? null
@@ -163,13 +209,13 @@ export function AuthProvider({ children }) {
         throw new Error('Invalid email or password')
       }
 
-      const user = {
+      const user = restoreSavedProfile({
         id: matchedUser.id,
         fullName: matchedUser.fullName,
         email: matchedUser.email,
         phone: matchedUser.phone,
         role: matchedUser.role,
-      }
+      })
       const token = `mock-token-${user.role}-${Date.now()}`
       const nextRecord = {
         user,
@@ -209,13 +255,13 @@ export function AuthProvider({ children }) {
         throw new Error('An account with this email already exists.')
       }
 
-      const user = {
+      const user = restoreSavedProfile({
         id: `user-${normalizedEmail}`,
         fullName: fullName.trim(),
         email: normalizedEmail,
         phone: phone.trim(),
         role: 'customer',
-      }
+      })
       const registeredUser = { ...user, password }
       window.localStorage.setItem(
         REGISTERED_USERS_KEY,
@@ -233,6 +279,81 @@ export function AuthProvider({ children }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const updateProfile = (updates) => {
+    if (!authRecord.user || !authRecord.token) {
+      throw new Error('You must be signed in to update your profile.')
+    }
+
+    const user = {
+      ...authRecord.user,
+      fullName: updates.fullName,
+      email: updates.email,
+      phone: updates.phone,
+      avatar: updates.avatar || '',
+    }
+    const nextRecord = { ...authRecord, user }
+
+    try {
+      const savedProfiles = loadSavedProfiles()
+      savedProfiles[user.id] = {
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+      }
+      window.localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(savedProfiles))
+      persistAuthRecord(nextRecord, authRecord.expiresAt !== undefined)
+      const registeredUsers = loadRegisteredUsers()
+      const registeredUserIndex = registeredUsers.findIndex(
+        (registeredUser) => registeredUser.id === user.id,
+      )
+      if (registeredUserIndex !== -1) {
+        registeredUsers[registeredUserIndex] = {
+          ...registeredUsers[registeredUserIndex],
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+        }
+        window.localStorage.setItem(
+          REGISTERED_USERS_KEY,
+          JSON.stringify(registeredUsers),
+        )
+      }
+      setAuthRecord(nextRecord)
+    } catch (error) {
+      console.error('Unable to save profile changes:', error)
+      throw new Error('Unable to save your profile. Please try again.', { cause: error })
+    }
+  }
+
+  const changePassword = (currentPassword, nextPassword) => {
+    if (!authRecord.user || !authRecord.token) {
+      throw new Error('You must be signed in to update your password.')
+    }
+
+    const mockUser = mockUsers.find(({ id }) => id === authRecord.user.id)
+    if (mockUser) {
+      const savedPasswords = loadMockPasswords()
+      if ((savedPasswords[mockUser.id] ?? mockUser.password) !== currentPassword) {
+        throw new Error('Current password is incorrect.')
+      }
+      savedPasswords[mockUser.id] = nextPassword
+      window.localStorage.setItem(
+        MOCK_PASSWORDS_STORAGE_KEY,
+        JSON.stringify(savedPasswords),
+      )
+      return
+    }
+
+    const registeredUsers = loadRegisteredUsers()
+    const registeredUser = registeredUsers.find(({ id }) => id === authRecord.user.id)
+    if (!registeredUser || registeredUser.password !== currentPassword) {
+      throw new Error('Current password is incorrect.')
+    }
+    registeredUser.password = nextPassword
+    window.localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers))
   }
 
   const logout = () => {
@@ -254,6 +375,8 @@ export function AuthProvider({ children }) {
     token: authRecord.token,
     login,
     register,
+    updateProfile,
+    changePassword,
     logout,
     isAuthenticated,
     loading,

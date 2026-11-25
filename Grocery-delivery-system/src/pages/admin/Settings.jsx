@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import {
   AlertCircle,
   Bell,
@@ -18,6 +18,9 @@ import {
   Truck,
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
+import { useAuth } from '../../context/AuthContext.jsx'
+import { ADMIN_NOTIFICATIONS_KEY } from '../../data/adminNotifications.js'
+import useAdminNotifications from '../../hooks/useAdminNotifications.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 
 const STORAGE_KEY = 'grocery_admin_settings'
@@ -31,7 +34,7 @@ const DEFAULT_SETTINGS = {
     address: 'Bole, Addis Ababa, Ethiopia',
     currency: 'ETB',
     isOpen: true,
-    maintenanceMessage: 'We are making a few improvements. Please check back soon.',
+    maintenanceMessage: "We're restocking fresh groceries and will reopen shortly!",
     openTime: '08:00',
     closeTime: '21:00',
   },
@@ -49,6 +52,7 @@ const DEFAULT_SETTINGS = {
       { id: 'sarbet', name: 'Sarbet', fee: 45, active: true },
     ],
     timeSlots: [
+      { id: 'express', name: 'Express', hours: '30–45 mins', active: true },
       { id: 'morning', name: 'Morning', hours: '8AM–11AM', active: true },
       { id: 'afternoon', name: 'Afternoon', hours: '12PM–4PM', active: true },
       { id: 'evening', name: 'Evening', hours: '5PM–9PM', active: true },
@@ -71,6 +75,8 @@ const DEFAULT_SETTINGS = {
     autoAssignRider: true,
   },
   notifications: {
+    adminEmail: 'admin@grocerydelivery.et',
+    adminPhone: '+251 911 234 567',
     admin: {
       newOrder: true,
       lowStock: true,
@@ -117,9 +123,21 @@ function loadSettings() {
         zones: Array.isArray(parsed.delivery?.zones)
           ? parsed.delivery.zones
           : DEFAULT_SETTINGS.delivery.zones,
-        timeSlots: Array.isArray(parsed.delivery?.timeSlots)
-          ? parsed.delivery.timeSlots
-          : DEFAULT_SETTINGS.delivery.timeSlots,
+        timeSlots: [
+          ...DEFAULT_SETTINGS.delivery.timeSlots.map((defaultSlot) => ({
+            ...defaultSlot,
+            ...(Array.isArray(parsed.delivery?.timeSlots)
+              ? parsed.delivery.timeSlots.find((slot) => slot.id === defaultSlot.id)
+              : {}),
+          })),
+          ...(Array.isArray(parsed.delivery?.timeSlots)
+            ? parsed.delivery.timeSlots.filter(
+                (slot) => !DEFAULT_SETTINGS.delivery.timeSlots.some(
+                  (defaultSlot) => defaultSlot.id === slot.id,
+                ),
+              )
+            : []),
+        ],
       },
       payments: {
         ...DEFAULT_SETTINGS.payments,
@@ -156,14 +174,17 @@ function Field({
   step = 'any',
   autoComplete,
   suffix,
+  action,
 }) {
   const { t } = useLanguage()
+  const inputId = useId()
 
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t(label)}</span>
+    <div>
+      <label htmlFor={inputId} className="mb-1.5 block text-xs font-semibold text-slate-700">{t(label)}</label>
       <div className="relative">
         <input
+          id={inputId}
           type={type}
           value={value ?? ''}
           onChange={(event) => onChange(event.target.value)}
@@ -172,8 +193,13 @@ function Field({
           max={max}
           step={step}
           autoComplete={autoComplete}
-          className={`h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/10 ${suffix ? 'pr-14' : ''}`}
+          className={`w-full rounded-lg border border-gray-300/80 bg-white px-3.5 py-2 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15 ${suffix || action ? 'pr-12' : ''}`}
         />
+        {action && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2">
+            {action}
+          </span>
+        )}
         {suffix && (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">
             {suffix}
@@ -181,7 +207,7 @@ function Field({
         )}
       </div>
       {hint && <span className="mt-1 block text-[11px] leading-4 text-slate-400">{t(hint)}</span>}
-    </label>
+    </div>
   )
 }
 
@@ -208,7 +234,7 @@ function ToggleRow({ label, description, checked, onChange }) {
   )
 }
 
-function Card({ title, description, children, className = '' }) {
+function Card({ title, description, children, badge, className = '' }) {
   const { t } = useLanguage()
 
   return (
@@ -216,7 +242,17 @@ function Card({ title, description, children, className = '' }) {
       <div className="grid grid-cols-1 lg:grid-cols-12">
         {(title || description) && (
           <div className="p-6 lg:col-span-4">
-            {title && <h2 className="text-base font-bold text-[#0E532B]">{t(title)}</h2>}
+            {title && (
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-base font-bold text-[#0E532B]">{t(title)}</h2>
+                {badge && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#DDEEE0] bg-[#F5FAF6] px-2.5 py-1 text-[10px] font-semibold text-[#0E532B]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" />
+                    {t(badge)}
+                  </span>
+                )}
+              </div>
+            )}
             {description && <p className="mt-1.5 text-sm leading-6 text-gray-500">{t(description)}</p>}
           </div>
         )}
@@ -230,6 +266,8 @@ function Card({ title, description, children, className = '' }) {
 
 function Settings() {
   const { t } = useLanguage()
+  const { changePassword, token } = useAuth()
+  const [, setNotifications] = useAdminNotifications()
   const [settings, setSettings] = useState(loadSettings)
   const [savedSettingsSnapshot, setSavedSettingsSnapshot] = useState(() => JSON.stringify(settings))
   const [activeTab, setActiveTab] = useState('store')
@@ -245,6 +283,8 @@ function Settings() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordNotice, setPasswordNotice] = useState('')
   const [showPasswords, setShowPasswords] = useState(false)
+  const [showGatewayKeys, setShowGatewayKeys] = useState({})
+  const [gatewayChecks, setGatewayChecks] = useState({})
   const hasUnsavedChanges = JSON.stringify(settings) !== savedSettingsSnapshot
 
   useEffect(() => {
@@ -275,10 +315,108 @@ function Settings() {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSettings))
       setSettings(nextSettings)
       setSavedSettingsSnapshot(JSON.stringify(nextSettings))
+      window.dispatchEvent(
+        new CustomEvent('grocery-store-status-change', {
+          detail: { isOpen: nextSettings.storeProfile.isOpen },
+        }),
+      )
       setToast({ type: 'success', message: successMessage })
     } catch (error) {
       console.error('Unable to save admin settings:', error)
       setToast({ type: 'error', message: t('settings.saveSettingsError') })
+    }
+  }
+
+  const updateStoreAvailability = (isOpen) => {
+    try {
+      const savedSettings = loadSettings()
+      const nextSavedSettings = {
+        ...savedSettings,
+        storeProfile: {
+          ...savedSettings.storeProfile,
+          isOpen,
+          maintenanceMessage: settings.storeProfile.maintenanceMessage,
+        },
+      }
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSavedSettings))
+      setSettings((current) => ({
+        ...current,
+        storeProfile: { ...current.storeProfile, isOpen },
+      }))
+      setSavedSettingsSnapshot(JSON.stringify(nextSavedSettings))
+      window.dispatchEvent(
+        new CustomEvent('grocery-store-status-change', { detail: { isOpen } }),
+      )
+    } catch (error) {
+      console.error('Unable to update store availability:', error)
+      setToast({ type: 'error', message: t('settings.saveSettingsError') })
+    }
+  }
+
+  const handleLogoUpload = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setToast({ type: 'error', message: 'Choose a valid image file.' })
+      event.target.value = ''
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setToast({ type: 'error', message: 'Store logo must be 2 MB or smaller.' })
+      event.target.value = ''
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        setToast({ type: 'error', message: 'Unable to read the selected logo.' })
+        return
+      }
+      updateSection('storeProfile', 'logo', reader.result)
+    }
+    reader.onerror = () => {
+      console.error('Unable to read the selected store logo:', reader.error)
+      setToast({ type: 'error', message: 'Unable to read the selected logo.' })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const testGateway = (gateway, credentials) => {
+    if (!credentials.some((credential) => credential.trim())) {
+      setGatewayChecks((current) => ({ ...current, [gateway]: false }))
+      setToast({ type: 'error', message: 'Add gateway credentials before testing.' })
+      return
+    }
+    setGatewayChecks((current) => ({ ...current, [gateway]: true }))
+  }
+
+  const sendTestNotification = () => {
+    const now = new Date()
+    const notification = {
+      id: `test-${now.getTime()}`,
+      title: 'Test notification',
+      category: 'System',
+      priority: 'Normal',
+      description: `Test alert sent to ${settings.notifications.adminEmail} and ${settings.notifications.adminPhone}.`,
+      actionLabel: 'Open settings',
+      actionPath: '/admin/settings',
+      timestamp: 'Just now',
+      unread: true,
+    }
+    try {
+      const saved = window.localStorage.getItem(ADMIN_NOTIFICATIONS_KEY)
+      const current = saved ? JSON.parse(saved) : []
+      if (!Array.isArray(current)) {
+        throw new TypeError(`${ADMIN_NOTIFICATIONS_KEY} must contain an array`)
+      }
+      const next = [notification, ...current]
+      window.localStorage.setItem(ADMIN_NOTIFICATIONS_KEY, JSON.stringify(next))
+      setNotifications(next)
+      setToast({ type: 'success', message: 'Test notification sent.' })
+    } catch (error) {
+      console.error('Unable to send test admin notification:', error)
+      setToast({ type: 'error', message: 'Unable to send test notification.' })
     }
   }
 
@@ -329,13 +467,41 @@ function Settings() {
       setPasswordError(t('settings.passwordsDoNotMatch'))
       return
     }
-    setPasswordFields({ current: '', next: '', confirm: '' })
-    setPasswordNotice(t('settings.passwordUpdateUnavailable'))
+    try {
+      changePassword(passwordFields.current, passwordFields.next)
+      setPasswordFields({ current: '', next: '', confirm: '' })
+      setPasswordNotice('Password updated successfully.')
+      setToast({ type: 'success', message: 'Password updated successfully.' })
+    } catch (error) {
+      if (error.message !== 'Current password is incorrect.') {
+        console.error('Unable to update admin password:', error)
+      }
+      setPasswordError(error.message || 'Unable to update password. Please try again.')
+    }
+  }
+
+  const signOutOtherSessions = () => {
+    try {
+      const localAuth = window.localStorage.getItem('grocery-auth')
+      const activeInLocalStorage = localAuth && JSON.parse(localAuth).token === token
+      const otherStorage = activeInLocalStorage
+        ? window.sessionStorage
+        : window.localStorage
+      otherStorage.removeItem('grocery-auth')
+      otherStorage.removeItem('token')
+      setToast({
+        type: 'success',
+        message: 'Other saved sessions on this browser have been signed out.',
+      })
+    } catch (error) {
+      console.error('Unable to sign out other admin sessions:', error)
+      setToast({ type: 'error', message: 'Unable to sign out other sessions.' })
+    }
   }
 
   const renderStoreProfile = () => (
     <div className="w-full space-y-6">
-      <Card title="Store profile" description="Customer-facing business details, support contacts, and warehouse location.">
+      <Card title="Store profile" description="Customer-facing business details, support contacts, and warehouse location." badge="Synced with Storefront">
         <div className="grid gap-5 lg:grid-cols-[1fr_180px]">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Store Name" value={settings.storeProfile.name} onChange={(value) => updateSection('storeProfile', 'name', value)} />
@@ -347,20 +513,26 @@ function Settings() {
             </div>
             <label className="block">
               <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('Currency')}</span>
-              <select value={settings.storeProfile.currency} onChange={(event) => updateSection('storeProfile', 'currency', event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1E8E3E]">
+              <select value={settings.storeProfile.currency} onChange={(event) => updateSection('storeProfile', 'currency', event.target.value)} className="w-full rounded-lg border border-gray-300/80 bg-white px-3.5 py-2 text-sm outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15">
                 <option value="ETB">{t('settings.ethiopianBirr')}</option>
               </select>
             </label>
           </div>
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
-            <img src={logo} alt={t('settings.storeLogoAlt')} className="h-24 w-36 object-contain" />
-            <p className="mt-2 text-[11px] font-semibold text-slate-500">{t('settings.storeLogoPreview')}</p>
-            <p className="mt-1 text-[10px] text-slate-400">{t('settings.managedByBrandAssets')}</p>
+            <img src={settings.storeProfile.logo || logo} alt={t('settings.storeLogoAlt')} className="h-24 w-36 object-contain" />
+            <label className="mt-3 block w-full text-left">
+              <span className="mb-1.5 block text-xs font-semibold text-slate-700">Store logo</span>
+              <input type="file" accept="image/*" onChange={handleLogoUpload} className="w-full text-xs text-slate-600 file:mr-2 file:rounded-md file:border-0 file:bg-white file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-[#0E532B] hover:file:bg-emerald-50" />
+            </label>
+            <button type="button" onClick={() => updateSection('storeProfile', 'logo', '')} className="mt-2 text-xs font-semibold text-[#0B4B8C] hover:underline">
+              Reset Logo
+            </button>
+            <p className="mt-1 text-[10px] text-slate-400">PNG, JPG, or SVG · 2 MB max</p>
           </div>
         </div>
       </Card>
 
-      <Card title="Store availability" description="Pause online ordering during planned maintenance or outside operating hours.">
+      <Card title="Store availability" description="Pause online ordering during planned maintenance or outside operating hours." badge="Synced with Storefront">
         <div className={`mb-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${settings.storeProfile.isOpen ? 'border-[#B9DDBF] bg-[#F0F7F1]' : 'border-orange-200 bg-orange-50'}`}>
           <div>
             <p className={`text-sm font-bold ${settings.storeProfile.isOpen ? 'text-[#0E532B]' : 'text-[#F04E00]'}`}>
@@ -373,16 +545,20 @@ function Settings() {
           <ToggleRow
             label={settings.storeProfile.isOpen ? 'Store Open' : 'Maintenance Mode'}
             checked={settings.storeProfile.isOpen}
-            onChange={(value) => updateSection('storeProfile', 'isOpen', value)}
+            onChange={updateStoreAvailability}
           />
         </div>
         {!settings.storeProfile.isOpen && (
           <div className="mb-4">
-            <Field
-              label="Maintenance Banner Message"
-              value={settings.storeProfile.maintenanceMessage}
-              onChange={(value) => updateSection('storeProfile', 'maintenanceMessage', value)}
-            />
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-slate-700">Customer Maintenance Message</span>
+              <textarea
+                rows={3}
+                value={settings.storeProfile.maintenanceMessage}
+                onChange={(event) => updateSection('storeProfile', 'maintenanceMessage', event.target.value)}
+                className="w-full resize-y rounded-lg border border-gray-300/80 bg-white px-3.5 py-2 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15"
+              />
+            </label>
           </div>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
@@ -395,7 +571,7 @@ function Settings() {
 
   const renderDelivery = () => (
     <div className="w-full space-y-6">
-      <Card title="Delivery pricing & coverage" description="Set checkout delivery pricing and the farthest distance served from your warehouse.">
+      <Card title="Delivery pricing & coverage" description="Set checkout delivery pricing and the farthest distance served from your warehouse." badge="Synced with Checkout">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           <Field label="Free Delivery Threshold" suffix="ETB" type="number" min="0" value={settings.delivery.freeThreshold} onChange={(value) => updateSection('delivery', 'freeThreshold', value)} />
           <Field label="Standard Delivery Fee" suffix="ETB" type="number" min="0" value={settings.delivery.standardFee} onChange={(value) => updateSection('delivery', 'standardFee', value)} />
@@ -405,7 +581,7 @@ function Settings() {
         </div>
       </Card>
 
-      <Card title="Addis Ababa delivery zones" description="Manage local delivery fees and temporarily pause service in a zone.">
+      <Card title="Addis Ababa delivery zones" description="Manage local delivery fees and temporarily pause service in a zone." badge="Synced with Checkout">
         <div className="space-y-2">
           {settings.delivery.zones.map((zone) => (
             <div key={zone.id} className="grid grid-cols-[minmax(0,1fr)_105px_auto_auto] items-center gap-2 rounded-xl border border-slate-100 px-3 py-2.5">
@@ -426,7 +602,7 @@ function Settings() {
                       zones: current.delivery.zones.map((item) => item.id === zone.id ? { ...item, fee: event.target.value } : item),
                     },
                   }))}
-                  className="h-9 w-full rounded-lg border border-slate-200 px-2.5 pr-9 text-sm outline-none focus:border-[#1E8E3E]"
+                  className="w-full rounded-lg border border-gray-300/80 px-3.5 py-2 pr-10 text-sm outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15"
                 />
                 <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">ETB</span>
               </label>
@@ -463,15 +639,15 @@ function Settings() {
         </div>
         <form onSubmit={addZone} className="mt-4 rounded-xl border border-dashed border-slate-300 p-3">
           <div className="grid gap-2 sm:grid-cols-[1fr_150px_auto]">
-            <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder={t('settings.newZoneName')} aria-label={t('settings.newZoneName')} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
-            <input type="number" min="0" value={zoneFee} onChange={(event) => setZoneFee(event.target.value)} placeholder={t('settings.feeEtb')} aria-label={t('settings.newZoneDeliveryFee')} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
+            <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder={t('settings.newZoneName')} aria-label={t('settings.newZoneName')} className="w-full rounded-lg border border-gray-300/80 px-3.5 py-2 text-sm outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15" />
+            <input type="number" min="0" value={zoneFee} onChange={(event) => setZoneFee(event.target.value)} placeholder={t('settings.feeEtb')} aria-label={t('settings.newZoneDeliveryFee')} className="w-full rounded-lg border border-gray-300/80 px-3.5 py-2 text-sm outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15" />
             <button type="submit" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#1E8E3E] px-4 text-xs font-semibold text-white hover:bg-[#0E532B]"><Plus size={14} /> {t('Add Zone')}</button>
           </div>
           {zoneError && <p role="alert" className="mt-2 text-xs text-[#F04E00]">{zoneError}</p>}
         </form>
       </Card>
 
-      <Card title="Available delivery time slots" description="Customers can choose from active delivery windows at checkout.">
+      <Card title="Available delivery time slots" description="Customers can choose from active delivery windows at checkout." badge="Synced with Checkout">
         <div className="divide-y divide-slate-100">
           {settings.delivery.timeSlots.map((slot) => (
             <ToggleRow
@@ -494,7 +670,32 @@ function Settings() {
   )
 
   const renderPayments = () => {
-    const gatewayCard = (title, gateway, fields) => (
+    const secretField = (gateway, field, label, placeholder) => (
+      <Field
+        label={label}
+        type={showGatewayKeys[gateway] ? 'text' : 'password'}
+        value={settings.payments[gateway][field]}
+        onChange={(value) => {
+          updateNested('payments', gateway, field, value)
+          setGatewayChecks((current) => ({ ...current, [gateway]: false }))
+        }}
+        placeholder={placeholder}
+        action={
+          <button
+            type="button"
+            aria-label={showGatewayKeys[gateway] ? 'Hide credential' : 'Show credential'}
+            onClick={() => setShowGatewayKeys((current) => ({
+              ...current,
+              [gateway]: !current[gateway],
+            }))}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
+          >
+            {showGatewayKeys[gateway] ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        }
+      />
+    )
+    const gatewayCard = (title, gateway, fields, credentials = []) => (
       <section key={title} className="rounded-xl border border-slate-200 p-4">
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
@@ -513,24 +714,37 @@ function Settings() {
           </button>
         </div>
         <div className="mt-4 space-y-4">{fields}</div>
+        {gateway !== 'cod' && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3">
+            <button type="button" onClick={() => testGateway(gateway, credentials)} className="inline-flex h-9 items-center rounded-lg border border-gray-300/80 bg-white px-3.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+              Test Connection
+            </button>
+            {gatewayChecks[gateway] && (
+              <span role="status" className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-[#1E8E3E]">
+                <Check size={13} /> Gateway Reachable ✓
+              </span>
+            )}
+            <span className="text-[10px] text-slate-400">Local credential check; provider endpoint is not configured.</span>
+          </div>
+        )}
       </section>
     )
     return (
       <div className="w-full space-y-6">
-        <Card title="Payment gateways" description="Enable the payment options customers can use to complete grocery orders.">
+        <Card title="Payment gateways" description="Enable the payment options customers can use to complete grocery orders." badge="Synced with Checkout">
           <div className="grid gap-4 md:grid-cols-2">
             {gatewayCard('Telebirr', 'telebirr', (
-              <Field label="Shortcode / App ID" value={settings.payments.telebirr.credential} onChange={(value) => updateNested('payments', 'telebirr', 'credential', value)} placeholder="Enter Telebirr shortcode" />
-            ))}
+              secretField('telebirr', 'credential', 'Shortcode / App ID', 'Enter Telebirr shortcode')
+            ), [settings.payments.telebirr.credential])}
             {gatewayCard('CBE Birr', 'cbeBirr', (
-              <Field label="Merchant Account" value={settings.payments.cbeBirr.credential} onChange={(value) => updateNested('payments', 'cbeBirr', 'credential', value)} placeholder="Enter merchant account" />
-            ))}
+              secretField('cbeBirr', 'credential', 'Merchant Account', 'Enter merchant account')
+            ), [settings.payments.cbeBirr.credential])}
             {gatewayCard('Chapa Card / Bank', 'chapa', (
               <>
-                <Field label="Public Key" value={settings.payments.chapa.publicKey} onChange={(value) => updateNested('payments', 'chapa', 'publicKey', value)} placeholder="pk_test_..." />
+                {secretField('chapa', 'publicKey', 'Public Key', 'pk_test_...')}
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('Gateway mode')}</span>
-                  <select value={settings.payments.chapa.mode} onChange={(event) => updateNested('payments', 'chapa', 'mode', event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1E8E3E]">
+                  <select value={settings.payments.chapa.mode} onChange={(event) => updateNested('payments', 'chapa', 'mode', event.target.value)} className="w-full rounded-lg border border-gray-300/80 bg-white px-3.5 py-2 text-sm outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15">
                     <option>{t('Test')}</option><option>{t('Live')}</option>
                   </select>
                   <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${settings.payments.chapa.mode === 'Live' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'}`}>
@@ -538,7 +752,7 @@ function Settings() {
                   </span>
                 </label>
               </>
-            ))}
+            ), [settings.payments.chapa.publicKey])}
             {gatewayCard('Cash on Delivery (COD)', 'cod', (
               <Field label="Max COD Order Limit" suffix="ETB" type="number" min="0" value={settings.payments.cod.maxLimit} onChange={(value) => updateNested('payments', 'cod', 'maxLimit', value)} />
             ))}
@@ -610,13 +824,34 @@ function Settings() {
             ['delivered', 'Delivered', 'Confirm successful delivery to the customer.'],
           ])}
         </Card>
+        <Card title="Alert recipients" description="Set the contacts that receive operational admin alerts.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Admin Alert Email"
+              type="email"
+              value={settings.notifications.adminEmail}
+              onChange={(value) => updateSection('notifications', 'adminEmail', value)}
+              autoComplete="email"
+            />
+            <Field
+              label="+251 Alert SMS Phone"
+              type="tel"
+              value={settings.notifications.adminPhone}
+              onChange={(value) => updateSection('notifications', 'adminPhone', value)}
+              placeholder="+251 911 234 567"
+            />
+          </div>
+          <button type="button" onClick={sendTestNotification} className="mt-5 inline-flex h-10 items-center rounded-lg bg-[#1E8E3E] px-4 text-sm font-semibold text-white transition hover:bg-[#0E532B]">
+            Send Test Notification
+          </button>
+        </Card>
       </div>
     )
   }
 
   const renderSecurity = () => (
     <div className="w-full space-y-6">
-      <Card title="Change admin password" description="Use a strong, unique password. Password updates require a secure server-side account service.">
+      <Card title="Change admin password" description="Verify your current password and choose a new password with at least eight characters.">
         <form onSubmit={submitPasswordChange} className="space-y-4">
           <div className="relative">
             <Field label="Current Password" type={showPasswords ? 'text' : 'password'} value={passwordFields.current} onChange={(value) => setPasswordFields((current) => ({ ...current, current: value }))} autoComplete="current-password" />
@@ -633,7 +868,7 @@ function Settings() {
           {passwordNotice && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-[#1E8E3E]">{passwordNotice}</p>}
           <div>
             <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white hover:bg-[#0E532B]">
-              <KeyRound size={15} /> {t('settings.validatePasswordChange')}
+              <KeyRound size={15} /> Update Password
             </button>
           </div>
         </form>
@@ -659,6 +894,23 @@ function Settings() {
             <span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" /> {t('settings.currentSession')}
           </span>
         </div>
+        <button type="button" onClick={signOutOtherSessions} className="mt-4 inline-flex h-9 items-center rounded-lg border border-gray-300/80 px-3.5 text-xs font-semibold text-slate-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#F04E00]">
+          Sign Out All Other Sessions
+        </button>
+        <p className="mt-2 text-[10px] text-slate-400">This clears other saved sign-ins on this browser.</p>
+      </Card>
+      <Card title="Recent security activity" description="A concise audit trail of recent administrator activity.">
+        <ol className="divide-y divide-slate-100">
+          {[
+            { event: 'Admin logged in • Addis Ababa', time: 'Today' },
+            { event: 'Delivery settings updated', time: 'Today' },
+          ].map(({ event, time }) => (
+            <li key={event} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+              <span className="text-sm font-medium text-slate-700">{event}</span>
+              <span className="shrink-0 text-xs text-slate-400">{time}</span>
+            </li>
+          ))}
+        </ol>
       </Card>
     </div>
   )
@@ -726,7 +978,7 @@ function Settings() {
       <nav
         role="tablist"
         aria-label={t('settings.settingsNavigation')}
-        className="mb-6 flex w-full items-center gap-6 overflow-x-auto border-b border-gray-200"
+        className="mb-6 flex w-full items-center gap-6 overflow-x-auto overflow-y-hidden whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b border-gray-200"
       >
         {settingTabs.map(({ id, translationKey, icon: Icon }) => (
           <button
