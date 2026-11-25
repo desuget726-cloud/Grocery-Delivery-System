@@ -45,7 +45,7 @@ function Profile() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <header>
         <p className="text-sm font-semibold text-emerald-700">Account settings</p>
         <h1 className="mt-1 text-3xl font-bold text-slate-900">Your profile</h1>

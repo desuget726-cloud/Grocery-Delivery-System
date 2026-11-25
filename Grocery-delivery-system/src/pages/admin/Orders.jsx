@@ -228,14 +228,14 @@ function Orders() {
   return (
     <div>
       <AdminPageHeader
-        title="Orders"
-        description="Track grocery orders, update fulfillment, and coordinate Addis Ababa deliveries."
+        title={t('orders')}
+        description={t('orders.ordersDescription')}
       />
 
       <section className="mb-6 rounded-2xl bg-gradient-to-r from-[#0E532B] to-[#1E8E3E] p-5 text-white">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryCard
-            label="Total Orders"
+            label={t('totalOrders')}
             value={orders.length}
             icon={ShoppingBasket}
             iconClass="bg-[#1E8E3E] text-white"
@@ -249,30 +249,30 @@ function Orders() {
             }`}
           >
             <SummaryCardContent
-              label="Unassigned Orders"
+              label={t('orders.unassignedOrders')}
               value={unassignedCount}
               icon={UserRound}
               iconClass="bg-[#F04E00] text-white"
             />
           </button>
           <SummaryCard
-            label="Today's Orders"
+            label={t('orders.todaysOrders')}
             value={todayCount}
             icon={CalendarDays}
             iconClass="bg-blue-600 text-white"
           />
           <SummaryCard
-            label="Active Riders"
+            label={t('orders.activeRiders')}
             value={riders.filter((rider) => rider.available).length}
             icon={Bike}
             iconClass="bg-[#F04E00] text-white"
-            detail="available delivery staff"
+            detail={t('orders.availableDeliveryStaff')}
           />
         </div>
       </section>
 
       <section className="mb-4 space-y-3">
-        <div className="flex flex-wrap gap-2" aria-label="Filter orders by status">
+        <div className="flex flex-wrap gap-2" aria-label={t('orders.filterOrdersByStatus')}>
           {statusTabs.map(({ label, value }) => {
             const count =
               value === 'all'
@@ -313,8 +313,8 @@ function Orders() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search GDS order ID, customer, or phone..."
-              aria-label="Search order ID, customer name, or phone number"
+              placeholder={t('orders.searchOrdersPlaceholder')}
+              aria-label={t('orders.searchOrdersLabel')}
               className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15"
             />
           </label>
@@ -329,8 +329,8 @@ function Orders() {
             }`}
           >
             <Users aria-hidden="true" size={16} />
-            Unassigned Only
-            {unassignedOnly && <span className="text-xs">On</span>}
+            {t('orders.unassignedOnly')}
+            {unassignedOnly && <span className="text-xs">{t('orders.on')}</span>}
           </button>
         </div>
       </section>
@@ -340,14 +340,14 @@ function Orders() {
           <table className="w-full min-w-[1120px] text-left text-sm">
             <thead className="bg-gray-50 text-[11px] uppercase tracking-wide text-[#0E532B]/75">
               <tr>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Order ID</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Customer</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Date &amp; Time</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Items</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Total (ETB)</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Delivery Rider</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Status</th>
-                <th scope="col" className="px-4 py-3.5 text-right font-semibold">Actions</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('orderId')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.customer')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.dateTime')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.items')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.totalEtb')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.deliveryRider')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('status')}</th>
+                <th scope="col" className="px-4 py-3.5 text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -371,14 +371,14 @@ function Orders() {
                     </p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-slate-600">
-                    {order.items.reduce((total, item) => total + item.quantity, 0)} items
+                    {order.items.reduce((total, item) => total + item.quantity, 0)} {t('common.items')}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 font-semibold text-[#0E532B]">
                     {formatCurrency(order.total)}
                   </td>
                   <td className="px-4 py-4">
                     <label className="sr-only" htmlFor={`rider-${order.id}`}>
-                      Assign delivery rider for {order.id}
+                      {t('orders.assignRider')} {order.id}
                     </label>
                     <div className="relative">
                       <Truck
@@ -399,7 +399,7 @@ function Orders() {
                         }`}
                       >
                         <option value="">
-                          {order.deliveryStaff ? 'Change Rider' : 'Assign Rider'}
+                          {t(order.deliveryStaff ? 'orders.changeRider' : 'orders.assignRider')}
                         </option>
                         {riders.filter((rider) => rider.available).map((rider) => (
                           <option key={rider.id} value={rider.name}>
@@ -418,7 +418,7 @@ function Orders() {
                       {t(order.status)}
                     </span>
                     <label className="sr-only" htmlFor={`status-${order.id}`}>
-                      Update status for {order.id}
+                      {t('orders.updateOrderStatus')} {order.id}
                     </label>
                     <select
                       id={`status-${order.id}`}
@@ -429,14 +429,14 @@ function Orders() {
                       className="block max-w-36 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-slate-600 outline-none focus:border-[#1E8E3E]"
                     >
                       {orderStatuses.map((status) => (
-                        <option key={status} value={status}>{status}</option>
+                        <option key={status} value={status}>{t(status)}</option>
                       ))}
                     </select>
                   </td>
                   <td className="px-4 py-4 text-right">
                     <button
                       type="button"
-                      aria-label={`View details for ${order.id}`}
+                      aria-label={`${t('orders.viewOrderDetails')} ${order.id}`}
                       onClick={() => setSelectedOrderId(order.id)}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-emerald-50 hover:text-[#1E8E3E] focus:outline-none focus:ring-2 focus:ring-[#1E8E3E]/30"
                     >
@@ -449,9 +449,9 @@ function Orders() {
                 <tr>
                   <td colSpan="8" className="px-5 py-14 text-center">
                     <ShoppingBasket aria-hidden="true" size={30} className="mx-auto text-slate-300" />
-                    <p className="mt-3 font-semibold text-slate-700">No orders found</p>
+                    <p className="mt-3 font-semibold text-slate-700">{t('orders.noOrdersFound')}</p>
                     <p className="mt-1 text-sm text-slate-500">
-                      Try a different status, search term, or filter.
+                      {t('orders.tryDifferentStatusSearchFilter')}
                     </p>
                   </td>
                 </tr>
@@ -463,7 +463,7 @@ function Orders() {
 
       {selectedOrder && (
         <Modal
-          title={`Order ${selectedOrder.id}`}
+          title={`${t('common.order')} ${selectedOrder.id}`}
           onClose={() => setSelectedOrderId(null)}
           size="max-w-2xl"
         >
@@ -484,14 +484,14 @@ function Orders() {
                   statusColors[selectedOrder.status] ?? 'bg-slate-100 text-slate-700'
                 }`}
               >
-                {selectedOrder.status}
+                {t(selectedOrder.status)}
               </span>
             </div>
 
             <section>
               <h3 className="flex items-center gap-2 text-sm font-bold text-[#0E532B]">
                 <PackageCheck aria-hidden="true" size={17} className="text-[#1E8E3E]" />
-                Grocery items
+                {t('orders.groceryItems')}
               </h3>
               <ul className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-100">
                 {selectedOrder.items.map((item) => (
@@ -499,7 +499,7 @@ function Orders() {
                     <div>
                       <p className="text-sm font-medium text-slate-800">{item.name}</p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {item.unit} · Qty {item.quantity}
+                        {item.unit} · {t('common.quantity')} {item.quantity}
                       </p>
                     </div>
                     <span className="whitespace-nowrap text-sm font-semibold text-slate-700">
@@ -509,7 +509,7 @@ function Orders() {
                 ))}
               </ul>
               <div className="mt-3 flex justify-between border-t border-gray-100 pt-3 text-sm">
-                <span className="font-semibold text-slate-600">Order total</span>
+                <span className="font-semibold text-slate-600">{t('orders.orderTotal')}</span>
                 <span className="font-bold text-[#0E532B]">
                   {formatCurrency(selectedOrder.total)}
                 </span>
@@ -520,7 +520,7 @@ function Orders() {
               <section className="rounded-xl border border-gray-100 p-3">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-[#0E532B]">
                   <MapPin aria-hidden="true" size={16} className="text-[#1E8E3E]" />
-                  Delivery address
+                  {t('orders.deliveryAddress')}
                 </h3>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   {selectedOrder.deliveryAddress}
@@ -529,7 +529,7 @@ function Orders() {
               <section className="rounded-xl border border-gray-100 p-3">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-[#0E532B]">
                   <CreditCard aria-hidden="true" size={16} className="text-[#1E8E3E]" />
-                  Payment method
+                  {t('orders.paymentMethod')}
                 </h3>
                 <p className="mt-2 text-sm text-slate-600">
                   {selectedOrder.paymentMethod}

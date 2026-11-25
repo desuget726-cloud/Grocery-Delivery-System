@@ -100,58 +100,55 @@ const tabTranslationKeys = {
 
 const guides = [
   {
-    title: 'Order & Rider Dispatch',
-    description: 'Manage incoming orders, assign riders, and keep deliveries on track.',
+    titleKey: 'common.guideOrderDispatch',
+    descriptionKey: 'common.guideOrderDispatchDescription',
     icon: Truck,
     tone: 'bg-blue-50 text-[#0B4B8C]',
-    duration: '5 min read',
+    durationMinutes: 5,
   },
   {
-    title: 'Inventory & Expiry Tracking',
-    description: 'Update stock levels and stay ahead of low-stock and expiry alerts.',
+    titleKey: 'common.guideInventoryExpiry',
+    descriptionKey: 'common.guideInventoryExpiryDescription',
     icon: PackageCheck,
     tone: 'bg-emerald-50 text-[#1E8E3E]',
-    duration: '4 min read',
+    durationMinutes: 4,
   },
   {
-    title: 'Telebirr & COD Settlements',
-    description: 'Reconcile mobile payments and record rider cash-on-delivery returns.',
+    titleKey: 'common.guideTelebirrCod',
+    descriptionKey: 'common.guideTelebirrCodDescription',
     icon: Wallet,
     tone: 'bg-orange-50 text-[#F04E00]',
-    duration: '6 min read',
+    durationMinutes: 6,
   },
   {
-    title: 'Coupons & Store Settings',
-    description: 'Create customer offers and configure store hours and delivery rules.',
+    titleKey: 'common.guideCouponsSettings',
+    descriptionKey: 'common.guideCouponsSettingsDescription',
     icon: TicketPercent,
     tone: 'bg-blue-50 text-[#0B4B8C]',
-    duration: '3 min read',
+    durationMinutes: 3,
   },
 ]
 
 const faqs = [
   {
-    question: 'How do I assign an unassigned order?',
-    answer:
-      'Open Order Management and select the order marked “Unassigned”. Choose an available rider from the dispatch panel, then confirm the assignment. The rider will receive the delivery details in their app.',
+    questionKey: 'common.faqAssignOrder',
+    answerKey: 'common.faqAssignOrderAnswer',
   },
   {
-    question: 'How to settle rider COD cash?',
-    answer:
-      'Go to Transactions and open the rider’s COD settlement. Compare the cash received with the delivered orders, enter the amount handed in, and save the settlement record. Flag any difference for review before closing the shift.',
+    questionKey: 'common.faqSettleCod',
+    answerKey: 'common.faqSettleCodAnswer',
   },
   {
-    question: 'How to set free delivery threshold?',
-    answer:
-      'Open Settings → Delivery & Zones and update the “Free delivery above” amount. The threshold is shown in ETB and applies to eligible customer orders once you save the store settings.',
+    questionKey: 'common.faqFreeDelivery',
+    answerKey: 'common.faqFreeDeliveryAnswer',
   },
 ]
 
 const systemServices = [
-  { name: 'Storefront API', detail: 'Customer app and catalog', status: 'Operational' },
-  { name: 'Telebirr Gateway', detail: 'Mobile money payments', status: 'Connected' },
-  { name: 'CBE Birr', detail: 'Bank payment processing', status: 'Connected' },
-  { name: 'Rider Fleet Sync', detail: 'Dispatch and rider updates', status: 'Active' },
+  { nameKey: 'common.storefrontApi', detailKey: 'common.customerAppAndCatalog', status: 'Operational' },
+  { nameKey: 'common.telebirrGateway', detailKey: 'common.mobileMoneyPayments', status: 'Connected' },
+  { nameKey: 'common.cbeBirr', detailKey: 'common.bankPaymentProcessing', status: 'Connected' },
+  { nameKey: 'common.riderFleetSync', detailKey: 'common.dispatchAndRiderUpdates', status: 'Active' },
 ]
 
 function initials(name) {
@@ -198,10 +195,10 @@ function Support() {
   const selectedTicket =
     filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0]
   const visibleGuides = guides.filter((guide) =>
-    `${guide.title} ${guide.description}`.toLowerCase().includes(normalizedSearch),
+    `${t(guide.titleKey)} ${t(guide.descriptionKey)}`.toLowerCase().includes(normalizedSearch),
   )
   const visibleFaqs = faqs.filter((faq) =>
-    `${faq.question} ${faq.answer}`.toLowerCase().includes(normalizedSearch),
+    `${t(faq.questionKey)} ${t(faq.answerKey)}`.toLowerCase().includes(normalizedSearch),
   )
   const openTicketCount = tickets.filter((ticket) => ticket.status !== 'Resolved').length
 
@@ -237,20 +234,20 @@ function Support() {
   const handleResolve = () => {
     if (!selectedTicket) return
     updateTicket(selectedTicket.id, { status: 'Resolved', updated: 'Just now' })
-    setToast(`${selectedTicket.id} marked as resolved`)
+    setToast(`${selectedTicket.id} ${t('common.markedAsResolved')}`)
   }
 
   const handleCoupon = () => {
     if (!selectedTicket) return
     addAdminMessage('I’ve added a 10% apology coupon to your account. We appreciate your patience.')
-    setToast('10% apology coupon sent')
+    setToast(t('common.apologyCouponSent'))
   }
 
   const handleSupportRequest = (event) => {
     event.preventDefault()
     setFormSubmitted(true)
     event.currentTarget.reset()
-    setToast('Technical support request submitted')
+    setToast(t('common.supportRequestSubmitted'))
   }
 
   return (
@@ -268,7 +265,7 @@ function Support() {
             {t('helpCenterSupport')}
           </h1>
           <p className="mt-2 text-sm leading-6 text-gray-600 sm:text-base">
-            Resolve customer order complaints, browse store admin guides, and monitor system health
+            {t('common.supportDescription')}
           </p>
         </div>
         <label className="mt-6 flex h-12 max-w-2xl items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 text-slate-400 shadow-sm focus-within:ring-4 focus-within:ring-[#0E532B]/10">
@@ -277,15 +274,15 @@ function Support() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search customer tickets, GDS- order IDs, or admin guides..."
-            aria-label="Search customer tickets, order IDs, or admin guides"
+            placeholder={t('common.supportSearchPlaceholder')}
+            aria-label={t('common.supportSearchPlaceholder')}
             className="h-full min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              aria-label="Clear search"
+              aria-label={t('common.clearSearch')}
               className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             >
               <X aria-hidden="true" size={16} />
@@ -294,35 +291,35 @@ function Support() {
         </label>
       </section>
 
-      <section aria-label="Support overview" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label={t('common.supportOverview')} className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-slate-500">Open Tickets</p>
+            <p className="text-sm font-medium text-slate-500">{t('common.openTickets')}</p>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-semibold text-[#F04E00]">
               <span className="h-1.5 w-1.5 rounded-full bg-[#F04E00]" />
               {t('needsAttention')}
             </span>
           </div>
           <p className="mt-3 text-2xl font-bold text-[#0E532B]">{openTicketCount}</p>
-          <p className="mt-1 text-xs text-slate-500">Customer cases awaiting closure</p>
+          <p className="mt-1 text-xs text-slate-500">{t('common.customerCasesAwaitingClosure')}</p>
         </article>
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-sm font-medium text-slate-500">Avg Response Time</p>
-          <p className="mt-3 text-2xl font-bold text-[#0E532B]">14 mins</p>
-          <p className="mt-1 text-xs text-slate-500">Across active support tickets</p>
+          <p className="text-sm font-medium text-slate-500">{t('common.avgResponseTime')}</p>
+          <p className="mt-3 text-2xl font-bold text-[#0E532B]">14 {t('common.minutes')}</p>
+          <p className="mt-1 text-xs text-slate-500">{t('common.acrossActiveSupportTickets')}</p>
         </article>
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium text-slate-500">Resolved This Week</p>
+            <p className="text-sm font-medium text-slate-500">{t('common.resolvedThisWeek')}</p>
             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-[#1E8E3E]">
               +12%
             </span>
           </div>
           <p className="mt-3 text-2xl font-bold text-[#0E532B]">28</p>
-          <p className="mt-1 text-xs text-slate-500">Great work keeping shoppers happy</p>
+          <p className="mt-1 text-xs text-slate-500">{t('common.greatWorkKeepingShoppersHappy')}</p>
         </article>
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <p className="text-sm font-medium text-slate-500">System Status</p>
+          <p className="text-sm font-medium text-slate-500">{t('common.systemStatus')}</p>
           <p className="mt-3 flex items-center gap-2 text-xl font-bold text-[#0E532B]">
             <span className="relative flex h-3 w-3">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -330,13 +327,13 @@ function Support() {
             </span>
             99.9% {t('operational')}
           </p>
-          <p className="mt-1 text-xs text-slate-500">All services are running normally</p>
+          <p className="mt-1 text-xs text-slate-500">{t('common.allServicesRunningNormally')}</p>
         </article>
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto border-b border-slate-200 px-4 sm:px-6">
-          <div className="flex min-w-max gap-6" role="tablist" aria-label="Help center sections">
+          <div className="flex min-w-max gap-6" role="tablist" aria-label={t('common.helpCenterSections')}>
             {tabs.map((tab) => (
               <button
                 key={tab}
@@ -370,13 +367,13 @@ function Support() {
                 <div className="mb-4 flex items-center justify-between">
                   <div>
                     <h2 className="font-bold text-[#0E532B]">{t('storeTickets')}</h2>
-                    <p className="mt-0.5 text-xs text-slate-500">{filteredTickets.length} matching cases</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{filteredTickets.length} {t('common.matchingCases')}</p>
                   </div>
                   <span className="rounded-lg bg-orange-50 px-2.5 py-1 text-xs font-semibold text-[#F04E00]">
-                    {openTicketCount} open
+                    {openTicketCount} {t('common.open')}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2" aria-label="Filter tickets">
+                <div className="flex flex-wrap gap-2" aria-label={t('common.filterTickets')}>
                   {ticketFilters.map((filter) => (
                     <button
                       key={filter}
@@ -433,7 +430,7 @@ function Support() {
                       <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
                         <span className="inline-flex items-center gap-1">
                           <MessageCircle aria-hidden="true" size={13} />
-                          {ticket.messages.length} messages
+                          {ticket.messages.length} {t('common.messages')}
                         </span>
                         <span>{ticket.updated}</span>
                       </div>
@@ -442,8 +439,8 @@ function Support() {
                 ) : (
                   <div className="px-4 py-12 text-center">
                     <Search aria-hidden="true" size={24} className="mx-auto text-slate-300" />
-                    <p className="mt-3 text-sm font-semibold text-slate-700">No tickets found</p>
-                    <p className="mt-1 text-xs text-slate-500">Try another search or status filter.</p>
+                    <p className="mt-3 text-sm font-semibold text-slate-700">{t('common.noTicketsFound')}</p>
+                    <p className="mt-1 text-xs text-slate-500">{t('common.tryAnotherSearchStatusFilter')}</p>
                   </div>
                 )}
               </div>
@@ -496,7 +493,7 @@ function Support() {
                       <PackageCheck aria-hidden="true" size={17} />
                     </span>
                     <div>
-                      <p className="text-[11px] font-medium text-slate-400">Linked order</p>
+                      <p className="text-[11px] font-medium text-slate-400">{t('common.linkedOrder')}</p>
                       <p className="text-sm font-semibold text-[#0B4B8C]">{selectedTicket.orderId}</p>
                     </div>
                   </div>
@@ -543,7 +540,7 @@ function Support() {
                       className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-[#F04E00] transition hover:bg-orange-100"
                     >
                       <TicketPercent aria-hidden="true" size={15} />
-                      Send 10% Apology Coupon
+                      {t('common.sendApologyCoupon')}
                     </button>
                     <button
                       type="button"
@@ -561,15 +558,15 @@ function Support() {
                     <input
                       value={reply}
                       onChange={(event) => setReply(event.target.value)}
-                      placeholder="Write a reply to the customer..."
-                      aria-label="Write a reply to the customer"
+                      placeholder={t('common.replyToCustomer')}
+                      aria-label={t('common.replyToCustomer')}
                       className="min-w-0 flex-1 py-2 text-sm text-slate-800 outline-none placeholder:text-slate-400"
                     />
                     <button
                       type="submit"
                       disabled={!reply.trim()}
                       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1E8E3E] text-white transition hover:bg-[#0E532B] disabled:cursor-not-allowed disabled:opacity-40"
-                      aria-label="Send reply"
+                      aria-label={t('common.sendReply')}
                     >
                       <Send aria-hidden="true" size={16} />
                     </button>
@@ -579,8 +576,8 @@ function Support() {
             ) : (
               <div className="grid min-h-[400px] place-content-center px-6 text-center">
                 <MessageCircle aria-hidden="true" size={30} className="mx-auto text-slate-300" />
-                <p className="mt-3 text-sm font-semibold text-slate-700">Choose a ticket to view the conversation</p>
-                <p className="mt-1 text-xs text-slate-500">Adjust your filters or search for another case.</p>
+                <p className="mt-3 text-sm font-semibold text-slate-700">{t('common.chooseTicketConversation')}</p>
+                <p className="mt-1 text-xs text-slate-500">{t('common.adjustFiltersSearchCase')}</p>
               </div>
             )}
           </div>
@@ -599,29 +596,29 @@ function Support() {
               </span>
               <div>
                 <h2 className="font-bold text-[#0E532B]">{t('quickStartGuides')}</h2>
-                <p className="mt-1 text-sm text-slate-500">Practical help for everyday store operations.</p>
+                <p className="mt-1 text-sm text-slate-500">{t('common.practicalStoreOperationsHelp')}</p>
               </div>
             </div>
             {visibleGuides.length ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {visibleGuides.map(({ title, description, icon: Icon, tone, duration }) => (
-                  <article key={title} className="group rounded-2xl border border-slate-200 p-4 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
+                {visibleGuides.map(({ titleKey, descriptionKey, icon: Icon, tone, durationMinutes }) => (
+                  <article key={titleKey} className="group rounded-2xl border border-slate-200 p-4 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
                     <span className={`flex h-11 w-11 items-center justify-center rounded-xl ${tone}`}>
                       <Icon aria-hidden="true" size={21} />
                     </span>
-                    <h3 className="mt-4 font-bold text-[#0E532B]">{title}</h3>
-                    <p className="mt-2 min-h-12 text-sm leading-5 text-slate-500">{description}</p>
+                    <h3 className="mt-4 font-bold text-[#0E532B]">{t(titleKey)}</h3>
+                    <p className="mt-2 min-h-12 text-sm leading-5 text-slate-500">{t(descriptionKey)}</p>
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                      <span className="text-xs text-slate-400">{duration}</span>
+                      <span className="text-xs text-slate-400">{durationMinutes} {t('common.minutes')} {t('common.read')}</span>
                       <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#1E8E3E]">
-                        Quick guide <ArrowUpRight aria-hidden="true" size={13} />
+                        {t('common.quickGuide')} <ArrowUpRight aria-hidden="true" size={13} />
                       </span>
                     </div>
                   </article>
                 ))}
               </div>
             ) : (
-              <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">No guides match “{search}”.</p>
+              <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">{t('common.noGuidesMatchSearch')} “{search}”.</p>
             )}
 
             <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -631,28 +628,28 @@ function Support() {
                   <h2 className="font-bold text-[#0E532B]">{t('frequentlyAskedQuestions')}</h2>
                 </div>
                 <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
-                  {visibleFaqs.map(({ question, answer }) => {
-                    const isOpen = openFaq === question
+                  {visibleFaqs.map(({ questionKey, answerKey }) => {
+                    const isOpen = openFaq === questionKey
                     return (
-                      <div key={question} className="px-4 sm:px-5">
+                      <div key={questionKey} className="px-4 sm:px-5">
                         <button
                           type="button"
                           aria-expanded={isOpen}
-                          onClick={() => setOpenFaq(isOpen ? null : question)}
+                          onClick={() => setOpenFaq(isOpen ? null : questionKey)}
                           className="flex w-full items-center justify-between gap-4 py-4 text-left"
                         >
-                          <span className="text-sm font-semibold text-slate-800">{question}</span>
+                          <span className="text-sm font-semibold text-slate-800">{t(questionKey)}</span>
                           <ChevronDown
                             aria-hidden="true"
                             size={18}
                             className={`shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                           />
                         </button>
-                        {isOpen && <p className="max-w-3xl pb-4 pr-8 text-sm leading-6 text-slate-600">{answer}</p>}
+                        {isOpen && <p className="max-w-3xl pb-4 pr-8 text-sm leading-6 text-slate-600">{t(answerKey)}</p>}
                       </div>
                     )
                   })}
-                  {!visibleFaqs.length && <p className="p-5 text-sm text-slate-500">No FAQs match “{search}”.</p>}
+                  {!visibleFaqs.length && <p className="p-5 text-sm text-slate-500">{t('common.noFaqsMatchSearch')} “{search}”.</p>}
                 </div>
               </div>
               <aside className="flex flex-col justify-between gap-4 rounded-2xl bg-[#F0F7F1] p-5">
@@ -660,15 +657,15 @@ function Support() {
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#0E532B] shadow-sm">
                     <Headphones aria-hidden="true" size={20} />
                   </span>
-                  <h3 className="mt-4 font-bold text-[#0E532B]">Need a hand?</h3>
-                  <p className="mt-1 text-sm leading-5 text-slate-600">Our support team can walk you through any admin task.</p>
+                  <h3 className="mt-4 font-bold text-[#0E532B]">{t('common.needAHand')}</h3>
+                  <p className="mt-1 text-sm leading-5 text-slate-600">{t('common.supportCanHelp')}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveTab('System & Contact')}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0E532B]"
                 >
-                  Contact support <ArrowUpRight aria-hidden="true" size={16} />
+                  {t('common.contactSupport')} <ArrowUpRight aria-hidden="true" size={16} />
                 </button>
               </aside>
             </div>
@@ -690,12 +687,12 @@ function Support() {
                   </span>
                   <div>
                     <h2 className="font-bold text-[#0E532B]">{t('systemHealth')}</h2>
-                    <p className="mt-1 text-sm text-slate-500">Live status of store services and integrations.</p>
+                    <p className="mt-1 text-sm text-slate-500">{t('common.liveServiceStatus')}</p>
                   </div>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-[#1E8E3E]">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#1E8E3E]" />
-                  Live
+                  {t('common.live')}
                 </span>
               </div>
               <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200">
@@ -706,17 +703,17 @@ function Support() {
                         <CheckCircle2 aria-hidden="true" size={18} />
                       </span>
                       <div>
-                        <p className="text-sm font-semibold text-slate-800">{service.name}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{service.detail}</p>
+                        <p className="text-sm font-semibold text-slate-800">{t(service.nameKey)}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{t(service.detailKey)}</p>
                       </div>
                     </div>
-                    <span className="whitespace-nowrap text-xs font-semibold text-[#1E8E3E]">{service.status}</span>
+                    <span className="whitespace-nowrap text-xs font-semibold text-[#1E8E3E]">{t(service.status)}</span>
                   </div>
                 ))}
               </div>
               <div className="mt-4 flex items-start gap-3 rounded-xl bg-blue-50 p-4 text-sm text-[#0B4B8C]">
                 <ShieldCheck aria-hidden="true" size={18} className="mt-0.5 shrink-0" />
-                <p>All payment and delivery integrations are reporting normally. Last status check: just now.</p>
+                <p>{t('common.integrationsHealthy')}</p>
               </div>
             </section>
 
@@ -726,40 +723,40 @@ function Support() {
                   <LifeBuoy aria-hidden="true" size={20} />
                 </span>
                 <div>
-                  <h2 className="font-bold text-[#0E532B]">Contact Technical Support</h2>
-                  <p className="mt-1 text-sm text-slate-500">Report a system issue and our team will follow up.</p>
+                  <h2 className="font-bold text-[#0E532B]">{t('common.contactTechnicalSupport')}</h2>
+                  <p className="mt-1 text-sm text-slate-500">{t('common.reportSystemIssue')}</p>
                 </div>
               </div>
               <form onSubmit={handleSupportRequest} onChange={() => setFormSubmitted(false)} className="space-y-4 rounded-2xl border border-slate-200 p-4 sm:p-5">
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">Subject</span>
+                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.subject')}</span>
                   <input
                     name="subject"
                     required
-                    placeholder="e.g. Payment reconciliation issue"
+                    placeholder={t('common.paymentReconciliationIssue')}
                     className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/10"
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">Priority</span>
+                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.priority')}</span>
                   <select
                     name="priority"
                     defaultValue="Normal"
                     className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/10"
                   >
-                    <option>Low</option>
-                    <option>Normal</option>
-                    <option>High</option>
-                    <option>Urgent</option>
+                    <option>{t('Low')}</option>
+                    <option>{t('Normal')}</option>
+                    <option>{t('High')}</option>
+                    <option>{t('Urgent')}</option>
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">Description</span>
+                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.description')}</span>
                   <textarea
                     name="description"
                     required
                     rows="4"
-                    placeholder="Tell us what happened and include any relevant order or transaction ID..."
+                    placeholder={t('common.supportDescriptionPlaceholder')}
                     className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/10"
                   />
                 </label>
@@ -768,15 +765,15 @@ function Support() {
                   className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white transition hover:bg-[#0E532B]"
                 >
                   {formSubmitted ? <Check aria-hidden="true" size={17} /> : <Send aria-hidden="true" size={16} />}
-                  {formSubmitted ? 'Request submitted' : 'Submit support request'}
+                  {t(formSubmitted ? 'common.requestSubmitted' : 'common.submitSupportRequest')}
                 </button>
               </form>
             </section>
 
             <section className="rounded-2xl bg-slate-50 p-4 sm:p-5 lg:col-span-2">
               <div className="mb-4">
-                <h2 className="font-bold text-[#0E532B]">Direct helpline</h2>
-                <p className="mt-1 text-sm text-slate-500">For urgent service disruptions, contact our support team directly.</p>
+                <h2 className="font-bold text-[#0E532B]">{t('common.directHelpline')}</h2>
+                <p className="mt-1 text-sm text-slate-500">{t('common.urgentServiceDisruptions')}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <a
@@ -787,7 +784,7 @@ function Support() {
                     <Phone aria-hidden="true" size={19} />
                   </span>
                   <span>
-                    <span className="block text-xs text-slate-500">Call the helpline</span>
+                    <span className="block text-xs text-slate-500">{t('common.callHelpline')}</span>
                     <span className="mt-0.5 block text-sm font-semibold text-slate-800">+251 912 345 678</span>
                   </span>
                   <Clock3 aria-hidden="true" size={16} className="ml-auto text-slate-400" />
@@ -800,7 +797,7 @@ function Support() {
                     <Mail aria-hidden="true" size={19} />
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-xs text-slate-500">Email support</span>
+                    <span className="block text-xs text-slate-500">{t('common.emailSupport')}</span>
                     <span className="mt-0.5 block truncate text-sm font-semibold text-slate-800">support@grocerydelivery.et</span>
                   </span>
                   <ArrowUpRight aria-hidden="true" size={16} className="ml-auto shrink-0 text-slate-400" />

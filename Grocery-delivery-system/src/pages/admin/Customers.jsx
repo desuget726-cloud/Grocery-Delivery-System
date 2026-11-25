@@ -192,6 +192,7 @@ function CustomerAvatar({ customer, size = 'h-11 w-11' }) {
 }
 
 function TierBadge({ tier }) {
+  const { t } = useLanguage()
   const styles = {
     VIP: 'bg-orange-50 text-[#F04E00]',
     Regular: 'bg-blue-50 text-[#0B4B8C]',
@@ -200,12 +201,13 @@ function TierBadge({ tier }) {
 
   return (
     <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${styles[tier]}`}>
-      {tier}
+      {t(tier)}
     </span>
   )
 }
 
 function CustomerModal({ onClose, onAdd }) {
+  const { t } = useLanguage()
   const [form, setForm] = useState({ name: '', email: '', phone: '+251 ', area: '' })
   const update = (field) => (event) =>
     setForm((current) => ({ ...current, [field]: event.target.value }))
@@ -219,7 +221,7 @@ function CustomerModal({ onClose, onAdd }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       <button
         type="button"
-        aria-label="Close dialog"
+        aria-label={t('common.close')}
         className="fixed inset-0 bg-slate-950/50"
         onClick={onClose}
       />
@@ -232,13 +234,13 @@ function CustomerModal({ onClose, onAdd }) {
         <div className="mb-5 flex items-center justify-between gap-4">
           <div>
             <h2 id="add-customer-title" className="text-lg font-bold text-[#0E532B]">
-              Add customer
+              {t('customers.addCustomer')}
             </h2>
-            <p className="mt-1 text-sm text-gray-500">Create a new shopper account.</p>
+            <p className="mt-1 text-sm text-gray-500">{t('customers.createShopperAccount')}</p>
           </div>
           <button
             type="button"
-            aria-label="Close dialog"
+            aria-label={t('common.close')}
             onClick={onClose}
             className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
           >
@@ -247,7 +249,7 @@ function CustomerModal({ onClose, onAdd }) {
         </div>
         <form onSubmit={submit} className="space-y-4">
           <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-gray-700">Full name</span>
+            <span className="mb-1.5 block text-xs font-semibold text-gray-700">{t('customers.fullName')}</span>
             <input
               required
               autoFocus
@@ -258,7 +260,7 @@ function CustomerModal({ onClose, onAdd }) {
             />
           </label>
           <label className="block">
-            <span className="mb-1.5 block text-xs font-semibold text-gray-700">Email address</span>
+            <span className="mb-1.5 block text-xs font-semibold text-gray-700">{t('customers.emailAddress')}</span>
             <input
               required
               type="email"
@@ -270,7 +272,7 @@ function CustomerModal({ onClose, onAdd }) {
           </label>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold text-gray-700">Phone number</span>
+              <span className="mb-1.5 block text-xs font-semibold text-gray-700">{t('customers.phoneNumber')}</span>
               <input
                 required
                 type="tel"
@@ -281,14 +283,14 @@ function CustomerModal({ onClose, onAdd }) {
               />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold text-gray-700">Delivery area</span>
+              <span className="mb-1.5 block text-xs font-semibold text-gray-700">{t('customers.deliveryArea')}</span>
               <select
                 required
                 value={form.area}
                 onChange={update('area')}
                 className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
               >
-                <option value="" disabled>Select area</option>
+                <option value="" disabled>{t('customers.selectArea')}</option>
                 <option>Bole</option>
                 <option>Kazanchis</option>
                 <option>CMC</option>
@@ -303,13 +305,13 @@ function CustomerModal({ onClose, onAdd }) {
               onClick={onClose}
               className="rounded-xl border border-[#0B4B8C]/30 px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               className="rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0E532B]"
             >
-              Add customer
+              {t('customers.addCustomer')}
             </button>
           </div>
         </form>
@@ -326,7 +328,7 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
     <div className="fixed inset-0 z-40">
       <button
         type="button"
-        aria-label="Close customer details"
+        aria-label={t('common.close')}
         className="absolute inset-0 bg-slate-950/40"
         onClick={onClose}
       />
@@ -338,14 +340,14 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 sm:px-7">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1E8E3E]">Customer 360°</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1E8E3E]">{t('common.customer360')}</p>
             <h2 id="customer-drawer-title" className="mt-1 text-lg font-bold text-[#0E532B]">
-              Customer profile
+              {t('customers.customerProfile')}
             </h2>
           </div>
           <button
             type="button"
-            aria-label="Close customer details"
+            aria-label={t('common.close')}
             onClick={onClose}
             className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
           >
@@ -360,7 +362,7 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
                 <h3 className="text-xl font-bold text-[#0E532B]">{customer.name}</h3>
                 <TierBadge tier={customer.tier} />
               </div>
-              <p className="mt-1 text-sm text-gray-500">Customer since {customer.createdAt}</p>
+              <p className="mt-1 text-sm text-gray-500">{t('customers.customerSince')} {customer.createdAt}</p>
             </div>
           </div>
 
@@ -373,7 +375,7 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
                 <Phone aria-hidden="true" size={17} />
               </span>
               <span className="min-w-0">
-                <span className="block text-[11px] text-gray-400">Phone</span>
+                <span className="block text-[11px] text-gray-400">{t('common.phone')}</span>
                 <span className="block truncate font-medium">{customer.phone}</span>
               </span>
             </a>
@@ -385,7 +387,7 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
                 <Mail aria-hidden="true" size={17} />
               </span>
               <span className="min-w-0">
-                <span className="block text-[11px] text-gray-400">Email</span>
+                <span className="block text-[11px] text-gray-400">{t('common.email')}</span>
                 <span className="block truncate font-medium">{customer.email}</span>
               </span>
             </a>
@@ -393,8 +395,8 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
 
           <section className="mt-7">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#0E532B]">Saved delivery addresses</h3>
-              <span className="text-xs text-gray-400">{customer.addresses.length} saved</span>
+              <h3 className="text-sm font-bold text-[#0E532B]">{t('customers.savedAddresses')}</h3>
+              <span className="text-xs text-gray-400">{customer.addresses.length}</span>
             </div>
             <div className="space-y-2">
               {customer.addresses.map((address) => (
@@ -408,8 +410,8 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
 
           <section className="mt-7">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#0E532B]">Recent orders</h3>
-              <span className="text-xs text-gray-400">{customer.orders} total orders</span>
+              <h3 className="text-sm font-bold text-[#0E532B]">{t('customers.recentOrders')}</h3>
+              <span className="text-xs text-gray-400">{customer.orders} {t('totalOrders')}</span>
             </div>
             <div className="divide-y divide-gray-100 rounded-xl border border-gray-100">
               {customer.recentOrders.map((order) => (
@@ -434,7 +436,7 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
             href={`mailto:${customer.email}?subject=${encodeURIComponent('A fresh offer from GROCERY DELIVERY')}&body=${encodeURIComponent('Enjoy 10% off your next grocery order with promo code FRESH10.')}`}
             className="inline-flex flex-1 items-center justify-center rounded-xl border border-[#0B4B8C]/30 px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
           >
-            Send Promo Code
+            {t('common.sendPromoCode')}
           </a>
           <button
             type="button"
@@ -445,7 +447,7 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
                 : 'bg-[#1E8E3E] hover:bg-[#0E532B]'
             }`}
           >
-            {customer.status === 'Active' ? 'Suspend account' : 'Activate account'}
+            {customer.status === 'Active' ? t('common.suspendAccount') : t('common.activateAccount')}
           </button>
         </div>
       </aside>
@@ -557,7 +559,7 @@ function Customers() {
             {t('customers')}
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-gray-500">
-            Manage registered grocery shoppers, loyalty tiers, delivery zones, and account status
+            {t('customers.description')}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
@@ -567,7 +569,7 @@ function Customers() {
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] shadow-sm transition hover:bg-[#0B4B8C] hover:text-white"
           >
             <Download aria-hidden="true" size={16} />
-            Export CSV
+            {t('common.exportCsv')}
           </button>
           <button
             type="button"
@@ -575,12 +577,12 @@ function Customers() {
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]"
           >
             <Plus aria-hidden="true" size={17} />
-            Add Customer
+            {t('customers.addCustomer')}
           </button>
         </div>
       </header>
 
-      <section aria-label="Customer metrics" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label={t('common.customerMetrics')} className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { labelKey: 'totalCustomers', value: customers.length.toLocaleString('en-US'), icon: Users, tone: 'bg-emerald-50 text-[#1E8E3E]' },
           { labelKey: 'activeAccounts', value: activeCount.toLocaleString('en-US'), icon: UserCheck, tone: 'bg-emerald-50 text-[#0E532B]' },
@@ -613,27 +615,27 @@ function Customers() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name, email, phone (+251), or Addis Ababa area..."
-                aria-label="Search customers"
+                placeholder={t('customers.searchPlaceholder')}
+                aria-label={t('customers.searchPlaceholder')}
                 className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-10 pr-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
               />
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-500">
-              <span className="shrink-0">Sort by</span>
+              <span className="shrink-0">{t('common.sortBy')}</span>
               <select
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
-                aria-label="Sort customers"
+                aria-label={t('customers.sortCustomers')}
                 className="min-w-0 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 outline-none focus:border-[#1E8E3E]"
               >
-                <option value="spent">Highest Spent</option>
-                <option value="orders">Most Orders</option>
-                <option value="newest">Newest First</option>
-                <option value="name">Name A–Z</option>
+                <option value="spent">{t('customers.highestSpent')}</option>
+                <option value="orders">{t('customers.mostOrders')}</option>
+                <option value="newest">{t('customers.newestFirst')}</option>
+                <option value="name">{t('products.nameAToZ')}</option>
               </select>
             </label>
           </div>
-          <div className="flex flex-wrap items-center gap-2" aria-label="Customer segments">
+          <div className="flex flex-wrap items-center gap-2" aria-label={t('common.customerSegments')}>
             {segments.map((item) => (
               <button
                 key={item}
@@ -660,12 +662,12 @@ function Customers() {
           <table className="w-full min-w-[1050px] text-left text-sm">
             <thead className="bg-gray-50/80 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#0E532B]/75">
               <tr>
-                <th scope="col" className="px-5 py-3.5">Customer</th>
-                <th scope="col" className="px-5 py-3.5">Phone &amp; Delivery Area</th>
-                <th scope="col" className="px-5 py-3.5">Orders</th>
-                <th scope="col" className="px-5 py-3.5">Total Spent</th>
-                <th scope="col" className="px-5 py-3.5">Status</th>
-                <th scope="col" className="px-5 py-3.5 text-right">Actions</th>
+                <th scope="col" className="px-5 py-3.5">{t('common.customer')}</th>
+                <th scope="col" className="px-5 py-3.5">{t('customers.phoneDeliveryArea')}</th>
+                <th scope="col" className="px-5 py-3.5">{t('common.totalOrders')}</th>
+                <th scope="col" className="px-5 py-3.5">{t('customers.totalSpent')}</th>
+                <th scope="col" className="px-5 py-3.5">{t('status')}</th>
+                <th scope="col" className="px-5 py-3.5 text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -695,9 +697,9 @@ function Customers() {
                   </td>
                   <td className="px-5 py-4">
                     <p className="font-semibold text-gray-800">
-                      {customer.orders} {customer.orders === 1 ? 'order' : 'orders'}
+                      {customer.orders} {t(customer.orders === 1 ? 'common.order' : 'orders')}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">Last: {customer.lastOrder}</p>
+                    <p className="mt-1 text-xs text-gray-500">{t('common.last')}: {customer.lastOrder}</p>
                   </td>
                   <td className="px-5 py-4 font-semibold text-[#0E532B]">{formatEtb(customer.spent)}</td>
                   <td className="px-5 py-4">
@@ -714,19 +716,19 @@ function Customers() {
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        aria-label={`View details for ${customer.name}`}
-                        title="View Details"
+                        aria-label={`${t('common.viewDetails')} ${customer.name}`}
+                        title={t('common.viewDetails')}
                         onClick={() => setSelectedId(customer.id)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-[#0B4B8C]/30 px-2.5 py-2 text-xs font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
                       >
                         <Eye aria-hidden="true" size={16} />
-                        <span>View Details</span>
+                        <span>{t('common.viewDetails')}</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => toggleStatus(customer)}
-                        aria-label={`${customer.status === 'Active' ? 'Suspend' : 'Activate'} ${customer.name}`}
-                        title={customer.status === 'Active' ? 'Suspend account' : 'Activate account'}
+                        aria-label={`${t(customer.status === 'Active' ? 'common.suspend' : 'common.activate')} ${customer.name}`}
+                        title={t(customer.status === 'Active' ? 'common.suspendAccount' : 'common.activateAccount')}
                         className={`rounded-lg p-2 transition ${
                           customer.status === 'Active'
                             ? 'text-orange-600 hover:bg-orange-50'
@@ -739,7 +741,7 @@ function Customers() {
                         type="button"
                         onClick={() => deleteCustomer(customer)}
                         aria-label={`Delete ${customer.name}`}
-                        title="Delete customer"
+                        title={t('common.delete')}
                         className="rounded-lg p-2 text-gray-400 transition hover:bg-orange-50 hover:text-[#F04E00]"
                       >
                         <Trash2 aria-hidden="true" size={16} />
@@ -754,8 +756,8 @@ function Customers() {
                     <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400">
                       <Search aria-hidden="true" size={19} />
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-gray-700">No customers found</p>
-                    <p className="mt-1 text-xs text-gray-500">Try another search or customer segment.</p>
+                    <p className="mt-3 text-sm font-semibold text-gray-700">{t('customers.noCustomersFound')}</p>
+                    <p className="mt-1 text-xs text-gray-500">{t('customers.tryAnotherSearchSegment')}</p>
                   </td>
                 </tr>
               )}
@@ -763,8 +765,8 @@ function Customers() {
           </table>
         </div>
         <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3.5 text-xs text-gray-500">
-          <span>Showing {visibleCustomers.length} of {customers.length} customers</span>
-          <span className="hidden sm:inline">All amounts shown in ETB</span>
+          <span>{t('common.showing')} {visibleCustomers.length} / {customers.length} {t('customers.customers')}</span>
+          <span className="hidden sm:inline">{t('customers.allAmountsEtb')}</span>
         </div>
       </section>
 

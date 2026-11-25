@@ -21,40 +21,50 @@ function Dashboard() {
   const riderName = user?.fullName || 'Dawit Tadesse'
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-24 sm:px-6 lg:px-8">
+    <div className="w-full space-y-6 px-4 sm:px-6 lg:px-10 py-6 pb-24">
       <section
-        className={`flex items-center justify-between gap-4 rounded-2xl p-6 text-white shadow-md ${
-          online
-            ? 'bg-gradient-to-r from-[#0E532B] to-[#1E8E3E]'
-            : 'bg-slate-700'
+        className={`flex items-center justify-between gap-4 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 border-l-4 ${
+          online ? 'border-l-[#1E8E3E]' : 'border-l-gray-300'
         }`}
       >
         <div>
-          <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
+          <span className="inline-flex rounded-full bg-[#0B4B8C]/10 text-[#0B4B8C] text-xs font-semibold px-3 py-1">
             {t('deliveryPartner')}
           </span>
-          <h1 className="mt-3 text-2xl font-bold">Hi, {riderName} 👋</h1>
-          <p className="mt-1 text-sm text-white/85">Motorbike • AA-23451 • Bole Zone</p>
-          <p className="mt-3 text-sm font-semibold">
-            {online ? t('online') : t('offline')}
-          </p>
+          <h1 className="mt-3 text-[#0E532B] text-2xl font-extrabold">Hi, {riderName} 👋</h1>
+          <p className="mt-1 text-gray-500 text-sm">Motorbike • AA-23451 • Bole Zone</p>
+          {online ? (
+            <p className="mt-3 inline-flex items-center gap-2 bg-emerald-50 text-[#1E8E3E] border border-emerald-200 px-3 py-1 rounded-full text-xs font-semibold">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#1E8E3E]" />
+              Online • Receiving live assignments
+            </p>
+          ) : (
+            <p className="mt-3 inline-flex items-center rounded-full bg-gray-100 text-gray-600 px-3 py-1 text-xs font-semibold">
+              Offline
+            </p>
+          )}
         </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={online}
-          aria-label={t('online')}
-          onClick={() => setOnline((current) => !current)}
-          className={`relative h-12 w-20 shrink-0 rounded-full transition ${
-            online ? 'bg-white/35' : 'bg-slate-500'
-          }`}
-        >
-          <span
-            className={`absolute top-1.5 h-9 w-9 rounded-full bg-white shadow-lg transition ${
-              online ? 'left-9' : 'left-1.5'
+        <div className="flex shrink-0 items-center gap-3">
+          <span className={`hidden text-sm font-semibold sm:block ${online ? 'text-[#1E8E3E]' : 'text-gray-500'}`}>
+            {online ? 'Accepting Orders' : 'Paused'}
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={online}
+            aria-label={t('online')}
+            onClick={() => setOnline((current) => !current)}
+            className={`relative h-12 w-20 shrink-0 rounded-full transition ${
+              online ? 'bg-[#1E8E3E]' : 'bg-gray-300'
             }`}
-          />
-        </button>
+          >
+            <span
+              className={`absolute top-1.5 h-9 w-9 rounded-full bg-white shadow-lg transition ${
+                online ? 'left-9' : 'left-1.5'
+              }`}
+            />
+          </button>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">

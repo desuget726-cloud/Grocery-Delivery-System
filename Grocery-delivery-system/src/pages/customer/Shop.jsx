@@ -4,17 +4,31 @@ import { useSearchParams } from 'react-router-dom'
 import ProductCard from '../../components/ProductCard.jsx'
 import SearchBar from '../../components/SearchBar.jsx'
 import { categories, products } from '../../data/mockData.js'
+import categorySlug from '../../utils/categorySlug.js'
+import formatCurrency from '../../utils/formatCurrency.js'
 
 const maximumPrice = Math.ceil(Math.max(...products.map((product) => product.price)))
+const categoriesBySlug = new Map(
+  categories.map((category) => [categorySlug(category), category]),
+)
+const legacyCategoryAliases = {
+  Bakery: 'Bakery & Bread',
+  Pantry: 'Pantry & Grains',
+  Snacks: 'Snacks & Nuts',
+}
 
 function Shop() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [priceLimit, setPriceLimit] = useState(maximumPrice)
   const [sortBy, setSortBy] = useState('featured')
+  const [onSaleOnly, setOnSaleOnly] = useState(false)
   const query = searchParams.get('search') || ''
-  const selectedCategories = (searchParams.get('category') || '')
+  const selectedCategoryValues = (searchParams.get('category') || '')
     .split(',')
     .filter(Boolean)
+  const selectedCategories = selectedCategoryValues.map(
+    (value) => categoriesBySlug.get(value) || legacyCategoryAliases[value] || value,
+  )
 
   const updateQuery = (key, value) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -34,7 +48,7 @@ function Shop() {
       nextParams.delete('search')
     }
     if (category) {
-      nextParams.set('category', category)
+      nextParams.set('category', categorySlug(category))
     } else {
       nextParams.delete('category')
     }
@@ -45,7 +59,17 @@ function Shop() {
     const nextCategories = selectedCategories.includes(category)
       ? selectedCategories.filter((item) => item !== category)
       : [...selectedCategories, category]
-    updateQuery('category', nextCategories.join(','))
+    updateQuery('category', nextCategories.map(categorySlug).join(','))
+  }
+
+  const clearFilters = () => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('search')
+    nextParams.delete('category')
+    setSearchParams(nextParams)
+    setPriceLimit(maximumPrice)
+    setOnSaleOnly(false)
+    setSortBy('featured')
   }
 
   const normalizedQuery = query.trim().toLowerCase()
@@ -56,32 +80,38 @@ function Shop() {
     const matchesCategory =
       selectedCategories.length === 0 ||
       selectedCategories.includes(product.category)
-    return matchesQuery && matchesCategory && product.price <= priceLimit
+    const matchesPrice = product.price <= priceLimit
+    const matchesSale =
+      !onSaleOnly ||
+      (Number(product.originalPrice) > Number(product.price) &&
+        Number(product.originalPrice) > 0)
+    return matchesQuery && matchesCategory && matchesPrice && matchesSale
   })
 
   if (sortBy === 'price-low') {
     filteredProducts.sort((a, b) => a.price - b.price)
   } else if (sortBy === 'price-high') {
     filteredProducts.sort((a, b) => b.price - a.price)
-  } else if (sortBy === 'name') {
-    filteredProducts.sort((a, b) => a.name.localeCompare(b.name))
+  } else if (sortBy === 'top-rated') {
+    filteredProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))
   }
 
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-semibold text-emerald-700">The grocery aisle</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">Shop all products</h1>
-        <p className="mt-2 text-slate-600">
-          Fresh ingredients and everyday essentials, all in one place.
+        <p className="text-sm font-semibold text-[#1E8E3E]">The grocery aisle</p>
+        <h1 className="mt-1 text-3xl font-bold text-[#0E532B]">Shop all products</h1>
+        <p className="mt-2 text-gray-600">
+          Fresh Ethiopian favorites and everyday essentials, all in one place.
+          Free delivery on orders over 500 ETB.
         </p>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-2">
-            <SlidersHorizontal aria-hidden="true" size={18} className="text-emerald-700" />
-            <h2 className="font-semibold text-slate-900">Filters</h2>
+            <SlidersHorizontal aria-hidden="true" size={18} className="text-[#1E8E3E]" />
+            <h2 className="font-semibold text-[#0E532B]">Filters</h2>
           </div>
 
           <fieldset id="categories" className="mt-6">
@@ -93,7 +123,7 @@ function Shop() {
                     type="checkbox"
                     checked={selectedCategories.includes(category)}
                     onChange={() => toggleCategory(category)}
-                    className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                    className="h-4 w-4 rounded border-slate-300 accent-[#1E8E3E]"
                   />
                   {category}
                 </label>
@@ -102,9 +132,9 @@ function Shop() {
           </fieldset>
 
           <div className="mt-6 border-t border-slate-100 pt-5">
-            <label htmlFor="price-limit" className="flex justify-between text-sm font-semibold text-slate-800">
-              <span>Maximum price</span>
-              <span>${priceLimit}</span>
+            <label htmlFor="price-limit" className="flex justify-between gap-2 text-sm font-semibold text-slate-800">
+              <span>Max Price</span>
+              <span>{formatCurrency(priceLimit)}</span>
             </label>
             <input
               id="price-limit"
@@ -114,13 +144,35 @@ function Shop() {
               step="1"
               value={priceLimit}
               onChange={(event) => setPriceLimit(Number(event.target.value))}
-              className="mt-3 w-full accent-emerald-600"
+              className="mt-3 w-full accent-[#1E8E3E]"
             />
             <div className="flex justify-between text-xs text-slate-500">
-              <span>$1</span>
-              <span>${maximumPrice}+</span>
+              <span>{formatCurrency(1)}</span>
+              <span>{formatCurrency(maximumPrice)}+</span>
             </div>
           </div>
+
+          <label
+            htmlFor="on-sale-only"
+            className="mt-5 flex cursor-pointer items-center gap-2 border-t border-slate-100 pt-5 text-sm font-semibold text-slate-700"
+          >
+            <input
+              id="on-sale-only"
+              type="checkbox"
+              checked={onSaleOnly}
+              onChange={(event) => setOnSaleOnly(event.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 accent-[#F04E00]"
+            />
+            On Sale Only
+          </label>
+
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="mt-5 w-full rounded-xl border border-[#0E532B] px-4 py-2.5 text-sm font-bold text-[#0E532B] transition hover:bg-[#0E532B] hover:text-white"
+          >
+            Clear Filters
+          </button>
         </aside>
 
         <section>
@@ -140,9 +192,9 @@ function Shop() {
                 className="min-h-11 bg-transparent pr-2 font-medium text-slate-800 outline-none"
               >
                 <option value="featured">Featured</option>
-                <option value="price-low">Price: low to high</option>
-                <option value="price-high">Price: high to low</option>
-                <option value="name">Name: A to Z</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="top-rated">Top Rated</option>
               </select>
             </label>
           </div>

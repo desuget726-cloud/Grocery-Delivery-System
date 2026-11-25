@@ -2,7 +2,7 @@ import { Check, ChevronDown, Languages } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { LANGUAGES, useLanguage } from '../context/LanguageContext.jsx'
 
-function LanguageSwitcher({ className = '' }) {
+function LanguageSwitcher({ className = '', triggerClassName = '' }) {
   const { language, setLanguage } = useLanguage()
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
@@ -27,7 +27,10 @@ function LanguageSwitcher({ className = '' }) {
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold transition hover:bg-black/5"
+        className={
+          triggerClassName ||
+          'inline-flex h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold transition hover:bg-black/5'
+        }
       >
         <Languages aria-hidden="true" size={15} />
         <span>{activeLanguage.short}</span>
@@ -37,7 +40,7 @@ function LanguageSwitcher({ className = '' }) {
         <div
           role="menu"
           aria-label="Select language"
-          className="absolute right-0 top-full z-50 mt-1 w-40 rounded-xl border border-gray-100 bg-white p-1.5 text-gray-700 shadow-xl"
+          className="absolute right-0 top-full z-50 mt-1 w-40 rounded-xl border border-gray-100 bg-white p-1.5 text-gray-800 shadow-xl"
         >
           {LANGUAGES.map(({ code, label }) => (
             <button

@@ -91,21 +91,21 @@ function Reports() {
     <div>
       <AdminPageHeader
         title="Reports"
-        description="Review sales, category performance, and delivery outcomes."
+        description={t('common.reportsDescription')}
         action={
           <button
             type="button"
             onClick={exportReport}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
           >
-            <Download aria-hidden="true" size={17} /> Export CSV
+            <Download aria-hidden="true" size={17} /> {t('common.exportCsv')}
           </button>
         }
       />
 
       <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:flex-row sm:items-end">
         <label className="text-sm font-medium text-slate-700">
-          From
+          {t('common.from')}
           <input
             type="date"
             value={startDate}
@@ -115,7 +115,7 @@ function Reports() {
           />
         </label>
         <label className="text-sm font-medium text-slate-700">
-          To
+          {t('common.to')}
           <input
             type="date"
             value={endDate}
@@ -126,20 +126,20 @@ function Reports() {
           />
         </label>
         <p className="text-sm text-slate-500 sm:ml-auto">
-          {filteredOrders.length} orders in selected date range
+          {filteredOrders.length} {t('common.ordersInSelectedDateRange')}
         </p>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Sales" value={formatCurrency(totalSales)} detail="For selected period" icon={TrendingUp} />
-        <StatCard label="Orders" value={filteredOrders.length} detail="For selected period" tone="blue" />
-        <StatCard label="Delivery completion" value={`${deliveryRate}%`} detail={`${deliveredOrders} delivered orders`} tone="emerald" />
+        <StatCard label={t('sales')} value={formatCurrency(totalSales)} detail={t('common.forSelectedPeriod')} icon={TrendingUp} />
+        <StatCard label={t('orders')} value={filteredOrders.length} detail={t('common.forSelectedPeriod')} tone="blue" />
+        <StatCard label={t('common.deliveryCompletion')} value={`${deliveryRate}%`} detail={`${deliveredOrders} ${t('common.deliveredOrders')}`} tone="emerald" />
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="font-bold text-[#0E532B]">{t('salesOverTime')}</h2>
-          <p className="mt-1 text-sm text-slate-500">Order revenue by delivery date</p>
+          <p className="mt-1 text-sm text-slate-500">{t('common.orderRevenueByDeliveryDate')}</p>
           {dailySales.length > 0 ? (
             <div className="mt-7 flex h-56 items-end gap-3 overflow-x-auto border-b border-l border-slate-100 px-3">
               {dailySales.map(({ date, amount }) => (
@@ -156,14 +156,14 @@ function Reports() {
             </div>
           ) : (
             <p className="mt-8 rounded-xl bg-slate-50 p-8 text-center text-sm text-slate-500">
-              No sales found for this date range.
+              {t('common.noSalesForDateRange')}
             </p>
           )}
         </section>
 
         <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
           <h2 className="font-bold text-[#0E532B]">{t('categoryPerformance')}</h2>
-          <p className="mt-1 text-sm text-slate-500">Sales by grocery category</p>
+          <p className="mt-1 text-sm text-slate-500">{t('common.salesByGroceryCategory')}</p>
           {categoryPerformance.length > 0 ? (
             <div className="mt-5 space-y-4">
               {categoryPerformance.map(({ category, sales, units }) => (
@@ -183,7 +183,7 @@ function Reports() {
             </div>
           ) : (
             <p className="mt-8 rounded-xl bg-slate-50 p-8 text-center text-sm text-slate-500">
-              No category sales found for this date range.
+              {t('common.noCategorySalesForDateRange')}
             </p>
           )}
         </section>
@@ -192,12 +192,12 @@ function Reports() {
       <section className="mt-6 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="font-bold text-[#0E532B]">{t('deliveryEfficiency')}</h2>
-          <p className="mt-1 text-sm text-slate-500">Fulfillment status in the selected period</p>
+          <p className="mt-1 text-sm text-slate-500">{t('common.fulfillmentStatusSelectedPeriod')}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-[#0E532B]/75">
-              <tr><th className="px-5 py-3 font-semibold">Status</th><th className="px-5 py-3 font-semibold">Orders</th><th className="px-5 py-3 font-semibold">Share</th></tr>
+              <tr><th className="px-5 py-3 font-semibold">{t('status')}</th><th className="px-5 py-3 font-semibold">{t('orders')}</th><th className="px-5 py-3 font-semibold">{t('common.share')}</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {['Pending', 'Confirmed', 'Packed', 'Out for Delivery', 'Delivered'].map((status) => {

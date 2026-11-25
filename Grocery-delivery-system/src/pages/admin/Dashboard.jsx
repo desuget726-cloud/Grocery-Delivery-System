@@ -94,7 +94,7 @@ const salesSeries = [
   { nameKey: 'revenue', color: '#1E8E3E', values: [31, 39, 30, 42, 38, 47, 42] },
   { nameKey: 'orders', color: '#0B4B8C', values: [22, 30, 24, 27, 35, 32, 39] },
 ]
-const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const weekDays = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 const chart = { left: 48, right: 544, top: 28, bottom: 174 }
 
 function getSparklinePath(values, width = 126, height = 48) {
@@ -140,7 +140,7 @@ function SparklineCard({ item }) {
         <svg
           viewBox="0 0 126 48"
           role="img"
-          aria-label={`${t(item.titleKey)} trend`}
+          aria-label={`${t(item.titleKey)} ${t('dashboard.trend')}`}
           className="h-10 w-20 shrink-0"
         >
           <path
@@ -203,10 +203,10 @@ function SalesReport() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <SelectPill ariaLabel="Sales report period" value="This week" options={['This week', 'Last week', 'This month']} />
+          <SelectPill ariaLabel="dashboard.salesReportPeriod" value="This week" options={['This week', 'Last week', 'This month']} />
           <button
             type="button"
-            aria-label="More sales report options"
+            aria-label={t('dashboard.moreSalesReportOptions')}
             className="rounded-lg p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
           >
             <MoreVertical aria-hidden="true" size={18} />
@@ -219,7 +219,7 @@ function SalesReport() {
           viewBox="0 0 560 220"
           preserveAspectRatio="none"
           role="img"
-          aria-label="Weekly sales report in Ethiopian birr, Sunday through Saturday, with revenue and orders series."
+          aria-label={t('dashboard.weeklySalesChartDescription')}
           className="h-full w-full"
         >
           <defs>
@@ -302,7 +302,7 @@ function SalesReport() {
                 className="fill-gray-500"
                 fontSize="10"
               >
-                {day}
+                {t(`dashboard.weekDays.${day}`)}
               </text>
             </g>
           ))}
@@ -316,7 +316,7 @@ function SalesReport() {
               fill="#072916"
             />
             <text x={tooltipX + 11} y="20" fill="white" fontSize="10" fontWeight="600">
-              Wednesday
+              {t('dashboard.weekDays.wed')}
             </text>
             <text x={tooltipX + 11} y="36" fill="#B9DDBF" fontSize="11">
               27k ETB
@@ -394,7 +394,7 @@ function TopSellingProducts() {
         </div>
         <button
           type="button"
-          aria-label="More top product options"
+          aria-label={t('dashboard.moreTopProductOptions')}
           className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
         >
           <MoreVertical aria-hidden="true" size={18} />
@@ -418,7 +418,7 @@ function TopSellingProducts() {
             </div>
             <Link
               to="/admin/products"
-              aria-label={`Details for ${product.name}`}
+              aria-label={`${t('dashboard.detailsFor')} ${product.name}`}
               className="shrink-0 rounded-full border border-[#0B4B8C]/30 px-2 py-1 text-[10px] font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
             >
               {t('details')}
@@ -427,7 +427,7 @@ function TopSellingProducts() {
         ))}
       </ol>
       <div className="mt-2 flex justify-end">
-        <SelectPill ariaLabel="Top products per page" value="Items per page: 4" options={['Items per page: 4', 'Items per page: 8']} />
+        <SelectPill ariaLabel="dashboard.topProductsPerPage" value="Items per page: 4" options={['Items per page: 4', 'Items per page: 8']} />
       </div>
     </article>
   )
@@ -457,7 +457,7 @@ function OrderSummary() {
         </div>
         <button
           type="button"
-          aria-label="More order summary options"
+          aria-label={t('dashboard.moreOrderSummaryOptions')}
           className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
         >
           <MoreVertical aria-hidden="true" size={18} />
@@ -475,7 +475,7 @@ function OrderSummary() {
         <svg
           viewBox="0 0 160 160"
           role="img"
-          aria-label="Order summary: 60 percent completed, 30 percent new orders, 10 percent pending."
+          aria-label={t('dashboard.orderSummaryChartDescription')}
           className="mx-auto h-40 w-40 shrink-0"
         >
           <circle cx="80" cy="80" r={radius} fill="none" stroke="#F1F5F2" strokeWidth="22" />
@@ -551,20 +551,20 @@ function RecentOrders() {
         </div>
         <div className="flex items-center gap-1.5">
           <SelectPill
-            ariaLabel="Filter orders"
+            ariaLabel="dashboard.filterOrders"
             value={statusFilter}
             options={['Show All', 'Pending', 'Confirm', 'Delivered']}
             onChange={setStatusFilter}
           />
           <SelectPill
-            ariaLabel="Recent orders period"
+            ariaLabel="dashboard.recentOrdersPeriod"
             value="This week"
             options={['This week', 'Last week', 'This month']}
             green
           />
           <button
             type="button"
-            aria-label="More recent orders options"
+            aria-label={t('dashboard.moreRecentOrdersOptions')}
             className="rounded-lg p-2 text-gray-400 hover:bg-gray-50 hover:text-gray-700"
           >
             <MoreVertical aria-hidden="true" size={18} />
@@ -625,14 +625,14 @@ function RecentOrders() {
                     <span className="inline-flex items-center gap-1">
                       <Link
                         to="/admin/orders?status=all"
-                        aria-label={`View ${order.id}`}
+                        aria-label={`${t('dashboard.viewOrder')} ${order.id}`}
                         className="rounded-md border border-[#0B4B8C]/30 p-1.5 text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white"
                       >
                         <Eye aria-hidden="true" size={15} />
                       </Link>
                       <button
                         type="button"
-                        aria-label={`Delete ${order.id}`}
+                        aria-label={`${t('dashboard.deleteOrder')} ${order.id}`}
                         onClick={() => deleteOrder(order.id)}
                         className="rounded-md p-1.5 text-gray-400 hover:bg-orange-50 hover:text-[#F04E00]"
                       >
@@ -640,7 +640,7 @@ function RecentOrders() {
                       </button>
                       <button
                         type="button"
-                        aria-label={`More actions for ${order.id}`}
+                        aria-label={`${t('dashboard.moreActionsFor')} ${order.id}`}
                         aria-expanded={openActionId === order.id}
                         onClick={() =>
                           setOpenActionId((current) =>
@@ -660,7 +660,7 @@ function RecentOrders() {
                           className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-[#0B4B8C] hover:bg-blue-50"
                         >
                           <Eye aria-hidden="true" size={13} />
-                          View order
+                          {t('dashboard.viewOrder')}
                         </Link>
                         <button
                           type="button"
@@ -668,7 +668,7 @@ function RecentOrders() {
                           className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-[#F04E00] hover:bg-orange-50"
                         >
                           <Trash2 aria-hidden="true" size={13} />
-                          Delete order
+                          {t('dashboard.deleteOrder')}
                         </button>
                       </div>
                     )}
@@ -679,7 +679,7 @@ function RecentOrders() {
             {filteredOrders.length === 0 && (
               <tr>
                 <td colSpan="6" className="px-5 py-10 text-center text-sm text-gray-500">
-                  No orders match this filter.
+                  {t('dashboard.noOrdersMatchFilter')}
                 </td>
               </tr>
             )}
@@ -688,17 +688,17 @@ function RecentOrders() {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 sm:px-5">
         <SelectPill
-          ariaLabel="Orders per page"
+          ariaLabel="dashboard.ordersPerPage"
           value="Items per page: 7"
           options={['Items per page: 7', 'Items per page: 14']}
         />
         <div className="flex items-center gap-1 text-xs text-gray-500">
           <span className="mr-2">
-            {filteredOrders.length ? `1 - ${filteredOrders.length}` : '0'} of {totalOrders}
+            {filteredOrders.length ? `1 - ${filteredOrders.length}` : '0'} {t('common.of')} {totalOrders}
           </span>
           <button
             type="button"
-            aria-label="Previous page"
+            aria-label={t('dashboard.previousPage')}
             disabled
             className="rounded-md p-1.5 text-gray-300"
           >
@@ -706,7 +706,7 @@ function RecentOrders() {
           </button>
           <button
             type="button"
-            aria-label="Next page"
+            aria-label={t('dashboard.nextPage')}
             className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100"
           >
             <ChevronRight aria-hidden="true" size={16} />
@@ -727,7 +727,7 @@ function TransactionHistory() {
           {t('transactionHistory')}
         </h2>
         <SelectPill
-          ariaLabel="Transaction history period"
+          ariaLabel="dashboard.transactionHistoryPeriod"
           value="This Week"
           options={['This Week', 'Last Week', 'This Month']}
         />
@@ -751,13 +751,13 @@ function TransactionHistory() {
             >
               {amount}
             </span>
-            {index === 0 && <span className="sr-only">Most recent transaction</span>}
+            {index === 0 && <span className="sr-only">{t('dashboard.mostRecentTransaction')}</span>}
           </li>
         ))}
       </ul>
       <div className="mt-2 flex justify-end border-t border-gray-100 pt-3">
         <SelectPill
-          ariaLabel="Transactions per page"
+          ariaLabel="dashboard.transactionsPerPage"
           value="Items per page: 8"
           options={['Items per page: 8', 'Items per page: 16']}
         />
@@ -767,10 +767,12 @@ function TransactionHistory() {
 }
 
 function Dashboard() {
+  const { t } = useLanguage()
+
   return (
     <div>
       <section
-        aria-label="Key performance indicators"
+        aria-label={t('dashboard.keyPerformanceIndicators')}
         className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
       >
         {kpis.map((item) => (
@@ -779,7 +781,7 @@ function Dashboard() {
       </section>
 
       <section
-        aria-label="Analytics"
+        aria-label={t('dashboard.analytics')}
         className="mb-5 grid grid-cols-1 items-stretch gap-5 lg:grid-cols-12"
       >
         <div className="lg:col-span-5 xl:col-span-6">
@@ -794,7 +796,7 @@ function Dashboard() {
       </section>
 
       <section
-        aria-label="Orders and transactions"
+        aria-label={t('dashboard.ordersAndTransactions')}
         className="grid grid-cols-1 gap-5 lg:grid-cols-12"
       >
         <RecentOrders />

@@ -95,7 +95,7 @@ function DeliveryDetails() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 pb-24 sm:px-6 lg:px-8">
+    <div className="w-full space-y-5 px-4 sm:px-6 lg:px-10 py-6 pb-24">
       <Link
         to="/delivery/assigned-orders"
         className="inline-flex items-center gap-2 text-sm font-bold text-[#0E532B]"

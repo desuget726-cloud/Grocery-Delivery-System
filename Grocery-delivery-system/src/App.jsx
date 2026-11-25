@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { CartProvider } from './context/CartContext.jsx'
 import { LanguageProvider } from './context/LanguageContext.jsx'
+import { WishlistProvider } from './context/WishlistContext.jsx'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import CustomerLayout from './layouts/CustomerLayout.jsx'
 import DeliveryLayout from './layouts/DeliveryLayout.jsx'
@@ -28,11 +29,16 @@ import LoginPage from './pages/auth/Login.jsx'
 import RegisterPage from './pages/auth/Register.jsx'
 import Cart from './pages/customer/Cart.jsx'
 import Checkout from './pages/customer/Checkout.jsx'
+import AboutUs from './pages/customer/AboutUs.jsx'
+import Categories from './pages/customer/Categories.jsx'
+import ContactUs from './pages/customer/ContactUs.jsx'
 import Home from './pages/customer/Home.jsx'
 import MyOrders from './pages/customer/MyOrders.jsx'
+import Offers from './pages/customer/Offers.jsx'
 import ProductDetails from './pages/customer/ProductDetails.jsx'
 import Profile from './pages/customer/Profile.jsx'
 import Shop from './pages/customer/Shop.jsx'
+import Wishlist from './pages/customer/Wishlist.jsx'
 
 function NotFound() {
   return (
@@ -49,9 +55,10 @@ function NotFound() {
 function App() {
   return (
     <LanguageProvider>
-      <CartProvider>
-        <AuthProvider>
-          <BrowserRouter>
+      <WishlistProvider>
+        <CartProvider>
+          <AuthProvider>
+            <BrowserRouter>
             <Routes>
               <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<RegisterPage />} />
@@ -59,8 +66,14 @@ function App() {
               <Route path="/" element={<CustomerLayout />}>
                 <Route index element={<Home />} />
                 <Route path="shop" element={<Shop />} />
+                <Route path="categories" element={<Categories />} />
+                <Route path="offers" element={<Offers />} />
+                <Route path="about" element={<AboutUs />} />
+                <Route path="contact" element={<ContactUs />} />
+                <Route path="product/:id" element={<ProductDetails />} />
                 <Route path="products/:productId" element={<ProductDetails />} />
                 <Route path="cart" element={<Cart />} />
+                <Route path="wishlist" element={<Wishlist />} />
                 <Route
                   path="checkout"
                   element={
@@ -69,22 +82,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="my-orders"
-                  element={
-                    <ProtectedRoute allowedRoles={['customer']}>
-                      <MyOrders />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="my-orders/:orderId"
-                  element={
-                    <ProtectedRoute allowedRoles={['customer']}>
-                      <MyOrders />
-                    </ProtectedRoute>
-                  }
-                />
+                <Route path="my-orders" element={<MyOrders />} />
+                <Route path="my-orders/:orderId" element={<MyOrders />} />
                 <Route
                   path="profile"
                   element={
@@ -131,6 +130,7 @@ function App() {
                 <Route index element={<DeliveryDashboard />} />
                 <Route path="dashboard" element={<DeliveryDashboard />} />
                 <Route path="assigned-orders" element={<AssignedOrders />} />
+                <Route path="orders" element={<AssignedOrders />} />
                 <Route path="details/:orderId" element={<DeliveryDetails />} />
                 <Route path="orders/:orderId" element={<DeliveryDetails />} />
                 <Route path="history" element={<DeliveryHistory />} />
@@ -138,9 +138,10 @@ function App() {
 
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </CartProvider>
+            </BrowserRouter>
+          </AuthProvider>
+        </CartProvider>
+      </WishlistProvider>
     </LanguageProvider>
   )
 }

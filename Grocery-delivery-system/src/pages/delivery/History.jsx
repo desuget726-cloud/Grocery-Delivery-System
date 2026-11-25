@@ -66,7 +66,7 @@ function History() {
     .reduce((sum) => sum + 680, 0)
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8">
+    <div className="w-full px-4 sm:px-6 lg:px-10 py-6 pb-24">
       <header>
         <p className="text-sm font-semibold text-[#1E8E3E]">
           {t('yourCompletedWork')}

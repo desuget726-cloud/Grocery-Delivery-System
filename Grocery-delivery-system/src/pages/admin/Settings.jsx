@@ -155,38 +155,50 @@ function Field({
   max,
   step = 'any',
   autoComplete,
+  suffix,
 }) {
+  const { t } = useLanguage()
+
   return (
     <label className="block">
-      <span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>
-      <input
-        type={type}
-        value={value ?? ''}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        min={min}
-        max={max}
-        step={step}
-        autoComplete={autoComplete}
-        className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/10"
-      />
-      {hint && <span className="mt-1 block text-[11px] leading-4 text-slate-400">{hint}</span>}
+      <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t(label)}</span>
+      <div className="relative">
+        <input
+          type={type}
+          value={value ?? ''}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder ? t(placeholder) : undefined}
+          min={min}
+          max={max}
+          step={step}
+          autoComplete={autoComplete}
+          className={`h-10 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/10 ${suffix ? 'pr-14' : ''}`}
+        />
+        {suffix && (
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400">
+            {suffix}
+          </span>
+        )}
+      </div>
+      {hint && <span className="mt-1 block text-[11px] leading-4 text-slate-400">{t(hint)}</span>}
     </label>
   )
 }
 
 function ToggleRow({ label, description, checked, onChange }) {
+  const { t } = useLanguage()
+
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div>
-        <p className="text-sm font-semibold text-slate-800">{label}</p>
-        {description && <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>}
+        <p className="text-sm font-semibold text-slate-800">{t(label)}</p>
+        {description && <p className="mt-0.5 text-xs leading-5 text-slate-500">{t(description)}</p>}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
-        aria-label={label}
+        aria-label={t(label)}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${checked ? 'bg-[#1E8E3E]' : 'bg-slate-300'}`}
       >
@@ -197,15 +209,21 @@ function ToggleRow({ label, description, checked, onChange }) {
 }
 
 function Card({ title, description, children, className = '' }) {
+  const { t } = useLanguage()
+
   return (
-    <section className={`rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6 ${className}`}>
-      {(title || description) && (
-        <div className="mb-5">
-          {title && <h2 className="text-sm font-bold text-[#0E532B]">{title}</h2>}
-          {description && <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>}
+    <section className={`overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm divide-y divide-gray-100 ${className}`}>
+      <div className="grid grid-cols-1 lg:grid-cols-12">
+        {(title || description) && (
+          <div className="p-6 lg:col-span-4">
+            {title && <h2 className="text-base font-bold text-[#0E532B]">{t(title)}</h2>}
+            {description && <p className="mt-1.5 text-sm leading-6 text-gray-500">{t(description)}</p>}
+          </div>
+        )}
+        <div className="min-w-0 p-6 lg:col-span-8 lg:border-l lg:border-gray-100">
+          {children}
         </div>
-      )}
-      {children}
+      </div>
     </section>
   )
 }
@@ -213,6 +231,7 @@ function Card({ title, description, children, className = '' }) {
 function Settings() {
   const { t } = useLanguage()
   const [settings, setSettings] = useState(loadSettings)
+  const [savedSettingsSnapshot, setSavedSettingsSnapshot] = useState(() => JSON.stringify(settings))
   const [activeTab, setActiveTab] = useState('store')
   const [toast, setToast] = useState(null)
   const [zoneName, setZoneName] = useState('')
@@ -226,6 +245,7 @@ function Settings() {
   const [passwordError, setPasswordError] = useState('')
   const [passwordNotice, setPasswordNotice] = useState('')
   const [showPasswords, setShowPasswords] = useState(false)
+  const hasUnsavedChanges = JSON.stringify(settings) !== savedSettingsSnapshot
 
   useEffect(() => {
     if (!toast) return undefined
@@ -250,20 +270,21 @@ function Settings() {
     }))
   }
 
-  const persistSettings = (nextSettings, successMessage = 'Settings saved successfully!') => {
+  const persistSettings = (nextSettings, successMessage = t('settings.settingsSavedSuccessfully')) => {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSettings))
       setSettings(nextSettings)
+      setSavedSettingsSnapshot(JSON.stringify(nextSettings))
       setToast({ type: 'success', message: successMessage })
     } catch (error) {
       console.error('Unable to save admin settings:', error)
-      setToast({ type: 'error', message: 'Unable to save settings. Check your browser storage and try again.' })
+      setToast({ type: 'error', message: t('settings.saveSettingsError') })
     }
   }
 
   const resetDefaults = () => {
-    if (!window.confirm('Reset all store settings to their defaults?')) return
-    persistSettings(DEFAULT_SETTINGS, 'Default settings restored.')
+    if (!window.confirm(t('settings.resetConfirmation'))) return
+    persistSettings(DEFAULT_SETTINGS, t('settings.defaultsRestored'))
     setZoneError('')
   }
 
@@ -272,15 +293,15 @@ function Settings() {
     const name = zoneName.trim()
     const fee = Number(zoneFee)
     if (!name) {
-      setZoneError('Enter a delivery zone name.')
+      setZoneError(t('settings.enterZoneName'))
       return
     }
     if (!zoneFee.trim() || !Number.isFinite(fee) || fee < 0) {
-      setZoneError('Enter a valid delivery fee.')
+      setZoneError(t('settings.enterValidDeliveryFee'))
       return
     }
     if (settings.delivery.zones.some((zone) => zone.name.toLowerCase() === name.toLowerCase())) {
-      setZoneError('That delivery zone already exists.')
+      setZoneError(t('settings.zoneAlreadyExists'))
       return
     }
     updateSection('delivery', 'zones', [
@@ -297,23 +318,23 @@ function Settings() {
     setPasswordError('')
     setPasswordNotice('')
     if (!passwordFields.current) {
-      setPasswordError('Enter your current password.')
+      setPasswordError(t('settings.enterCurrentPassword'))
       return
     }
     if (passwordFields.next.length < 8) {
-      setPasswordError('Your new password must be at least 8 characters.')
+      setPasswordError(t('settings.passwordMinimumLength'))
       return
     }
     if (passwordFields.next !== passwordFields.confirm) {
-      setPasswordError('The new password and confirmation do not match.')
+      setPasswordError(t('settings.passwordsDoNotMatch'))
       return
     }
     setPasswordFields({ current: '', next: '', confirm: '' })
-    setPasswordNotice('Password fields passed validation. A secure server-side password update is not configured for this application.')
+    setPasswordNotice(t('settings.passwordUpdateUnavailable'))
   }
 
   const renderStoreProfile = () => (
-    <div className="space-y-5">
+    <div className="w-full space-y-6">
       <Card title="Store profile" description="Customer-facing business details, support contacts, and warehouse location.">
         <div className="grid gap-5 lg:grid-cols-[1fr_180px]">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -325,16 +346,16 @@ function Settings() {
               <Field label="Warehouse Address" value={settings.storeProfile.address} onChange={(value) => updateSection('storeProfile', 'address', value)} />
             </div>
             <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold text-slate-700">Currency</span>
+              <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('Currency')}</span>
               <select value={settings.storeProfile.currency} onChange={(event) => updateSection('storeProfile', 'currency', event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1E8E3E]">
-                <option value="ETB">ETB — Ethiopian Birr</option>
+                <option value="ETB">{t('settings.ethiopianBirr')}</option>
               </select>
             </label>
           </div>
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
-            <img src={logo} alt="Grocery Delivery System logo" className="h-24 w-36 object-contain" />
-            <p className="mt-2 text-[11px] font-semibold text-slate-500">Store logo preview</p>
-            <p className="mt-1 text-[10px] text-slate-400">Managed by your brand assets</p>
+            <img src={logo} alt={t('settings.storeLogoAlt')} className="h-24 w-36 object-contain" />
+            <p className="mt-2 text-[11px] font-semibold text-slate-500">{t('settings.storeLogoPreview')}</p>
+            <p className="mt-1 text-[10px] text-slate-400">{t('settings.managedByBrandAssets')}</p>
           </div>
         </div>
       </Card>
@@ -343,10 +364,10 @@ function Settings() {
         <div className={`mb-4 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${settings.storeProfile.isOpen ? 'border-[#B9DDBF] bg-[#F0F7F1]' : 'border-orange-200 bg-orange-50'}`}>
           <div>
             <p className={`text-sm font-bold ${settings.storeProfile.isOpen ? 'text-[#0E532B]' : 'text-[#F04E00]'}`}>
-              {settings.storeProfile.isOpen ? 'Store Open' : 'Maintenance Mode'}
+              {t(settings.storeProfile.isOpen ? 'Store Open' : 'Maintenance Mode')}
             </p>
             <p className="mt-1 text-xs text-slate-600">
-              {settings.storeProfile.isOpen ? 'Customers can browse and place orders.' : 'Ordering is paused while maintenance mode is active.'}
+              {t(settings.storeProfile.isOpen ? 'Customers can browse and place orders.' : 'Ordering is paused while maintenance mode is active.')}
             </p>
           </div>
           <ToggleRow
@@ -373,13 +394,13 @@ function Settings() {
   )
 
   const renderDelivery = () => (
-    <div className="space-y-5">
+    <div className="w-full space-y-6">
       <Card title="Delivery pricing & coverage" description="Set checkout delivery pricing and the farthest distance served from your warehouse.">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <Field label="Free Delivery Threshold (ETB)" type="number" min="0" value={settings.delivery.freeThreshold} onChange={(value) => updateSection('delivery', 'freeThreshold', value)} />
-          <Field label="Standard Delivery Fee (ETB)" type="number" min="0" value={settings.delivery.standardFee} onChange={(value) => updateSection('delivery', 'standardFee', value)} />
-          <Field label="Express Delivery Fee (ETB)" type="number" min="0" value={settings.delivery.expressFee} onChange={(value) => updateSection('delivery', 'expressFee', value)} />
-          <Field label="Minimum Order Amount (ETB)" type="number" min="0" value={settings.delivery.minimumOrder} onChange={(value) => updateSection('delivery', 'minimumOrder', value)} />
+          <Field label="Free Delivery Threshold" suffix="ETB" type="number" min="0" value={settings.delivery.freeThreshold} onChange={(value) => updateSection('delivery', 'freeThreshold', value)} />
+          <Field label="Standard Delivery Fee" suffix="ETB" type="number" min="0" value={settings.delivery.standardFee} onChange={(value) => updateSection('delivery', 'standardFee', value)} />
+          <Field label="Express Delivery Fee" suffix="ETB" type="number" min="0" value={settings.delivery.expressFee} onChange={(value) => updateSection('delivery', 'expressFee', value)} />
+          <Field label="Minimum Order Amount" suffix="ETB" type="number" min="0" value={settings.delivery.minimumOrder} onChange={(value) => updateSection('delivery', 'minimumOrder', value)} />
           <Field label="Max Delivery Radius (km)" type="number" min="1" value={settings.delivery.maxRadius} onChange={(value) => updateSection('delivery', 'maxRadius', value)} />
         </div>
       </Card>
@@ -393,7 +414,7 @@ function Settings() {
                 <span className="truncate text-sm font-semibold text-slate-700">{zone.name}</span>
               </div>
               <label className="relative">
-                <span className="sr-only">{zone.name} delivery fee in ETB</span>
+                <span className="sr-only">{zone.name} {t('settings.deliveryFeeEtb')}</span>
                 <input
                   type="number"
                   min="0"
@@ -413,7 +434,7 @@ function Settings() {
                 type="button"
                 role="switch"
                 aria-checked={zone.active}
-                aria-label={`${zone.name} zone active`}
+                aria-label={`${zone.name} ${t('settings.zoneActive')}`}
                 onClick={() => setSettings((current) => ({
                   ...current,
                   delivery: {
@@ -431,20 +452,20 @@ function Settings() {
                   ...current,
                   delivery: { ...current.delivery, zones: current.delivery.zones.filter((item) => item.id !== zone.id) },
                 }))}
-                aria-label={`Remove ${zone.name} zone`}
+                aria-label={`${t('settings.removeZone')} ${zone.name}`}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-orange-50 hover:text-[#F04E00]"
               >
                 <Trash2 size={14} />
               </button>
             </div>
           ))}
-          {settings.delivery.zones.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500">No delivery zones configured.</p>}
+          {settings.delivery.zones.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500">{t('settings.noDeliveryZonesConfigured')}</p>}
         </div>
         <form onSubmit={addZone} className="mt-4 rounded-xl border border-dashed border-slate-300 p-3">
           <div className="grid gap-2 sm:grid-cols-[1fr_150px_auto]">
-            <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder="New zone name" aria-label="New zone name" className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
-            <input type="number" min="0" value={zoneFee} onChange={(event) => setZoneFee(event.target.value)} placeholder="Fee (ETB)" aria-label="New zone delivery fee" className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
-            <button type="submit" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#1E8E3E] px-4 text-xs font-semibold text-white hover:bg-[#0E532B]"><Plus size={14} /> Add Zone</button>
+            <input value={zoneName} onChange={(event) => setZoneName(event.target.value)} placeholder={t('settings.newZoneName')} aria-label={t('settings.newZoneName')} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
+            <input type="number" min="0" value={zoneFee} onChange={(event) => setZoneFee(event.target.value)} placeholder={t('settings.feeEtb')} aria-label={t('settings.newZoneDeliveryFee')} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]" />
+            <button type="submit" className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-[#1E8E3E] px-4 text-xs font-semibold text-white hover:bg-[#0E532B]"><Plus size={14} /> {t('Add Zone')}</button>
           </div>
           {zoneError && <p role="alert" className="mt-2 text-xs text-[#F04E00]">{zoneError}</p>}
         </form>
@@ -478,7 +499,7 @@ function Settings() {
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
             <h3 className="text-sm font-bold text-[#0E532B]">{title}</h3>
-            <p className="mt-0.5 text-[11px] text-slate-500">{settings.payments[gateway].active ? 'Available at checkout' : 'Disabled at checkout'}</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">{t(settings.payments[gateway].active ? 'settings.availableAtCheckout' : 'settings.disabledAtCheckout')}</p>
           </div>
           <button
             type="button"
@@ -495,7 +516,7 @@ function Settings() {
       </section>
     )
     return (
-      <div className="space-y-5">
+      <div className="w-full space-y-6">
         <Card title="Payment gateways" description="Enable the payment options customers can use to complete grocery orders.">
           <div className="grid gap-4 md:grid-cols-2">
             {gatewayCard('Telebirr', 'telebirr', (
@@ -508,18 +529,18 @@ function Settings() {
               <>
                 <Field label="Public Key" value={settings.payments.chapa.publicKey} onChange={(value) => updateNested('payments', 'chapa', 'publicKey', value)} placeholder="pk_test_..." />
                 <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">Gateway mode</span>
+                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('Gateway mode')}</span>
                   <select value={settings.payments.chapa.mode} onChange={(event) => updateNested('payments', 'chapa', 'mode', event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1E8E3E]">
-                    <option>Test</option><option>Live</option>
+                    <option>{t('Test')}</option><option>{t('Live')}</option>
                   </select>
                   <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ${settings.payments.chapa.mode === 'Live' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'}`}>
-                    {settings.payments.chapa.mode} mode
+                    {t(`settings.${settings.payments.chapa.mode}`)} {t('settings.mode')}
                   </span>
                 </label>
               </>
             ))}
             {gatewayCard('Cash on Delivery (COD)', 'cod', (
-              <Field label="Max COD Order Limit (ETB)" type="number" min="0" value={settings.payments.cod.maxLimit} onChange={(value) => updateNested('payments', 'cod', 'maxLimit', value)} />
+              <Field label="Max COD Order Limit" suffix="ETB" type="number" min="0" value={settings.payments.cod.maxLimit} onChange={(value) => updateNested('payments', 'cod', 'maxLimit', value)} />
             ))}
           </div>
         </Card>
@@ -539,7 +560,7 @@ function Settings() {
   }
 
   const renderRules = () => (
-    <div className="space-y-5">
+    <div className="w-full space-y-6">
       <Card title="Order & inventory thresholds" description="Choose when the team receives stock alerts and how long orders remain unpaid.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Low Stock Alert Threshold (units)" type="number" min="0" value={settings.rules.lowStockThreshold} onChange={(value) => updateSection('rules', 'lowStockThreshold', value)} />
@@ -572,7 +593,7 @@ function Settings() {
       </div>
     )
     return (
-      <div className="space-y-5">
+      <div className="w-full space-y-6">
         <Card title="Admin alerts" description="Choose which operational events should notify the store team.">
           {rows('admin', [
             ['newOrder', 'New Order Alert', 'Notify admins when a customer submits an order.'],
@@ -594,25 +615,25 @@ function Settings() {
   }
 
   const renderSecurity = () => (
-    <div className="space-y-5">
+    <div className="w-full space-y-6">
       <Card title="Change admin password" description="Use a strong, unique password. Password updates require a secure server-side account service.">
         <form onSubmit={submitPasswordChange} className="space-y-4">
           <div className="relative">
             <Field label="Current Password" type={showPasswords ? 'text' : 'password'} value={passwordFields.current} onChange={(value) => setPasswordFields((current) => ({ ...current, current: value }))} autoComplete="current-password" />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="New Password" type={showPasswords ? 'text' : 'password'} value={passwordFields.next} onChange={(value) => setPasswordFields((current) => ({ ...current, next: value }))} hint="Use at least 8 characters." autoComplete="new-password" />
+            <Field label="New Password" type={showPasswords ? 'text' : 'password'} value={passwordFields.next} onChange={(value) => setPasswordFields((current) => ({ ...current, next: value }))} hint={t('settings.passwordHint')} autoComplete="new-password" />
             <Field label="Confirm Password" type={showPasswords ? 'text' : 'password'} value={passwordFields.confirm} onChange={(value) => setPasswordFields((current) => ({ ...current, confirm: value }))} autoComplete="new-password" />
           </div>
           <button type="button" onClick={() => setShowPasswords((value) => !value)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
             {showPasswords ? <EyeOff size={14} /> : <Eye size={14} />}
-            {showPasswords ? 'Hide passwords' : 'Show passwords'}
+            {t(showPasswords ? 'settings.hidePasswords' : 'settings.showPasswords')}
           </button>
           {passwordError && <p role="alert" className="text-xs font-medium text-[#F04E00]">{passwordError}</p>}
           {passwordNotice && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-xs leading-5 text-[#1E8E3E]">{passwordNotice}</p>}
           <div>
             <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white hover:bg-[#0E532B]">
-              <KeyRound size={15} /> Validate Password Change
+              <KeyRound size={15} /> {t('settings.validatePasswordChange')}
             </button>
           </div>
         </form>
@@ -630,12 +651,12 @@ function Settings() {
           <div className="flex items-start gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#1E8E3E]"><LockKeyhole size={18} /></span>
             <div>
-              <p className="text-sm font-semibold text-slate-800">Current browser session</p>
-              <p className="mt-1 text-xs text-slate-500">Addis Ababa, Ethiopia <span className="px-1">·</span> Active Now</p>
+              <p className="text-sm font-semibold text-slate-800">{t('settings.currentBrowserSession')}</p>
+              <p className="mt-1 text-xs text-slate-500">Addis Ababa, Ethiopia <span className="px-1">·</span> {t('settings.activeNow')}</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-[#1E8E3E] sm:self-center">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" /> CURRENT SESSION
+            <span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" /> {t('settings.currentSession')}
           </span>
         </div>
       </Card>
@@ -643,7 +664,6 @@ function Settings() {
   )
 
   const activeTabInfo = settingTabs.find((tab) => tab.id === activeTab)
-  const ActiveTabIcon = activeTabInfo?.icon
   const renderActivePanel = () => {
     switch (activeTab) {
       case 'delivery':
@@ -662,7 +682,7 @@ function Settings() {
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] pb-4">
+    <div className="w-full min-w-0 pb-4">
       {toast && (
         <div
           role="status"
@@ -672,73 +692,68 @@ function Settings() {
           {toast.message}
         </div>
       )}
-      <header className="mb-6">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em]">
-          <span className="h-2 w-2 rounded-full bg-[#1E8E3E]" />
-          <span className="font-bold text-[#0E532B]">GROCERY</span>{' '}
-          <span className="font-bold text-[#F04E00]">DELIVERY</span>{' '}
-          <span className="font-bold text-[#0B4B8C]">SYSTEM</span>
-          <span className="text-slate-300">/</span> ADMIN SETTINGS
-        </div>
-        <h1 className="text-2xl font-bold tracking-tight text-[#0E532B] sm:text-[30px]">
-          {t('settings')}
-        </h1>
-        <p className="mt-1.5 text-sm leading-6 text-slate-500">Configure your store, fulfillment, payments, notifications, and account security.</p>
-      </header>
-
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        <nav aria-label="Settings sections" className="w-full shrink-0 rounded-2xl border border-gray-100 bg-white p-2 shadow-sm lg:sticky lg:top-24 lg:w-64">
-          <p className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
-            {t('settings')}
+      <header className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-[#0E532B]">{t('settings')}</h1>
+          <p className="mt-1.5 text-sm leading-6 text-gray-500">
+            Manage store profile, delivery pricing, payment gateways, notifications, and security.
           </p>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
-            {settingTabs.map(({ id, translationKey, icon: Icon }) => (
-              <button
-                type="button"
-                key={id}
-                onClick={() => setActiveTab(id)}
-                aria-current={activeTab === id ? 'page' : undefined}
-                className={`flex min-h-11 items-center gap-2.5 rounded-xl px-3 py-2 text-left text-xs font-semibold transition sm:text-sm ${activeTab === id ? 'bg-[#1E8E3E] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50 hover:text-[#0E532B]'}`}
-              >
-                <Icon size={17} className="shrink-0" />
-                <span>{t(translationKey)}</span>
-              </button>
-            ))}
-          </div>
-        </nav>
-
-        <main className="min-w-0 flex-1">
-          <div className="mb-4 flex items-center gap-2">
-            {ActiveTabIcon && <ActiveTabIcon size={18} className="text-[#1E8E3E]" />}
-            <h2 className="text-lg font-bold text-[#0E532B]">
-              {activeTabInfo?.translationKey
-                ? t(activeTabInfo.translationKey)
-                : null}
-            </h2>
-          </div>
-          {renderActivePanel()}
-        </main>
-      </div>
-
-      <div className="sticky bottom-3 z-20 mt-6 flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5">
-        <button
-          type="button"
-          onClick={resetDefaults}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#F04E00]"
-        >
-          <RotateCcw size={15} /> Reset Defaults
-        </button>
-        <div className="flex items-center justify-end gap-3">
-          <p className="hidden text-xs text-slate-400 sm:block">Changes are saved to this browser.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+          {hasUnsavedChanges && (
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-[#F04E00]">
+              <span className="h-2 w-2 rounded-full bg-[#F04E00]" />
+              Unsaved changes
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={resetDefaults}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#F04E00]"
+          >
+            <RotateCcw size={15} /> {t('Reset Defaults')}
+          </button>
           <button
             type="button"
             onClick={() => persistSettings(settings)}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]"
           >
-            <Check size={16} /> Save Changes
+            <Check size={16} /> {t('Save Changes')}
           </button>
         </div>
-      </div>
+      </header>
+
+      <nav
+        role="tablist"
+        aria-label={t('settings.settingsNavigation')}
+        className="mb-6 flex w-full items-center gap-6 overflow-x-auto border-b border-gray-200"
+      >
+        {settingTabs.map(({ id, translationKey, icon: Icon }) => (
+          <button
+            type="button"
+            key={id}
+            onClick={() => setActiveTab(id)}
+            role="tab"
+            aria-selected={activeTab === id}
+            className={`-mb-px inline-flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-1 pb-3 pt-2 text-sm transition ${
+              activeTab === id
+                ? 'border-[#1E8E3E] font-semibold text-[#0E532B]'
+                : 'border-transparent text-gray-500 hover:text-[#0E532B]'
+            }`}
+          >
+            <Icon size={17} className="shrink-0" aria-hidden="true" />
+            <span>{t(translationKey)}</span>
+          </button>
+        ))}
+      </nav>
+
+      <main
+        role="tabpanel"
+        className="w-full min-w-0 space-y-6"
+        aria-label={activeTabInfo?.translationKey ? t(activeTabInfo.translationKey) : undefined}
+      >
+        {renderActivePanel()}
+      </main>
     </div>
   )
 }

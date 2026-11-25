@@ -101,7 +101,7 @@ function Register() {
           className="relative z-10 flex w-fit items-center gap-2 text-xl font-bold tracking-tight text-[#283B2D]"
         >
           <Leaf aria-hidden="true" size={25} className="text-[#4D7C0F]" />
-          FreshBite
+          Grocery Basket
         </Link>
 
         <div className="relative z-10 mt-12 max-w-xl sm:mt-16 lg:mt-20">

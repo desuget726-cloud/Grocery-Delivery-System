@@ -1,42 +1,99 @@
-import { Apple, ArrowRight, Carrot, Coffee, Milk, Wheat } from 'lucide-react'
+import { ArrowRight, Zap } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../../components/ProductCard.jsx'
 import { categories, products } from '../../data/mockData.js'
 
-const categoryIcons = [Apple, Milk, Wheat, Carrot, Coffee, Apple]
+const categoryDetails = {
+  'Fruits & Vegetables': {
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=700&q=85',
+    count: 24,
+  },
+  'Dairy & Eggs': {
+    image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=700&q=85',
+    count: 18,
+  },
+  'Bakery & Bread': {
+    image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=700&q=85',
+    count: 12,
+  },
+  'Meat & Seafood': {
+    image: 'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=700&q=85',
+    count: 16,
+  },
+  'Pantry & Grains': {
+    image: 'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=700&q=85',
+    count: 20,
+  },
+  'Snacks & Nuts': {
+    image: 'https://images.unsplash.com/photo-1621939514649-280e2aa5f1cf?auto=format&fit=crop&w=700&q=85',
+    count: 32,
+  },
+  'Beverages & Juice': {
+    image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=700&q=85',
+    count: 14,
+  },
+  'Spices & Herbs': {
+    image: 'https://images.unsplash.com/photo-1532336414038-cf19250c5757?auto=format&fit=crop&w=700&q=85',
+    count: 20,
+  },
+}
 
 function Home() {
+  const [heroImageFailed, setHeroImageFailed] = useState(false)
+
   return (
     <div className="space-y-12 sm:space-y-16">
-      <section className="relative overflow-hidden rounded-3xl bg-emerald-800 px-6 py-12 text-white sm:px-10 sm:py-16">
-        <div className="relative z-10 max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-emerald-200">
+      <section className="relative grid w-full grid-cols-1 items-center gap-8 overflow-hidden rounded-3xl border border-emerald-100/80 bg-gradient-to-br from-[#F3FAF6] via-[#FFFDF9] to-[#FFF4EC] p-8 shadow-sm lg:grid-cols-12 lg:p-12">
+        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 h-56 w-56 rounded-full bg-[#1E8E3E]/10 blur-3xl" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 left-1/3 h-48 w-48 rounded-full bg-[#F04E00]/10 blur-3xl" />
+        <div className="relative z-10 lg:col-span-7">
+          <p className="inline-flex items-center gap-2 rounded-full bg-[#0B4B8C]/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[#0B4B8C]">
             Freshness at your doorstep
           </p>
-          <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-            Good food.
+          <h1 className="mt-4 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+            <span className="text-[#0E532B]">Good food.</span>
             <br />
-            Good mood.
+            <span className="text-[#F04E00]">Good mood.</span>
           </h1>
-          <p className="mt-4 max-w-lg text-emerald-50">
+          <p className="mt-4 max-w-xl text-base text-gray-600 sm:text-lg">
             Shop farm-fresh groceries and pantry favorites, delivered right when
             you need them.
           </p>
-          <Link
-            to="/shop"
-            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-50"
-          >
-            Shop fresh picks <ArrowRight aria-hidden="true" size={18} />
-          </Link>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1E8E3E] px-6 py-3.5 font-bold text-white shadow-md transition-all hover:bg-[#0E532B]"
+            >
+              Shop fresh picks <ArrowRight aria-hidden="true" size={18} />
+            </Link>
+            <Link
+              to="/shop?offers=true"
+              className="inline-flex items-center rounded-xl bg-[#F04E00] px-6 py-3.5 font-bold text-white shadow-md transition-all hover:bg-[#d94400]"
+            >
+              Today&apos;s Offers
+            </Link>
+          </div>
         </div>
-        <div
-          aria-hidden="true"
-          className="absolute -right-10 -top-14 h-72 w-72 rounded-full border-[36px] border-emerald-700/70 sm:right-8 sm:top-1/2 sm:-translate-y-1/2"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-24 right-24 h-52 w-52 rounded-full bg-lime-400/20"
-        />
+
+        <div className="relative z-10 lg:col-span-5">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-white p-2 ring-4 ring-white shadow-xl">
+            {heroImageFailed ? (
+              <div className="h-full rounded-2xl bg-gradient-to-br from-emerald-300 via-[#1E8E3E] to-[#072916]" />
+            ) : (
+              <img
+                src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=85"
+                alt="A colorful basket of fresh market produce"
+                onError={() => setHeroImageFailed(true)}
+                className="h-full w-full rounded-2xl object-cover"
+              />
+            )}
+            <div className="absolute bottom-3 left-3 flex w-max max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-2xl border border-white/70 bg-white px-4 py-3 text-sm font-bold text-[#0E532B] shadow-xl sm:bottom-4 sm:left-4 sm:max-w-none">
+              <Zap aria-hidden="true" size={18} className="shrink-0 fill-[#F04E00] text-[#F04E00]" />
+              <span>30-Min Delivery in Addis Ababa</span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section>
@@ -52,19 +109,27 @@ function Home() {
             View all <ArrowRight aria-hidden="true" size={16} />
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {categories.map((category, index) => {
-            const Icon = categoryIcons[index % categoryIcons.length]
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {categories.map((category) => {
+            const details = categoryDetails[category]
             return (
               <Link
                 key={category}
                 to={`/shop?category=${encodeURIComponent(category)}`}
-                className="group rounded-2xl border border-slate-100 bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+                className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
               >
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 transition group-hover:bg-emerald-100">
-                  <Icon aria-hidden="true" size={23} />
-                </span>
-                <span className="mt-3 block text-sm font-semibold text-slate-800">
+                <div className="relative h-24 overflow-hidden bg-emerald-50">
+                  <img
+                    src={details.image}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                  <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-[#0E532B] shadow-sm">
+                    {details.count} Items
+                  </span>
+                </div>
+                <span className="block p-3 text-left text-sm font-semibold text-slate-800">
                   {category}
                 </span>
               </Link>
@@ -88,10 +153,10 @@ function Home() {
             Shop all <ArrowRight aria-hidden="true" size={16} />
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {products
             .filter((product) => product.stock > 0)
-            .slice(0, 4)
+            .slice(0, 5)
             .map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -121,7 +186,7 @@ function Home() {
             Delivery made easy
           </p>
           <h2 className="mt-2 text-2xl font-bold text-slate-900">
-            Free delivery on $50+
+            Free delivery on orders over 500 ETB
           </h2>
           <p className="mt-2 text-slate-700">
             Stock up on the things you love and we&apos;ll bring them to you.

@@ -17,22 +17,25 @@ import logo from '../assets/logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
+import { useWishlist } from '../context/WishlistContext.jsx'
+import CartDrawer from './CartDrawer.jsx'
 import LanguageSwitcher from './LanguageSwitcher.jsx'
 import SearchBar from './SearchBar.jsx'
 
 const navigation = [
   { translationKey: 'home', to: '/', end: true, icon: Home },
   { translationKey: 'shop', to: '/shop' },
-  { translationKey: 'categories', to: '/shop#categories' },
+  { translationKey: 'categories', to: '/categories' },
   { translationKey: 'myOrders', to: '/my-orders' },
-  { translationKey: 'offers', to: '/shop?offers=true', badge: 'Hot' },
+  { translationKey: 'offers', to: '/offers', badge: 'Hot' },
   { translationKey: 'aboutUs', to: '/about' },
   { translationKey: 'contactUs', to: '/contact' },
 ]
 
 function Navbar() {
   const { t } = useLanguage()
-  const { totalItems } = useCart()
+  const { totalItems, isCartOpen, openCart } = useCart()
+  const { wishlistCount } = useWishlist()
   const { user, isAuthenticated, logout } = useAuth()
   const navigate = useNavigate()
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
@@ -58,7 +61,7 @@ function Navbar() {
           className={({ isActive }) =>
             `relative inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition ${
               isActive
-                ? 'font-semibold text-[#1E8E3E]'
+                ? 'font-bold text-[#1E8E3E]'
                 : 'font-medium text-gray-600 hover:text-[#0E532B]'
             } ${mobile ? 'w-full' : ''}`
           }
@@ -76,9 +79,10 @@ function Navbar() {
   )
 
   return (
+    <>
     <header className="relative z-30 bg-white">
       <div className="bg-[#0E532B] py-2 text-xs text-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
           <p className="flex items-center gap-2">
             <Truck aria-hidden="true" size={15} className="text-[#F04E00]" />
             <span>
@@ -102,7 +106,7 @@ function Navbar() {
       </div>
 
       <div className="border-b border-gray-100 bg-white py-3">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-3 px-4 sm:px-6 lg:flex-nowrap lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:flex-nowrap">
           <Link to="/" className="flex shrink-0 items-center gap-2.5">
             <img src={logo} alt="Grocery Delivery System logo" className="h-11 w-auto object-contain" />
             <span className="flex flex-col leading-none">
@@ -197,14 +201,21 @@ function Navbar() {
             >
               <span className="relative">
                 <Heart aria-hidden="true" size={20} />
-                <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-[#F04E00]" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#F04E00] px-1 text-[10px] font-bold leading-none text-white">
+                    {wishlistCount > 99 ? '99+' : wishlistCount}
+                  </span>
+                )}
               </span>
               <span className="hidden xl:inline">{t('wishlist')}</span>
             </Link>
 
-            <Link
-              to="/cart"
+            <button
+              type="button"
+              aria-controls="mini-cart-drawer"
+              aria-expanded={isCartOpen}
               aria-label={`${t('cart')}, ${totalItems} ${totalItems === 1 ? 'item' : 'items'}`}
+              onClick={openCart}
               className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[#0E532B] hover:bg-emerald-50 sm:gap-2 sm:px-3"
             >
               <span className="relative">
@@ -214,13 +225,13 @@ function Navbar() {
                 </span>
               </span>
               <span className="hidden xl:inline">{t('cart')}</span>
-            </Link>
+            </button>
           </div>
         </div>
       </div>
 
       <div className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10">
           <div className="flex min-h-11 items-center justify-between md:justify-center">
             <span className="text-xs font-semibold uppercase tracking-wider text-[#0E532B] md:hidden">
               {t('shop')}
@@ -244,6 +255,8 @@ function Navbar() {
         </div>
       </div>
     </header>
+    <CartDrawer />
+    </>
   )
 }
 

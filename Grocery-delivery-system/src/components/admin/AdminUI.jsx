@@ -84,11 +84,13 @@ export function StatusBadge({ status }) {
 }
 
 export function Modal({ title, onClose, children, size = 'max-w-lg' }) {
+  const { t } = useLanguage()
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       <button
         type="button"
-        aria-label="Close dialog"
+        aria-label={t('common.closeDialog')}
         className="fixed inset-0 bg-slate-950/50"
         onClick={onClose}
       />
@@ -104,7 +106,7 @@ export function Modal({ title, onClose, children, size = 'max-w-lg' }) {
           </h2>
           <button
             type="button"
-            aria-label="Close dialog"
+            aria-label={t('common.closeDialog')}
             onClick={onClose}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           >

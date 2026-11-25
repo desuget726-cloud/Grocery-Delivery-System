@@ -240,12 +240,14 @@ function CategoryImage({ src, name, className = '' }) {
 }
 
 function VisibilitySwitch({ category, onToggle, compact = false }) {
+  const { t } = useLanguage()
+
   return (
     <button
       type="button"
       role="switch"
       aria-checked={Boolean(category.active)}
-      aria-label={`${category.active ? 'Hide' : 'Show'} ${category.name} on storefront`}
+      aria-label={`${t(category.active ? 'products.hide' : 'products.show')} ${category.name} ${t('products.onStorefront')}`}
       onClick={onToggle}
       className={`relative inline-flex shrink-0 items-center rounded-full transition ${compact ? 'h-5 w-9' : 'h-6 w-11'} ${category.active ? 'bg-[#1E8E3E]' : 'bg-slate-300'}`}
     >
@@ -379,8 +381,8 @@ function Categories() {
   return (
     <div className="mx-auto max-w-[1600px]">
       <AdminPageHeader
-        title="Categories"
-        description="Organize grocery aisles, storefront banners, display order, and visibility"
+        title={t('categories')}
+        description={t('products.categoriesDescription')}
         action={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <label className="relative min-w-0 sm:w-56">
@@ -389,15 +391,15 @@ function Categories() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search categories..."
-                aria-label="Search categories"
+                placeholder={t('products.searchCategories')}
+                aria-label={t('products.searchCategories')}
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[#1E8E3E]"
               />
             </label>
-            <div role="group" aria-label="Category view" className="flex w-fit rounded-xl border border-slate-200 bg-white p-1">
+            <div role="group" aria-label={t('products.categoryView')} className="flex w-fit rounded-xl border border-slate-200 bg-white p-1">
               <button
                 type="button"
-                aria-label="Grid view"
+                aria-label={t('products.gridView')}
                 aria-pressed={view === 'grid'}
                 onClick={() => setView('grid')}
                 className={`rounded-lg p-2 ${view === 'grid' ? 'bg-[#F0F7F1] text-[#0E532B]' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -406,7 +408,7 @@ function Categories() {
               </button>
               <button
                 type="button"
-                aria-label="Table view"
+                aria-label={t('products.tableView')}
                 aria-pressed={view === 'table'}
                 onClick={() => setView('table')}
                 className={`rounded-lg p-2 ${view === 'table' ? 'bg-[#F0F7F1] text-[#0E532B]' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -419,13 +421,13 @@ function Categories() {
               onClick={openAddModal}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]"
             >
-              <Plus aria-hidden="true" size={17} /> Add Category
+              <Plus aria-hidden="true" size={17} /> {t('products.addCategory')}
             </button>
           </div>
         }
       />
 
-      <section aria-label="Category statistics" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label={t('products.categoryStatistics')} className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { labelKey: 'totalCategories', value: visibleCategories.length, badge: 'bg-[#F0F7F1] text-[#0E532B]', icon: ShoppingBasket },
           { labelKey: 'activeOnStorefront', value: activeCount, badge: 'bg-emerald-50 text-[#1E8E3E]', icon: Eye },
@@ -448,7 +450,7 @@ function Categories() {
 
       <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div role="group" aria-label="Filter categories by status" className="flex flex-wrap gap-1.5">
+          <div role="group" aria-label={t('products.filterCategoriesByStatus')} className="flex flex-wrap gap-1.5">
             {['All', 'Active', 'Hidden', 'Featured'].map((status) => (
               <button
                 key={status}
@@ -457,25 +459,25 @@ function Categories() {
                 onClick={() => setStatusFilter(status)}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === status ? 'bg-[#1E8E3E] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
-                {t(status)}
+                {t(status === 'Featured' ? 'products.featuredCategory' : status)}
               </button>
             ))}
           </div>
           <div className="flex items-center justify-between gap-3 sm:justify-end">
             <span className="text-xs font-medium text-slate-500">
-              {filteredCategories.length} {filteredCategories.length === 1 ? 'category' : 'categories'}
+              {filteredCategories.length} {t(filteredCategories.length === 1 ? 'products.categoryFound' : 'categories')}
             </span>
             <label className="flex items-center gap-2 text-xs font-medium text-slate-500">
-              Sort by
+              {t('common.sortBy')}
               <select
-                aria-label="Sort categories"
+                aria-label={t('common.sortBy')}
                 value={sortBy}
                 onChange={(event) => setSortBy(event.target.value)}
                 className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-[#1E8E3E]"
               >
-                <option value="order">Display Order</option>
-                <option value="products">Most Products</option>
-                <option value="name">Name A–Z</option>
+                <option value="order">{t('products.displayOrder')}</option>
+                <option value="products">{t('products.mostProducts')}</option>
+                <option value="name">{t('products.nameAToZ')}</option>
               </select>
             </label>
           </div>
@@ -500,17 +502,17 @@ function Categories() {
                   </span>
                   {category.featured && (
                     <span className="absolute left-[4.3rem] top-3 inline-flex items-center gap-1 rounded-full bg-[#F04E00] px-2.5 py-1 text-xs font-bold text-white shadow-sm">
-                      <Star aria-hidden="true" size={12} fill="currentColor" /> Featured
+                      <Star aria-hidden="true" size={12} fill="currentColor" /> {t('products.featuredCategory')}
                     </span>
                   )}
                   <button
                     type="button"
                     onClick={() => toggleVisibility(category)}
-                    aria-label={`${category.active ? 'Hide' : 'Show'} ${category.name} on storefront`}
+                    aria-label={`${t(category.active ? 'products.hide' : 'products.show')} ${category.name} ${t('products.onStorefront')}`}
                     className={`absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm transition ${category.active ? 'bg-white/95 text-[#1E8E3E]' : 'bg-slate-900/80 text-white'}`}
                   >
                     {category.active ? <Eye aria-hidden="true" size={13} /> : <EyeOff aria-hidden="true" size={13} />}
-                    {category.active ? 'Active' : 'Hidden'}
+                    {t(category.active ? 'Active' : 'Hidden')}
                   </button>
                   <p className="absolute bottom-3 left-4 text-xs font-medium text-white">
                     /shop?category={category.slug}
@@ -524,7 +526,7 @@ function Categories() {
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <span className="rounded-full bg-[#F0F7F1] px-2.5 py-1 text-xs font-semibold text-[#0E532B]">
-                      {category.productCount} Products
+                      {category.productCount} {t('products')}
                     </span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-[#0E532B]">
                       ~{formatCurrency(category.weeklySales)}/wk
@@ -542,13 +544,13 @@ function Categories() {
                       to={categoryLink(category)}
                       className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-[#1E8E3E] transition hover:text-[#0E532B]"
                     >
-                      View Products <span aria-hidden="true">→</span>
+                      {t('products.viewProducts')} <span aria-hidden="true">→</span>
                     </Link>
                     <div className="flex items-center gap-0.5">
                       <button
                         type="button"
                         aria-label={`Edit ${category.name}`}
-                        title="Edit category"
+                        title={t('products.editCategory')}
                         onClick={() => openEditModal(category)}
                         className="rounded-lg p-2 text-slate-500 transition hover:bg-emerald-50 hover:text-[#0E532B]"
                       >
@@ -557,7 +559,7 @@ function Categories() {
                       <button
                         type="button"
                         aria-label={`${category.active ? 'Hide' : 'Show'} ${category.name}`}
-                        title={`${category.active ? 'Hide' : 'Show'} category`}
+                        title={`${t(category.active ? 'products.hide' : 'products.show')} ${t('shop.category')}`}
                         onClick={() => toggleVisibility(category)}
                         className="rounded-lg p-2 text-slate-500 transition hover:bg-emerald-50 hover:text-[#0E532B]"
                       >
@@ -566,7 +568,7 @@ function Categories() {
                       <button
                         type="button"
                         aria-label={`Delete ${category.name}`}
-                        title="Delete category"
+                        title={`${t('common.delete')} ${t('shop.category')}`}
                         onClick={() => setDeleteTarget(category)}
                         className="rounded-lg p-2 text-slate-500 transition hover:bg-orange-50 hover:text-[#F04E00]"
                       >
@@ -579,8 +581,8 @@ function Categories() {
             ))}
             {filteredCategories.length === 0 && (
               <div className="col-span-full rounded-xl border border-dashed border-slate-300 py-14 text-center">
-                <p className="font-semibold text-slate-800">No categories found</p>
-                <p className="mt-1 text-sm text-slate-500">Try another search or filter.</p>
+                <p className="font-semibold text-slate-800">{t('products.noCategoriesFound')}</p>
+                <p className="mt-1 text-sm text-slate-500">{t('common.tryChangingSearchFilters')}</p>
               </div>
             )}
           </div>
@@ -589,12 +591,12 @@ function Categories() {
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-[#0E532B]/75">
                 <tr>
-                  <th scope="col" className="px-4 py-3.5 font-semibold">Category</th>
-                  <th scope="col" className="px-4 py-3.5 font-semibold">Description</th>
-                  <th scope="col" className="px-4 py-3.5 font-semibold">Products</th>
-                  <th scope="col" className="px-4 py-3.5 font-semibold">Order</th>
-                  <th scope="col" className="px-4 py-3.5 font-semibold">Active</th>
-                  <th scope="col" className="px-4 py-3.5 text-right font-semibold">Actions</th>
+                  <th scope="col" className="px-4 py-3.5 font-semibold">{t('shop.category')}</th>
+                  <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.description')}</th>
+                  <th scope="col" className="px-4 py-3.5 font-semibold">{t('products')}</th>
+                  <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.order')}</th>
+                  <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.active')}</th>
+                  <th scope="col" className="px-4 py-3.5 text-right font-semibold">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -610,7 +612,7 @@ function Categories() {
                       </div>
                     </td>
                     <td className="max-w-[290px] px-4 py-3.5 text-xs text-slate-600">{category.description}</td>
-                    <td className="whitespace-nowrap px-4 py-3.5 font-medium text-slate-700">{category.productCount} products</td>
+                    <td className="whitespace-nowrap px-4 py-3.5 font-medium text-slate-700">{category.productCount} {t('products')}</td>
                     <td className="px-4 py-3.5 font-semibold text-slate-700">#{category.order}</td>
                     <td className="px-4 py-3.5">
                       <VisibilitySwitch category={category} onToggle={() => toggleVisibility(category)} compact />
@@ -640,7 +642,7 @@ function Categories() {
                 {filteredCategories.length === 0 && (
                   <tr>
                     <td colSpan="6" className="px-5 py-14 text-center text-sm text-slate-500">
-                      No categories match your search or filters.
+                      {t('products.noCategoriesFound')}
                     </td>
                   </tr>
                 )}
@@ -652,14 +654,14 @@ function Categories() {
 
       {modalOpen && (
         <Modal
-          title={editingCategory ? 'Edit category' : 'Add category'}
+          title={editingCategory ? `${t('common.edit')} ${t('shop.category')}` : t('products.addCategory')}
           onClose={closeModal}
           size="max-w-4xl"
         >
           <form onSubmit={handleSave} className="space-y-5">
             <div className="grid gap-5 md:grid-cols-[240px_1fr]">
               <aside>
-                <p className="mb-2 text-sm font-semibold text-slate-700">Storefront preview</p>
+                <p className="mb-2 text-sm font-semibold text-slate-700">{t('products.storefrontPreview')}</p>
                 <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                   <div className="relative h-28 overflow-hidden bg-slate-100">
                     <CategoryImage
@@ -684,10 +686,10 @@ function Categories() {
                 </div>
 
                 <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
-                  <Upload aria-hidden="true" size={15} /> Upload image
+                  <Upload aria-hidden="true" size={15} /> {t('common.uploadImage')}
                   <input type="file" accept="image/*" className="sr-only" onChange={handleImageUpload} />
                 </label>
-                <p className="mb-2 mt-4 text-xs font-semibold text-slate-600">Quick image presets</p>
+                <p className="mb-2 mt-4 text-xs font-semibold text-slate-600">{t('products.quickImagePresets')}</p>
                 <div className="grid grid-cols-3 gap-2">
                   {presetImages.map((preset) => (
                     <button
@@ -710,7 +712,7 @@ function Categories() {
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-sm font-medium text-slate-700">
-                    Category name
+                    {t('products.categoryName')}
                     <input
                       required
                       autoFocus
@@ -720,7 +722,7 @@ function Categories() {
                     />
                   </label>
                   <label className="block text-sm font-medium text-slate-700">
-                    Auto-generated slug
+                    {t('products.autoGeneratedSlug')}
                     <input
                       readOnly
                       value={slugify(draft.name)}
@@ -730,7 +732,7 @@ function Categories() {
                   </label>
                 </div>
                 <label className="block text-sm font-medium text-slate-700">
-                  Description
+                  {t('common.description')}
                   <textarea
                     rows="3"
                     value={draft.description}
@@ -739,7 +741,7 @@ function Categories() {
                   />
                 </label>
                 <label className="block text-sm font-medium text-slate-700">
-                  Image URL
+                  {t('common.imageUrl')}
                   <input
                     type="text"
                     value={draft.image.startsWith('data:') ? '' : draft.image}
@@ -752,7 +754,7 @@ function Categories() {
                   />
                 </label>
                 <label className="block max-w-[200px] text-sm font-medium text-slate-700">
-                  Display order
+                  {t('products.displayOrder')}
                   <input
                     required
                     min="1"
@@ -771,7 +773,7 @@ function Categories() {
                       onChange={(event) => setDraft((current) => ({ ...current, active: event.target.checked }))}
                       className="h-4 w-4 accent-[#1E8E3E]"
                     />
-                    Active on storefront
+                    {t('products.activeOnStorefront')}
                   </label>
                   <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
                     <input
@@ -780,7 +782,7 @@ function Categories() {
                       onChange={(event) => setDraft((current) => ({ ...current, featured: event.target.checked }))}
                       className="h-4 w-4 accent-[#F04E00]"
                     />
-                    Featured category
+                    {t('products.featuredCategory')}
                   </label>
                 </div>
               </div>
@@ -791,14 +793,14 @@ function Categories() {
                 onClick={closeModal}
                 className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="inline-flex items-center gap-2 rounded-lg bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0E532B]"
               >
                 <Check aria-hidden="true" size={16} />
-                {editingCategory ? 'Save changes' : 'Add category'}
+                {editingCategory ? t('saveChanges') : t('products.addCategory')}
               </button>
             </div>
           </form>
@@ -806,9 +808,9 @@ function Categories() {
       )}
 
       {deleteTarget && (
-        <Modal title="Delete category?" onClose={() => setDeleteTarget(null)} size="max-w-md">
+        <Modal title={`${t('common.delete')} ${t('shop.category')}?`} onClose={() => setDeleteTarget(null)} size="max-w-md">
           <p className="text-sm leading-6 text-slate-600">
-            Remove <span className="font-semibold text-slate-900">{deleteTarget.name}</span> from your storefront categories?
+            {t('products.removeCategoryConfirmation')}
           </p>
           <div className="mt-6 flex justify-end gap-2">
             <button
@@ -816,14 +818,14 @@ function Categories() {
               onClick={() => setDeleteTarget(null)}
               className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
               onClick={confirmDelete}
               className="rounded-lg bg-[#F04E00] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#C54100]"
             >
-              Delete category
+              {t('products.deleteCategory')}
             </button>
           </div>
         </Modal>

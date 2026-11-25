@@ -1,15 +1,24 @@
-import { ArrowLeft, Image, Minus, Plus, ShoppingCart } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Heart, Image, Minus, Plus, ShoppingCart } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import ProductCard from '../../components/ProductCard.jsx'
 import { useCart } from '../../context/CartContext.jsx'
+import { useWishlist } from '../../context/WishlistContext.jsx'
 import { products } from '../../data/mockData.js'
+import categorySlug from '../../utils/categorySlug.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 function ProductDetails() {
-  const { productId } = useParams()
-  const product = products.find((item) => item.id === productId)
+  const { id, productId } = useParams()
+  const product = products.find((item) => item.id === (id || productId))
   const { cart, addToCart, updateQuantity } = useCart()
+  const { isInWishlist, toggleWishlist } = useWishlist()
   const [quantity, setQuantity] = useState(1)
+  const [wishlistError, setWishlistError] = useState('')
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [id, productId])
 
   if (!product) {
     return (
@@ -25,6 +34,35 @@ function ProductDetails() {
   const cartItem = cart.find((item) => item.id === product.id)
   const inStock = product.stock > 0
   const image = product.image || product.imageUrl
+  const isWishlisted = isInWishlist(product.id)
+  const isDiscounted = Number(product.originalPrice) > Number(product.price)
+  const relatedProducts = products
+    .filter((item) => item.category === product.category && item.id !== product.id)
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    .slice(0, 5)
+  const featuredProducts = products
+    .filter(
+      (item) =>
+        item.id !== product.id &&
+        !relatedProducts.some((relatedProduct) => relatedProduct.id === item.id),
+    )
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+  for (const featuredProduct of featuredProducts) {
+    if (relatedProducts.length >= 5) break
+    relatedProducts.push(featuredProduct)
+  }
+
+  const handleWishlistToggle = (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+    try {
+      toggleWishlist(product)
+      setWishlistError('')
+    } catch (error) {
+      console.error('Unable to save the wishlist:', error)
+      setWishlistError('Wishlist could not be saved. Please try again.')
+    }
+  }
 
   const handleAddToCart = () => {
     if (cartItem) {
@@ -47,11 +85,22 @@ function ProductDetails() {
       </Link>
 
       <section className="grid gap-8 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8 lg:grid-cols-2">
-        <div className="flex min-h-72 items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 sm:min-h-96">
+        <div className="relative overflow-hidden rounded-2xl bg-emerald-50">
           {image ? (
-            <img src={image} alt={product.name} className="h-full max-h-[480px] w-full object-cover" />
+            <img
+              src={image}
+              alt={product.name}
+              className="h-[360px] w-full rounded-2xl object-cover sm:h-[440px]"
+            />
           ) : (
-            <Image aria-hidden="true" size={72} strokeWidth={1.2} className="text-emerald-300" />
+            <div className="flex h-[360px] w-full items-center justify-center sm:h-[440px]">
+              <Image aria-hidden="true" size={72} strokeWidth={1.2} className="text-emerald-300" />
+            </div>
+          )}
+          {isDiscounted && (
+            <span className="absolute left-4 top-4 rounded-full bg-[#F04E00] px-3 py-1.5 text-sm font-bold text-white shadow-sm">
+              14% OFF
+            </span>
           )}
         </div>
 
@@ -61,11 +110,41 @@ function ProductDetails() {
             {product.name}
           </h1>
           <p className="mt-2 text-slate-500">{product.unit}</p>
-          <p className="mt-5 text-2xl font-bold text-slate-900">
-            {formatCurrency(product.price)}
+          <p className="mt-3 text-sm font-semibold text-slate-700">
+            <span className="text-[#F04E00]">4.9 ★</span> • 42 Verified Reviews
           </p>
+          <button
+            type="button"
+            aria-label={`${isWishlisted ? 'Remove' : 'Add'} ${product.name} ${isWishlisted ? 'from' : 'to'} wishlist`}
+            aria-pressed={isWishlisted}
+            onClick={handleWishlistToggle}
+            className="mt-4 inline-flex w-fit items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#F04E00]"
+          >
+            <Heart
+              aria-hidden="true"
+              size={17}
+              className={isWishlisted ? 'fill-[#F04E00] text-[#F04E00]' : ''}
+            />
+            {isWishlisted ? 'Saved to Wishlist' : 'Add to Wishlist'}
+          </button>
+          {wishlistError && (
+            <p role="alert" className="mt-2 text-xs font-medium text-rose-700">
+              {wishlistError}
+            </p>
+          )}
+          <div className="mt-5 flex flex-wrap items-baseline gap-3">
+            <p className="text-2xl font-bold text-slate-900">{formatCurrency(product.price)}</p>
+            {isDiscounted && (
+              <p className="text-base text-slate-400 line-through">
+                {formatCurrency(product.originalPrice)}
+              </p>
+            )}
+          </div>
           <p className={`mt-3 text-sm font-semibold ${inStock ? 'text-emerald-700' : 'text-rose-600'}`}>
             {inStock ? `${product.stock} in stock` : 'Currently out of stock'}
+          </p>
+          <p className="mt-4 w-fit rounded-xl bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+            ⚡ Fast 30–45 min delivery in Addis Ababa • Free over 500 ETB
           </p>
           <p className="mt-5 leading-7 text-slate-600">{product.description}</p>
 
@@ -117,6 +196,28 @@ function ProductDetails() {
               {inStock ? 'Add to Cart' : 'Out of stock'}
             </button>
           </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="similar-products-heading" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2
+            id="similar-products-heading"
+            className="text-xl font-extrabold text-[#0E532B]"
+          >
+            Similar in {product.category}
+          </h2>
+          <Link
+            to={`/shop?category=${encodeURIComponent(categorySlug(product.category))}`}
+            className="text-sm font-semibold text-[#1E8E3E] transition hover:text-[#0E532B]"
+          >
+            View all in {product.category} →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          {relatedProducts.map((relatedProduct) => (
+            <ProductCard key={relatedProduct.id} product={relatedProduct} />
+          ))}
         </div>
       </section>
     </div>

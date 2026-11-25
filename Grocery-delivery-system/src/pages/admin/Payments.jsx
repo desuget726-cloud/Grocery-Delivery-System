@@ -183,6 +183,28 @@ const methodIcons = {
   'Cash on Delivery': Banknote,
 }
 const money = formatCurrency
+const LEGACY_TRANSACTIONS_STORAGE_KEY = 'admin-payment-transactions'
+
+function loadInitialTransactions() {
+  if (typeof window === 'undefined') {
+    return initialTransactions
+  }
+
+  try {
+    const savedTransactions = window.localStorage.getItem(LEGACY_TRANSACTIONS_STORAGE_KEY)
+    if (savedTransactions === null) {
+      return initialTransactions
+    }
+    const transactions = JSON.parse(savedTransactions)
+    if (!Array.isArray(transactions)) {
+      throw new TypeError('Saved payment transactions must be an array')
+    }
+    return transactions
+  } catch (error) {
+    console.error('Unable to migrate saved payment transactions:', error)
+    return initialTransactions
+  }
+}
 
 function getRangeStart(range) {
   const start = new Date()
@@ -208,8 +230,8 @@ function formatTransactionDate(value) {
 function Payments() {
   const { t } = useLanguage()
   const [transactions, setTransactions] = usePersistentState(
-    'admin-payment-transactions',
-    initialTransactions,
+    'grocery_admin_transactions',
+    loadInitialTransactions,
   )
   const [dateRange, setDateRange] = useState('This Month')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -315,17 +337,17 @@ function Payments() {
             <span className="font-bold text-[#0E532B]">GROCERY</span>{' '}
             <span className="font-bold text-[#F04E00]">DELIVERY</span>{' '}
             <span className="font-bold text-[#0B4B8C]">SYSTEM</span>
-            <span className="text-slate-300">/</span> FINANCE
+            <span className="text-slate-300">/</span> {t('transactions.finance')}
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[#0E532B] sm:text-[30px]">
             {t('transactionsPayments')}
           </h1>
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
-            Track Telebirr, CBE Birr, Card, and Cash-on-Delivery settlements, refunds, and receipts
+            {t('transactions.description')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div role="group" aria-label="Date range" className="flex h-11 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <div role="group" aria-label={t('common.dateRange')} className="flex h-11 items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             {dateRanges.map((range) => (
               <button
                 type="button"
@@ -343,65 +365,65 @@ function Payments() {
             onClick={exportCsv}
             className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-4 text-sm font-semibold text-[#0B4B8C] shadow-sm transition hover:bg-[#0B4B8C] hover:text-white"
           >
-            <Download size={17} /> Export CSV
+            <Download size={17} /> {t('common.exportCsv')}
           </button>
         </div>
       </header>
 
-      <section aria-label="Financial overview" className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label={t('common.financialOverview')} className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-slate-500 sm:text-sm">Gross Revenue</p>
+              <p className="text-xs font-semibold text-slate-500 sm:text-sm">{t('transactions.grossRevenue')}</p>
               <p className="mt-3 text-xl font-bold tracking-tight text-[#0E532B] sm:text-2xl">{money(grossRevenue)}</p>
-              <p className="mt-1.5 text-xs text-slate-500">{dateRange} · completed transactions</p>
+              <p className="mt-1.5 text-xs text-slate-500">{t(dateRange)} · {t('transactions.completedTransactions')}</p>
             </div>
             <span className="rounded-xl bg-[#EAF5EC] p-2.5 text-[#1E8E3E]"><ArrowUpRight size={19} /></span>
           </div>
-          <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#1E8E3E]"><CheckCircle2 size={14} /> Captured revenue</div>
+          <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#1E8E3E]"><CheckCircle2 size={14} /> {t('transactions.capturedRevenue')}</div>
         </article>
         <article className="rounded-2xl border border-[#DDEEE0] bg-[#F0F7F1] p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-[#0E532B] sm:text-sm">Completed Payments</p>
+              <p className="text-xs font-semibold text-[#0E532B] sm:text-sm">{t('transactions.completedPayments')}</p>
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{completedTransactions.length}</p>
-              <p className="mt-1.5 text-xs text-[#477153]">{money(completedTotal)} settled</p>
+              <p className="mt-1.5 text-xs text-[#477153]">{money(completedTotal)} {t('transactions.settled')}</p>
             </div>
             <span className="rounded-xl bg-white/80 p-2.5 text-[#1E8E3E]"><Check size={19} /></span>
           </div>
-          <div className="mt-4"><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-[#0E722F]">Completed</span></div>
+          <div className="mt-4"><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-[#0E722F]">{t('Completed')}</span></div>
         </article>
         <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">Pending / COD To Settle</p>
+              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">{t('transactions.pendingCodToSettle')}</p>
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{pendingTransactions.length}</p>
-              <p className="mt-1.5 text-xs text-[#0E532B]">{money(pendingTotal)} waiting for rider</p>
+              <p className="mt-1.5 text-xs text-[#0E532B]">{money(pendingTotal)} {t('transactions.waitingForRider')}</p>
             </div>
             <span className="rounded-xl bg-orange-50 p-2.5 text-[#F04E00]"><Clock3 size={19} /></span>
           </div>
-          <div className="mt-4"><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-[#F04E00]">Awaiting settlement</span></div>
+          <div className="mt-4"><span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-semibold text-[#F04E00]">{t('transactions.awaitingSettlement')}</span></div>
         </article>
         <article className="rounded-2xl border border-orange-200 bg-orange-50 p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">Refunded &amp; Failed</p>
+              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">{t('transactions.refundedFailed')}</p>
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#B53B05]">{attentionTransactions.length}</p>
-              <p className="mt-1.5 text-xs text-[#0E532B]">{money(attentionTotal)} total amount</p>
+              <p className="mt-1.5 text-xs text-[#0E532B]">{money(attentionTotal)} {t('transactions.totalAmount')}</p>
             </div>
             <span className="rounded-xl bg-white/80 p-2.5 text-[#F04E00]"><RotateCcw size={19} /></span>
           </div>
-          <div className="mt-4"><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-[#B53B05]">Needs review</span></div>
+          <div className="mt-4"><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-[#B53B05]">{t('common.needsReview')}</span></div>
         </article>
       </section>
 
-      <section aria-label="Payment method breakdown" className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+      <section aria-label={t('common.paymentMethodBreakdown')} className="mb-5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold text-[#0E532B]">Payment method breakdown</h2>
+            <h2 className="text-sm font-bold text-[#0E532B]">{t('transactions.paymentMethodBreakdown')}</h2>
             <p className="mt-0.5 text-xs text-slate-500">Share of completed revenue · {dateRange}</p>
           </div>
-          <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">Revenue and transaction volume</span>
+          <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">{t('transactions.revenueTransactionVolume')}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {methodBreakdown.map(({ method, revenue, count, share }) => {
@@ -416,7 +438,7 @@ function Payments() {
                 </div>
                 <div className="mt-3 flex items-end justify-between gap-2">
                   <span className="text-sm font-bold text-[#0E532B]">{money(revenue)}</span>
-                  <span className="text-[11px] text-slate-400">{count} transactions</span>
+                  <span className="text-[11px] text-slate-400">{count} {t('transactions.transactions')}</span>
                 </div>
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
                   <div
@@ -434,7 +456,7 @@ function Payments() {
         <div className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:p-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h2 className="text-sm font-bold text-[#0E532B]">Transaction history</h2>
+              <h2 className="text-sm font-bold text-[#0E532B]">{t('transactions.transactionHistory')}</h2>
               <p className="mt-0.5 text-xs text-slate-500">Payments, settlements, and refunds for {dateRange.toLowerCase()}</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -444,8 +466,8 @@ function Payments() {
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by TXN ID, Order ID (GDS-), or Customer..."
-                  aria-label="Search transactions"
+                  placeholder={t('transactions.searchPlaceholder')}
+                  aria-label={t('transactions.searchPlaceholder')}
                   className="min-w-0 flex-1 bg-transparent text-xs text-slate-800 outline-none placeholder:text-slate-400 sm:text-sm"
                 />
               </label>
@@ -454,10 +476,10 @@ function Payments() {
                 <select
                   value={methodFilter}
                   onChange={(event) => setMethodFilter(event.target.value)}
-                  aria-label="Filter by payment method"
+                  aria-label={t('transactions.filterByPaymentMethod')}
                   className="h-full w-full appearance-none bg-transparent pr-5 text-xs font-medium text-slate-600 outline-none sm:text-sm"
                 >
-                  <option>All Methods</option>
+                  <option>{t('transactions.allMethods')}</option>
                   {methods.map((method) => <option key={method} value={method}>{method}</option>)}
                 </select>
                 <ChevronDown size={14} className="pointer-events-none absolute right-3 text-slate-400" />
@@ -488,13 +510,13 @@ function Payments() {
           <table className="w-full min-w-[1050px] text-left">
             <thead className="bg-[#F8FAF8] text-[10px] font-bold uppercase tracking-[0.1em] text-[#0E532B]/75">
               <tr>
-                <th className="px-5 py-3.5">Transaction / Order</th>
-                <th className="px-4 py-3.5">Customer</th>
-                <th className="px-4 py-3.5">Payment Method</th>
-                <th className="px-4 py-3.5">Date &amp; Time</th>
-                <th className="px-4 py-3.5">Amount</th>
-                <th className="px-4 py-3.5">Status</th>
-                <th className="px-4 py-3.5 text-right">Actions</th>
+                <th className="px-5 py-3.5">{t('transactions.transactionOrder')}</th>
+                <th className="px-4 py-3.5">{t('common.customer')}</th>
+                <th className="px-4 py-3.5">{t('transactions.paymentMethod')}</th>
+                <th className="px-4 py-3.5">{t('common.dateTime')}</th>
+                <th className="px-4 py-3.5">{t('common.amount')}</th>
+                <th className="px-4 py-3.5">{t('status')}</th>
+                <th className="px-4 py-3.5 text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -535,16 +557,16 @@ function Payments() {
                             onClick={() => markSettled(transaction)}
                             className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#1E8E3E] px-2.5 text-xs font-semibold text-white transition hover:bg-[#0E532B]"
                           >
-                            <Check size={13} /> Mark Settled
+                            <Check size={13} /> {t('transactions.markSettled')}
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => setReceiptId(transaction.id)}
-                          aria-label={`View receipt for ${transaction.id}`}
+                          aria-label={`${t('transactions.viewReceipt')} ${transaction.id}`}
                           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#0B4B8C]/30 px-2.5 text-xs font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
                         >
-                          <Eye size={14} /> Receipt
+                          <Eye size={14} /> {t('transactions.receipt')}
                         </button>
                         {transaction.status === 'Completed' && (
                           <button
@@ -552,7 +574,7 @@ function Payments() {
                             onClick={() => refundTransaction(transaction)}
                             className="inline-flex h-8 items-center gap-1 rounded-lg border border-orange-200 px-2.5 text-xs font-semibold text-[#B53B05] transition hover:bg-orange-50"
                           >
-                            <RotateCcw size={13} /> Refund
+                            <RotateCcw size={13} /> {t('transactions.refund')}
                           </button>
                         )}
                       </div>
@@ -561,19 +583,19 @@ function Payments() {
                 )
               })}
               {filteredTransactions.length === 0 && (
-                <tr><td colSpan="7" className="px-5 py-16 text-center text-sm text-slate-500">No transactions match these filters.</td></tr>
+                <tr><td colSpan="7" className="px-5 py-16 text-center text-sm text-slate-500">{t('transactions.noMatchingTransactions')}</td></tr>
               )}
             </tbody>
           </table>
         </div>
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-[#FCFDFC] px-5 py-3 text-[11px] text-slate-500">
-          <span>Showing {filteredTransactions.length} of {rangeTransactions.length} transactions</span>
-          <span>{dateRange} · {money(grossRevenue)} completed revenue</span>
+          <span>{t('common.showing')} {filteredTransactions.length} / {rangeTransactions.length} {t('transactions.transactions')}</span>
+          <span>{t(dateRange)} · {money(grossRevenue)} {t('transactions.completedRevenue')}</span>
         </footer>
       </section>
 
       {selectedReceipt && (
-        <Modal title="Payment receipt" onClose={() => setReceiptId(null)} size="max-w-xl">
+        <Modal title={t('transactions.paymentReceipt')} onClose={() => setReceiptId(null)} size="max-w-xl">
           <style>{`
             @media print {
               body * { visibility: hidden !important; }
@@ -590,37 +612,37 @@ function Payments() {
                 <span className="text-[#F04E00]">DELIVERY</span>{' '}
                 <span className="text-[#0B4B8C]">SYSTEM</span>
               </p>
-              <p className="mt-1 text-xs text-slate-500">Payment receipt</p>
+              <p className="mt-1 text-xs text-slate-500">{t('transactions.paymentReceipt')}</p>
               <p className="mt-3 text-lg font-bold text-[#0E532B]">{money(selectedReceipt.amount)}</p>
               <span className={`mt-2 rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusClassNames[selectedReceipt.status]}`}>
                 {t(selectedReceipt.status)}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-dashed border-slate-200 py-4 text-xs">
-              <div><p className="text-slate-400">Transaction ID</p><p className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.id}</p></div>
-              <div><p className="text-slate-400">Order ID</p><p className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.orderId}</p></div>
-              <div><p className="text-slate-400">Date &amp; time</p><p className="mt-1 font-semibold text-slate-800">{formatTransactionDate(selectedReceipt.date)}</p></div>
-              <div><p className="text-slate-400">Payment method</p><p className="mt-1 font-semibold text-slate-800">{selectedReceipt.method}</p></div>
+              <div><p className="text-slate-400">{t('transactions.transactionId')}</p><p className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.id}</p></div>
+              <div><p className="text-slate-400">{t('transactions.orderId')}</p><p className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.orderId}</p></div>
+              <div><p className="text-slate-400">{t('common.dateTime')}</p><p className="mt-1 font-semibold text-slate-800">{formatTransactionDate(selectedReceipt.date)}</p></div>
+              <div><p className="text-slate-400">{t('transactions.paymentMethod')}</p><p className="mt-1 font-semibold text-slate-800">{selectedReceipt.method}</p></div>
             </div>
             <div className="border-b border-dashed border-slate-200 py-4 text-xs">
-              <p className="mb-2 font-semibold text-slate-700">Customer</p>
+              <p className="mb-2 font-semibold text-slate-700">{t('common.customer')}</p>
               <p className="font-semibold text-slate-800">{selectedReceipt.customer}</p>
               <p className="mt-1 text-slate-500">{selectedReceipt.email}</p>
             </div>
             <div className="space-y-2.5 py-4 text-xs">
-              <div className="flex justify-between gap-4 text-slate-600"><span>Subtotal</span><span className="font-semibold text-[#0E532B]">{money(selectedReceipt.subtotal)}</span></div>
-              <div className="flex justify-between gap-4 text-slate-600"><span>Delivery fee</span><span className="font-semibold text-[#0E532B]">{money(selectedReceipt.deliveryFee)}</span></div>
-              <div className="flex justify-between gap-4 text-slate-600"><span>Discount</span><span className="font-semibold text-[#0E532B]">-{money(selectedReceipt.discount)}</span></div>
-              <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 text-sm font-bold text-[#0E532B]"><span>Total paid</span><span>{money(selectedReceipt.amount)}</span></div>
+              <div className="flex justify-between gap-4 text-slate-600"><span>{t('transactions.subtotal')}</span><span className="font-semibold text-[#0E532B]">{money(selectedReceipt.subtotal)}</span></div>
+              <div className="flex justify-between gap-4 text-slate-600"><span>{t('transactions.deliveryFee')}</span><span className="font-semibold text-[#0E532B]">{money(selectedReceipt.deliveryFee)}</span></div>
+              <div className="flex justify-between gap-4 text-slate-600"><span>{t('transactions.discount')}</span><span className="font-semibold text-[#0E532B]">-{money(selectedReceipt.discount)}</span></div>
+              <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 text-sm font-bold text-[#0E532B]"><span>{t('transactions.totalPaid')}</span><span>{money(selectedReceipt.amount)}</span></div>
             </div>
-            <p className="pt-2 text-center text-[10px] text-slate-400">Thank you for shopping with Grocery Delivery.</p>
+            <p className="pt-2 text-center text-[10px] text-slate-400">{t('transactions.thankYou')}</p>
           </div>
           <div className="payment-receipt-no-print mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => setReceiptId(null)} className="h-10 rounded-xl border border-[#0B4B8C]/30 px-4 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">
-              Close
+              {t('common.close')}
             </button>
             <button type="button" onClick={() => window.print()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0E532B] px-4 text-sm font-semibold text-white hover:bg-[#1E8E3E]">
-              <FileText size={16} /> Print Receipt
+              <FileText size={16} /> {t('transactions.printReceipt')}
             </button>
           </div>
         </Modal>

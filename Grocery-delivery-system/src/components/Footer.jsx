@@ -6,8 +6,8 @@ import logo from '../assets/logo.png'
 const quickLinks = [
   { label: 'Home', to: '/' },
   { label: 'Shop groceries', to: '/shop' },
-  { label: 'Categories', to: '/shop#categories' },
-  { label: 'Special offers', to: '/shop?offers=true' },
+  { label: 'Categories', to: '/categories' },
+  { label: 'Special offers', to: '/offers' },
 ]
 
 const serviceLinks = [
@@ -29,7 +29,7 @@ function Footer() {
 
   return (
     <footer className="bg-brand-green text-white">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="w-full px-4 py-12 sm:px-6 lg:px-10">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.9fr_1.2fr]">
           <section>
             <Link to="/" className="inline-flex items-center gap-3">
@@ -92,18 +92,18 @@ function Footer() {
             </h2>
             <address className="mt-4 space-y-3 not-italic">
               <a
-                href="tel:+251912345678"
+                href="tel:+251962714305"
                 className="flex items-center gap-3 text-sm text-gray-200 transition hover:text-white"
               >
                 <Phone aria-hidden="true" size={16} className="shrink-0 text-brand-orange" />
                 +251 962714305
               </a>
               <a
-                href="mailto:desualegngood136@gmail.com"
+                href="mailto:desuget726@gmail.com"
                 className="flex items-center gap-3 break-all text-sm text-gray-200 transition hover:text-white"
               >
                 <Mail aria-hidden="true" size={16} className="shrink-0 text-brand-orange" />
-                desualegngood136@gmail.com
+                desuget726@gmail.com
               </a>
               <p className="flex items-start gap-3 text-sm text-gray-200">
                 <MapPin aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-brand-orange" />

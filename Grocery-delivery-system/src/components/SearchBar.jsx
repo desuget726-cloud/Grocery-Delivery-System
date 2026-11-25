@@ -1,14 +1,8 @@
 import { Search } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
-const categories = [
-  'Fruits & Vegetables',
-  'Dairy & Eggs',
-  'Bakery',
-  'Beverages',
-  'Meat & Fish',
-]
+import { categories } from '../data/mockData.js'
+import categorySlug from '../utils/categorySlug.js'
 
 function SearchBar({
   initialValue = '',
@@ -31,7 +25,7 @@ function SearchBar({
       params.set('search', query.trim())
     }
     if (category) {
-      params.set('category', category)
+      params.set('category', categorySlug(category))
     }
 
     navigate(`/shop${params.size ? `?${params.toString()}` : ''}`)

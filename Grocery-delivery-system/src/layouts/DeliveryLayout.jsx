@@ -1,10 +1,13 @@
 import {
+  ChevronDown,
   ClipboardList,
   History,
   LayoutDashboard,
   LogOut,
+  Package,
   UserRound,
 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import logo from '../assets/logo.png'
@@ -21,6 +24,8 @@ function DeliveryLayout() {
   const { t } = useLanguage()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [profileOpen, setProfileOpen] = useState(false)
+  const profileRef = useRef(null)
   const riderName = user?.fullName || 'Dawit Tadesse'
   const riderInitials = riderName
     .split(' ')
@@ -30,6 +35,17 @@ function DeliveryLayout() {
     .join('')
     .toUpperCase()
 
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (!profileRef.current?.contains(event.target)) {
+        setProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', closeOnOutsideClick)
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick)
+  }, [])
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -37,15 +53,17 @@ function DeliveryLayout() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-gray-200 bg-white">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-30 w-full bg-gradient-to-r from-[#072916] via-[#0E532B] to-[#0B3D2E] text-white border-b-2 border-[#F04E00]/70 shadow-sm">
+        <div className="w-full px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4">
           <Link to="/delivery" className="flex shrink-0 items-center gap-2.5">
-            <img src={logo} alt="" className="h-9 w-auto object-contain" />
+            <span className="bg-white p-1 rounded-xl shadow-sm shrink-0">
+              <img src={logo} alt="" className="h-7 w-auto object-contain" />
+            </span>
             <div className="hidden items-baseline lg:flex">
-              <span className="text-[#0E532B] font-extrabold">GROCERY</span>
-              <span className="ml-1 text-[#F04E00] font-extrabold">DELIVERY</span>
+              <span className="text-white font-extrabold tracking-tight">GROCERY</span>
+              <span className="ml-1 text-[#FF6B2C] font-extrabold tracking-tight">DELIVERY</span>
             </div>
-            <span className="rounded-full bg-[#0B4B8C]/10 px-2.5 py-1 text-[10px] font-bold text-[#0B4B8C]">
+            <span className="bg-[#0B4B8C] text-sky-100 border border-sky-400/30 text-xs font-semibold px-2.5 py-0.5 rounded-full">
               {t('riderApp')}
             </span>
           </Link>
@@ -57,10 +75,10 @@ function DeliveryLayout() {
                 to={to}
                 end={end}
                 className={({ isActive }) =>
-                  `relative flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
+                  `relative flex items-center gap-1.5 whitespace-nowrap px-4 py-2 rounded-xl transition-colors ${
                     isActive
-                      ? 'bg-[#1E8E3E]/10 text-[#0E532B]'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-[#1E8E3E] text-white font-semibold shadow-sm'
+                      : 'text-emerald-100/80 hover:text-white hover:bg-white/10'
                   }`
                 }
               >
@@ -75,24 +93,96 @@ function DeliveryLayout() {
           </nav>
 
           <div className="flex shrink-0 items-center gap-3">
-            <LanguageSwitcher className="text-slate-600" />
-            <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0E532B]/10 text-xs font-bold text-[#0E532B] sm:flex">
-              {riderInitials || <UserRound aria-hidden="true" size={17} />}
+            <LanguageSwitcher
+              triggerClassName="inline-flex h-9 items-center gap-1 bg-white/10 hover:bg-white/20 text-white border border-white/15 rounded-xl px-3 py-1.5 text-sm"
+            />
+            <div ref={profileRef} className="relative">
+              <button
+                type="button"
+                aria-label={riderName}
+                aria-expanded={profileOpen}
+                aria-haspopup="menu"
+                onClick={() => setProfileOpen((current) => !current)}
+                className="flex items-center gap-2.5 rounded-xl px-2.5 py-1.5 hover:bg-white/10"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#0E532B] font-bold">
+                  {riderInitials || <UserRound aria-hidden="true" size={17} />}
+                </span>
+                <span className="hidden text-left leading-tight sm:block">
+                  <span className="block max-w-28 truncate text-sm font-bold text-white">
+                    {riderName}
+                  </span>
+                  <span className="block text-xs text-emerald-100/80">
+                    Delivery Rider
+                  </span>
+                </span>
+                <ChevronDown
+                  aria-hidden="true"
+                  size={15}
+                  className={`hidden text-emerald-100 transition-transform sm:block ${
+                    profileOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {profileOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-gray-100 bg-white py-2 text-gray-800 shadow-xl"
+                >
+                  <div className="px-4 py-2">
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {riderName}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Bole Zone • AA-23451
+                    </p>
+                    <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#1E8E3E]">
+                      <span className="h-2 w-2 rounded-full bg-[#1E8E3E]" />
+                      Online
+                    </p>
+                  </div>
+                  <div className="mt-1 border-t border-gray-100 py-1">
+                    <Link
+                      role="menuitem"
+                      to="/delivery/dashboard"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <LayoutDashboard aria-hidden="true" size={16} />
+                      Dashboard
+                    </Link>
+                    <Link
+                      role="menuitem"
+                      to="/delivery/orders"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <Package aria-hidden="true" size={16} />
+                      Assigned Orders
+                    </Link>
+                    <Link
+                      role="menuitem"
+                      to="/delivery/history"
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      <History aria-hidden="true" size={16} />
+                      Delivery History
+                    </Link>
+                  </div>
+                  <div className="border-t border-gray-100 my-1" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="text-[#F04E00] hover:bg-orange-50 w-full text-left px-4 py-2 flex items-center gap-2 font-medium"
+                  >
+                    <LogOut aria-hidden="true" size={16} />
+                    {t('logout')}
+                  </button>
+                </div>
+              )}
             </div>
-            <span className="hidden whitespace-nowrap text-sm font-semibold text-slate-800 lg:block">
-              {riderName}
-            </span>
-            <button
-              type="button"
-              onClick={handleLogout}
-              aria-label={t('logout')}
-              className="flex h-9 items-center gap-1.5 rounded-lg px-2 text-slate-500 transition hover:text-[#F04E00]"
-            >
-              <LogOut aria-hidden="true" size={19} />
-              <span className="hidden text-sm font-semibold sm:inline">
-                {t('logout')}
-              </span>
-            </button>
           </div>
         </div>
       </header>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 
 const CartContext = createContext(null)
 const CART_STORAGE_KEY = 'grocery-cart'
@@ -32,6 +32,9 @@ function loadCart() {
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState(loadCart)
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [lastAddedItem, setLastAddedItem] = useState(null)
+  const [promoCode, setPromoCode] = useState('')
 
   useEffect(() => {
     try {
@@ -46,6 +49,7 @@ export function CartProvider({ children }) {
       throw new TypeError('A product with an id is required')
     }
 
+    setLastAddedItem({ ...product })
     setCart((currentCart) => {
       const existingProduct = currentCart.find((item) => item.id === product.id)
 
@@ -61,6 +65,9 @@ export function CartProvider({ children }) {
 
   const removeFromCart = (productId) => {
     setCart((currentCart) => currentCart.filter((item) => item.id !== productId))
+    if (cart.length === 1 && cart[0].id === productId) {
+      setPromoCode('')
+    }
   }
 
   const updateQuantity = (productId, quantity) => {
@@ -75,11 +82,22 @@ export function CartProvider({ children }) {
             item.id === productId ? { ...item, quantity } : item,
           ),
     )
+    if (
+      quantity <= 0 &&
+      cart.length === 1 &&
+      cart[0].id === productId
+    ) {
+      setPromoCode('')
+    }
   }
 
   const clearCart = () => {
     setCart([])
+    setPromoCode('')
   }
+
+  const openCart = useCallback(() => setIsCartOpen(true), [])
+  const closeCart = useCallback(() => setIsCartOpen(false), [])
 
   const totalItems = cart.reduce((total, item) => total + item.quantity, 0)
   const totalPrice = cart.reduce(
@@ -89,6 +107,12 @@ export function CartProvider({ children }) {
 
   const value = {
     cart,
+    isCartOpen,
+    openCart,
+    closeCart,
+    lastAddedItem,
+    promoCode,
+    setPromoCode,
     addToCart,
     removeFromCart,
     updateQuantity,

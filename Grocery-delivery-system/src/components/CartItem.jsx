@@ -1,11 +1,6 @@
 import { Minus, Plus, Trash2 } from 'lucide-react'
 import { useCart } from '../context/CartContext.jsx'
-
-const formatCurrency = (amount) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
+import formatCurrency from '../utils/formatCurrency.js'
 
 function CartItem({ item }) {
   const { updateQuantity, removeFromCart } = useCart()

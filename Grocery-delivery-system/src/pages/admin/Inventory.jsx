@@ -337,7 +337,7 @@ function Inventory() {
             {t('inventoryManagement')}
           </h1>
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
-            Monitor live warehouse stock levels, expiry dates, stock value, and restock incoming supplies
+            {t('inventory.inventoryDescription')}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -346,43 +346,43 @@ function Inventory() {
             onClick={exportCsv}
             className="inline-flex h-11 items-center gap-2 rounded-xl border border-[#0B4B8C]/30 bg-white px-4 text-sm font-semibold text-[#0B4B8C] shadow-sm transition hover:bg-[#0B4B8C] hover:text-white"
           >
-            <Download size={17} /> Export Stock CSV
+            <Download size={17} /> {t('inventory.exportStockCsv')}
           </button>
           <button
             type="button"
             onClick={() => openMovementModal()}
             className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]"
           >
-            <Plus size={18} strokeWidth={2.5} /> Record Stock In
+            <Plus size={18} strokeWidth={2.5} /> {t('recordStockIn')}
           </button>
         </div>
       </header>
 
-      <section aria-label="Inventory overview" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label={t('inventory')} className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-slate-500 sm:text-sm">Total Stock Value</p>
+              <p className="text-xs font-semibold text-slate-500 sm:text-sm">{t('inventory.totalStockValue')}</p>
               <p className="mt-3 text-xl font-bold tracking-tight text-[#0E532B] sm:text-2xl">{money(totalStockValue)}</p>
-              <p className="mt-1.5 text-xs text-slate-500">Across {inventory.length} warehouse items</p>
+              <p className="mt-1.5 text-xs text-slate-500">{inventory.length} {t('inventory.warehouseItems')}</p>
             </div>
             <span className="rounded-xl bg-[#EAF5EC] p-2.5 text-[#1E8E3E]"><TrendingUp size={19} /></span>
           </div>
           <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#1E8E3E]">
-            <ArrowUpRight size={14} /> Inventory at unit cost
+            <ArrowUpRight size={14} /> {t('inventory.inventoryAtUnitCost')}
           </div>
         </article>
         <article className="rounded-2xl border border-[#DDEEE0] bg-[#F0F7F1] p-4 shadow-sm sm:p-5">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-[#0E532B] sm:text-sm">Healthy Stock</p>
+              <p className="text-xs font-semibold text-[#0E532B] sm:text-sm">{t('inventory.healthyStock')}</p>
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{healthyCount}</p>
-              <p className="mt-1.5 text-xs text-[#477153]">Items above reorder point</p>
+              <p className="mt-1.5 text-xs text-[#477153]">{t('inventory.itemsAboveReorderPoint')}</p>
             </div>
             <span className="rounded-xl bg-white/80 p-2.5 text-[#1E8E3E]"><Package size={19} /></span>
           </div>
           <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#1E8E3E]">
-            <Check size={14} /> In Stock
+            <Check size={14} /> {t('In Stock')}
           </div>
         </article>
         <button
@@ -392,14 +392,14 @@ function Inventory() {
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">Low Stock Alerts</p>
+              <p className="text-xs font-semibold text-[#F04E00] sm:text-sm">{t('inventory.lowStockAlerts')}</p>
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{lowCount}</p>
-              <p className="mt-1.5 text-xs text-slate-500">At or below reorder point</p>
+              <p className="mt-1.5 text-xs text-slate-500">{t('inventory.atOrBelowReorderPoint')}</p>
             </div>
             <span className="rounded-xl bg-orange-50 p-2.5 text-[#F04E00]"><AlertTriangle size={19} /></span>
           </div>
           <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#F04E00]">
-            View low stock <ArrowUpRight size={14} />
+            {t('inventory.viewLowStock')} <ArrowUpRight size={14} />
           </div>
         </button>
         <button
@@ -409,14 +409,14 @@ function Inventory() {
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-xs font-semibold text-[#B53B05] sm:text-sm">Out of Stock / Expiring</p>
+              <p className="text-xs font-semibold text-[#B53B05] sm:text-sm">{t('inventory.outOfStockExpiring')}</p>
               <p className="mt-3 text-3xl font-bold tracking-tight text-[#0E532B]">{criticalCount}</p>
-              <p className="mt-1.5 text-xs text-slate-500">Needs attention today</p>
+              <p className="mt-1.5 text-xs text-slate-500">{t('inventory.needsAttentionToday')}</p>
             </div>
             <span className="rounded-xl bg-white/80 p-2.5 text-[#F04E00]"><CircleAlert size={19} /></span>
           </div>
           <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#B53B05]">
-            View critical items <ArrowUpRight size={14} />
+            {t('inventory.viewCriticalItems')} <ArrowUpRight size={14} />
           </div>
         </button>
       </section>
@@ -444,8 +444,8 @@ function Inventory() {
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by product name, SKU, or supplier..."
-                  aria-label="Search by product name, SKU, or supplier"
+                  placeholder={t('inventory.searchInventory')}
+                  aria-label={t('inventory.searchInventory')}
                   className="min-w-0 flex-1 bg-transparent text-xs text-slate-800 outline-none placeholder:text-slate-400 sm:text-sm"
                 />
               </label>
@@ -453,10 +453,10 @@ function Inventory() {
                 <select
                   value={category}
                   onChange={(event) => setCategory(event.target.value)}
-                  aria-label="Filter by category"
+                  aria-label={t('products.filterByCategory')}
                   className="h-full w-full appearance-none bg-transparent pr-6 text-xs font-medium text-slate-600 outline-none sm:text-sm"
                 >
-                  <option>All categories</option>
+                  <option>{t('common.allCategories')}</option>
                   {categories.map((entry) => <option key={entry}>{entry}</option>)}
                 </select>
                 <ChevronDown size={15} className="pointer-events-none absolute right-3 text-slate-400" />
@@ -472,7 +472,7 @@ function Inventory() {
                   onClick={() => setStatusFilter(filter)}
                   className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${statusFilter === filter ? 'bg-[#1E8E3E] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
                 >
-                  {t(filter)}
+                  {t(filter === 'Expiring Soon' ? 'expiringSoon' : filter)}
                   {filter === 'Low Stock' && <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] text-[#F04E00]">{lowCount}</span>}
                 </button>
               ))}
@@ -482,7 +482,7 @@ function Inventory() {
                   onClick={() => setStatusFilter('All')}
                   className="shrink-0 rounded-full bg-orange-100 px-3.5 py-1.5 text-xs font-semibold text-[#B53B05]"
                 >
-                  Critical <X size={12} className="ml-1 inline" />
+                  {t('inventory.critical')} <X size={12} className="ml-1 inline" />
                 </button>
               )}
             </div>
@@ -494,13 +494,13 @@ function Inventory() {
             <table className="w-full min-w-[1280px] text-left">
               <thead className="bg-[#F8FAF8] text-[10px] font-bold uppercase tracking-[0.1em] text-[#0E532B]/75">
                 <tr>
-                  <th className="px-5 py-3.5">Product</th>
-                  <th className="px-4 py-3.5">Category</th>
-                  <th className="px-4 py-3.5">Stock Level</th>
-                  <th className="px-4 py-3.5">Freshness / Expiry</th>
-                  <th className="px-4 py-3.5">Stock Value</th>
-                  <th className="px-4 py-3.5">Status</th>
-                  <th className="px-4 py-3.5">Quick Restock</th>
+                  <th className="px-5 py-3.5">{t('common.product')}</th>
+                  <th className="px-4 py-3.5">{t('shop.category')}</th>
+                  <th className="px-4 py-3.5">{t('inventory.stockLevel')}</th>
+                  <th className="px-4 py-3.5">{t('inventory.freshnessExpiry')}</th>
+                  <th className="px-4 py-3.5">{t('inventory.stockValue')}</th>
+                  <th className="px-4 py-3.5">{t('status')}</th>
+                  <th className="px-4 py-3.5">{t('inventory.quickRestock')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -542,7 +542,7 @@ function Inventory() {
                       <td className="px-4 py-4">
                         <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${freshness === 'Fresh' ? 'bg-emerald-50 text-[#1E8E3E]' : 'bg-orange-50 text-[#F04E00]'}`}>
                           {freshness === 'Fresh' ? <Leaf size={12} /> : <Clock3 size={12} />}
-                          {t(freshness)}
+                          {t(freshness === 'Expired/Out' ? 'inventory.expiredOut' : freshness === 'Expiring Soon' ? 'expiringSoon' : 'Fresh')}
                         </span>
                         <p className="mt-1.5 text-[10px] text-slate-400">
                           {item.expiryDays < 0 ? 'Expired' : item.expiryDays === 0 ? 'Expires today' : item.expiryDays === 1 ? 'Expires tomorrow' : `${freshness === 'Fresh' ? 'Fresh' : 'Expires'} ${item.expiryDays}d`}
@@ -566,7 +566,7 @@ function Inventory() {
                             value={quickAmounts[item.id] ?? ''}
                             onChange={(event) => setQuickAmounts((current) => ({ ...current, [item.id]: event.target.value, [`error-${item.id}`]: '' }))}
                             aria-label={`Restock quantity for ${item.name}`}
-                            placeholder="Qty"
+                            placeholder={t('common.qty')}
                             className="h-8 w-[58px] rounded-lg border border-slate-200 px-2 text-xs outline-none focus:border-[#1E8E3E]"
                           />
                           <button
@@ -574,14 +574,14 @@ function Inventory() {
                             onClick={() => handleQuickRestock(item)}
                             className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#1E8E3E] px-2.5 text-xs font-semibold text-white transition hover:bg-[#0E532B]"
                           >
-                            <Plus size={13} /> Add
+                            <Plus size={13} /> {t('common.add')}
                           </button>
                           <button
                             type="button"
                             onClick={() => openMovementModal(item.id)}
                             className="h-8 rounded-lg border border-[#0B4B8C]/30 px-2.5 text-xs font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
                           >
-                            Adjust
+                            {t('common.adjust')}
                           </button>
                         </div>
                         {amountError && <p role="alert" className="mt-1.5 max-w-[190px] text-[10px] text-[#B53B05]">{amountError}</p>}
@@ -590,7 +590,7 @@ function Inventory() {
                   )
                 })}
                 {filteredInventory.length === 0 && (
-                  <tr><td colSpan="7" className="px-5 py-16 text-center text-sm text-slate-500">No inventory items match these filters.</td></tr>
+                  <tr><td colSpan="7" className="px-5 py-16 text-center text-sm text-slate-500">{t('inventory.noInventoryItemsMatch')}</td></tr>
                 )}
               </tbody>
             </table>
@@ -599,10 +599,10 @@ function Inventory() {
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
-                <h2 className="text-sm font-bold text-[#0E532B]">Recent stock movements</h2>
-                <p className="mt-1 text-xs text-slate-500">Audit trail of warehouse restocks and adjustments</p>
+                <h2 className="text-sm font-bold text-[#0E532B]">{t('inventory.recentStockMovements')}</h2>
+                <p className="mt-1 text-xs text-slate-500">{t('inventory.auditTrail')}</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{movements.length} entries</span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{movements.length} {t('inventory.entries')}</span>
             </div>
             {movements.length ? (
               <div className="divide-y divide-slate-100">
@@ -619,7 +619,7 @@ function Inventory() {
                           {' '}{entry.itemName}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
-                          {entry.type} <span className="px-1">·</span> {entry.note || `${incoming ? 'Restocked' : 'Adjusted'} by ${entry.administrator}`}
+                          {t(entry.type)} <span className="px-1">·</span> {entry.note || `${t(incoming ? 'inventory.restocked' : 'common.adjusted')} ${t('common.by')} ${entry.administrator}`}
                         </p>
                       </div>
                       <time className="shrink-0 pt-1 text-[11px] text-slate-400" dateTime={entry.timestamp}>
@@ -632,49 +632,49 @@ function Inventory() {
             ) : (
               <div className="px-5 py-16 text-center">
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400"><FileSpreadsheet size={22} /></span>
-                <p className="mt-3 text-sm font-semibold text-slate-700">No movements recorded yet</p>
-                <p className="mt-1 text-xs text-slate-500">Restocks and stock adjustments will appear here.</p>
+                <p className="mt-3 text-sm font-semibold text-slate-700">{t('inventory.noMovementsRecorded')}</p>
+                <p className="mt-1 text-xs text-slate-500">{t('inventory.restocksWillAppear')}</p>
               </div>
             )}
           </div>
         )}
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-[#FCFDFC] px-5 py-3 text-[11px] text-slate-500">
-          <span>{activeTab === 'Stock Levels' ? `Showing ${filteredInventory.length} of ${inventory.length} products` : 'Warehouse activity log'}</span>
-          <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" /> Stock data saved locally</span>
+          <span>{activeTab === 'Stock Levels' ? `${t('common.showing')} ${filteredInventory.length} ${t('common.of')} ${inventory.length} ${t('products')}` : t('inventory.warehouseActivityLog')}</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-[#1E8E3E]" /> {t('inventory.stockDataSavedLocally')}</span>
         </footer>
       </section>
 
       {modalItemId !== null && (
         <Modal
-          title={selectedItem ? 'Adjust inventory' : 'Record stock movement'}
+          title={selectedItem ? t('inventory.adjustInventory') : t('inventory.recordStockMovement')}
           onClose={() => setModalItemId(null)}
         >
           <form onSubmit={handleModalSubmit} className="space-y-4">
             <div>
-              <label htmlFor="inventory-item" className="mb-1.5 block text-xs font-semibold text-slate-700">Product</label>
+              <label htmlFor="inventory-item" className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.product')}</label>
               <select
                 id="inventory-item"
                 value={modalItemId || ''}
                 onChange={(event) => setModalItemId(event.target.value)}
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#1E8E3E]"
               >
-                <option value="">Choose an inventory item</option>
+                <option value="">{t('inventory.chooseInventoryItem')}</option>
                 {inventory.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.stock} {item.unit})</option>)}
               </select>
             </div>
             <div>
-              <label htmlFor="movement-type" className="mb-1.5 block text-xs font-semibold text-slate-700">Movement type</label>
+              <label htmlFor="movement-type" className="mb-1.5 block text-xs font-semibold text-slate-700">{t('inventory.movementType')}</label>
               <select
                 id="movement-type"
                 value={movementType}
                 onChange={(event) => setMovementType(event.target.value)}
                 className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#1E8E3E]"
               >
-                {movementOptions.map((option) => <option key={option}>{option}</option>)}
+                {movementOptions.map((option) => <option key={option} value={option}>{t(option)}</option>)}
               </select>
             </div>
             <div>
-              <label htmlFor="movement-quantity" className="mb-1.5 block text-xs font-semibold text-slate-700">Quantity {selectedItem && <span className="font-normal text-slate-400">({selectedItem.unit})</span>}</label>
+              <label htmlFor="movement-quantity" className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.quantity')} {selectedItem && <span className="font-normal text-slate-400">({selectedItem.unit})</span>}</label>
               <input
                 id="movement-quantity"
                 type="number"
@@ -682,26 +682,26 @@ function Inventory() {
                 step="any"
                 value={movementQuantity}
                 onChange={(event) => setMovementQuantity(event.target.value)}
-                placeholder="Enter quantity"
+                placeholder={t('common.enterQuantity')}
                 className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1E8E3E]"
               />
             </div>
             <div>
-              <label htmlFor="movement-note" className="mb-1.5 block text-xs font-semibold text-slate-700">Note <span className="font-normal text-slate-400">(optional)</span></label>
+              <label htmlFor="movement-note" className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.note')} <span className="font-normal text-slate-400">({t('optional')})</span></label>
               <textarea
                 id="movement-note"
                 value={movementNote}
                 onChange={(event) => setMovementNote(event.target.value)}
                 rows="3"
-                placeholder="Add a delivery reference or reason for adjustment..."
+                placeholder={t('inventory.movementNotePlaceholder')}
                 className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1E8E3E]"
               />
             </div>
             {formError && <p role="alert" className="text-xs font-medium text-[#B53B05]">{formError}</p>}
             <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button type="button" onClick={() => setModalItemId(null)} className="h-10 rounded-xl border border-[#0B4B8C]/30 px-4 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">Cancel</button>
+              <button type="button" onClick={() => setModalItemId(null)} className="h-10 rounded-xl border border-[#0B4B8C]/30 px-4 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">{t('common.cancel')}</button>
               <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 text-sm font-semibold text-white hover:bg-[#0E532B]">
-                <Check size={16} /> Save movement
+                <Check size={16} /> {t('inventory.saveMovement')}
               </button>
             </div>
           </form>

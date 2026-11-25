@@ -312,7 +312,7 @@ function Coupons() {
       <button
         type="button"
         aria-label={`Edit ${coupon.code}`}
-        title="Edit coupon"
+        title={`${t('common.edit')} ${t('couponCode')}`}
         onClick={() => openEditModal(coupon)}
         className="rounded-lg p-2 text-slate-500 transition hover:bg-emerald-50 hover:text-[#0E532B]"
       >
@@ -321,7 +321,7 @@ function Coupons() {
       <button
         type="button"
         aria-label={`Delete ${coupon.code}`}
-        title="Delete coupon"
+        title={`${t('common.delete')} ${t('couponCode')}`}
         onClick={() => setDeleteTarget(coupon)}
         className="rounded-lg p-2 text-slate-500 transition hover:bg-orange-50 hover:text-[#F04E00]"
       >
@@ -337,8 +337,8 @@ function Coupons() {
       </span>
       <button
         type="button"
-        aria-label={`${copiedCode === coupon.code ? 'Copied' : 'Copy'} ${coupon.code}`}
-        title={copiedCode === coupon.code ? 'Copied' : 'Copy code'}
+        aria-label={`${t(copiedCode === coupon.code ? 'common.copied' : 'common.copy')} ${coupon.code}`}
+        title={t(copiedCode === coupon.code ? 'common.copied' : 'common.copyCode')}
         onClick={() => copyCode(coupon.code)}
         className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[#0E532B]"
       >
@@ -352,20 +352,20 @@ function Coupons() {
   return (
     <div className="mx-auto max-w-[1600px]">
       <AdminPageHeader
-        title="Coupon Codes & Promotions"
-        description="Create and track discounts that keep your grocery customers coming back."
+        title={t('couponCodesPromotions')}
+        description={t('products.couponDescription')}
         action={
           <button
             type="button"
             onClick={openCreateModal}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]"
           >
-            <Plus aria-hidden="true" size={17} /> Create Coupon
+            <Plus aria-hidden="true" size={17} /> {t('createCoupon')}
           </button>
         }
       />
 
-      <section aria-label="Coupon statistics" className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section aria-label={t('common.couponStatistics')} className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { labelKey: 'activeCoupons', value: totals.active, icon: Ticket, tone: 'bg-emerald-50 text-[#1E8E3E]' },
           { labelKey: 'totalRedemptions', value: totals.redemptions.toLocaleString('en-US'), icon: UsersRound, tone: 'bg-blue-50 text-[#0B4B8C]' },
@@ -393,16 +393,16 @@ function Coupons() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search coupon code or promotion..."
-                aria-label="Search coupon codes"
+                placeholder={t('products.searchCoupons')}
+                aria-label={t('products.searchCoupons')}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[#1E8E3E] focus:bg-white"
               />
             </label>
             <span className="text-xs font-medium text-slate-500">
-              {filteredCoupons.length} {filteredCoupons.length === 1 ? 'coupon' : 'coupons'}
+              {filteredCoupons.length} {t(filteredCoupons.length === 1 ? 'products.couponFound' : 'products.couponsFound')}
             </span>
           </div>
-          <div role="group" aria-label="Filter coupons by status" className="flex flex-wrap gap-1.5">
+          <div role="group" aria-label={t('products.filterCouponsByStatus')} className="flex flex-wrap gap-1.5">
             {['All', 'Active', 'Scheduled', 'Expired', 'Paused'].map((status) => (
               <button
                 key={status}
@@ -421,7 +421,7 @@ function Coupons() {
           <div role="status" className="flex items-center justify-between gap-3 border-b border-emerald-100 bg-[#F0F7F1] px-4 py-2.5 text-sm text-[#0E532B] sm:px-5">
             <span>{notice}</span>
             <button type="button" onClick={() => setNotice('')} className="text-xs font-semibold underline underline-offset-2">
-              Dismiss
+              {t('common.dismiss')}
             </button>
           </div>
         )}
@@ -430,14 +430,14 @@ function Coupons() {
           <table className="w-full min-w-[1150px] text-left text-sm">
             <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-[#0E532B]/75">
               <tr>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Coupon Code</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Discount</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Min Order (ETB)</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Usage</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Expiry Date</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Status</th>
-                <th scope="col" className="px-4 py-3.5 font-semibold">Active</th>
-                <th scope="col" className="px-4 py-3.5 text-right font-semibold">Actions</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('products.couponCodeLabel')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('products.discount')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('products.minOrder')} (ETB)</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('products.usage')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('products.expiryDate')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('status')}</th>
+                <th scope="col" className="px-4 py-3.5 font-semibold">{t('common.active')}</th>
+                <th scope="col" className="px-4 py-3.5 text-right font-semibold">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -464,7 +464,7 @@ function Coupons() {
               {filteredCoupons.length === 0 && (
                 <tr>
                   <td colSpan="8" className="px-5 py-14 text-center text-sm text-slate-500">
-                    No coupons match your search or filters.
+                    {t('products.noCouponsMatch')}
                   </td>
                 </tr>
               )}
@@ -487,11 +487,11 @@ function Coupons() {
                 <p className="mt-2 text-xs leading-5 text-slate-500">{coupon.description}</p>
                 <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
                   <div>
-                    <p className="text-slate-400">Minimum order</p>
+                    <p className="text-slate-400">{t('products.minimumOrder')}</p>
                     <p className="mt-1 font-semibold text-slate-700">{formatMoney(coupon.minimumOrder)}</p>
                   </div>
                   <div>
-                    <p className="text-slate-400">Expires</p>
+                    <p className="text-slate-400">{t('products.expiryDate')}</p>
                     <p className="mt-1 font-semibold text-slate-700">{formatDate(coupon.expiryDate)}</p>
                   </div>
                 </div>
@@ -508,7 +508,7 @@ function Coupons() {
           })}
           {filteredCoupons.length === 0 && (
             <div className="py-12 text-center text-sm text-slate-500">
-              No coupons match your search or filters.
+              {t('products.noCouponsMatch')}
             </div>
           )}
         </div>
@@ -516,14 +516,14 @@ function Coupons() {
 
       {modalOpen && (
         <Modal
-          title={editingCoupon ? 'Edit coupon' : 'Create coupon'}
+          title={editingCoupon ? `${t('common.edit')} ${t('couponCode')}` : t('createCoupon')}
           onClose={closeModal}
           size="max-w-3xl"
         >
           <form onSubmit={handleSave} className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-slate-700">
-                Coupon code
+                {t('products.couponCodeLabel')}
                 <div className="mt-1.5 flex gap-2">
                   <input
                     required
@@ -540,25 +540,25 @@ function Coupons() {
                     onClick={generateCode}
                     className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-200 bg-[#F0F7F1] px-3 py-2 text-xs font-semibold text-[#0E532B] transition hover:bg-emerald-100"
                   >
-                    <WandSparkles aria-hidden="true" size={14} /> Generate Code
+                    <WandSparkles aria-hidden="true" size={14} /> {t('products.generateCode')}
                   </button>
                 </div>
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Discount type
+                {t('products.discountType')}
                 <select
                   value={draft.discountType}
                   onChange={(event) => setDraft((current) => ({ ...current, discountType: event.target.value }))}
                   className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#1E8E3E]"
                 >
-                  <option value="percentage">Percentage %</option>
-                  <option value="fixed">Fixed Amount ETB</option>
-                  <option value="freeDelivery">Free Delivery</option>
+                  <option value="percentage">{t('products.percentage')}</option>
+                  <option value="fixed">{t('products.fixedAmount')} (ETB)</option>
+                  <option value="freeDelivery">{t('products.freeDelivery')}</option>
                 </select>
               </label>
               {draft.discountType !== 'freeDelivery' && (
                 <label className="block text-sm font-medium text-slate-700">
-                  Discount value {draft.discountType === 'percentage' ? '(%)' : '(ETB)'}
+                  {t('products.discountValue')} {draft.discountType === 'percentage' ? '(%)' : '(ETB)'}
                   <input
                     required
                     min="0.01"
@@ -572,7 +572,7 @@ function Coupons() {
                 </label>
               )}
               <label className="block text-sm font-medium text-slate-700">
-                Minimum order amount (ETB)
+                {t('products.minimumOrderAmount')} (ETB)
                 <input
                   min="0"
                   step="0.01"
@@ -583,7 +583,7 @@ function Coupons() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Usage limit
+                {t('products.usageLimit')}
                 <input
                   required
                   min="1"
@@ -595,7 +595,7 @@ function Coupons() {
                 />
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Start date
+                {t('products.startDate')}
                 <span className="relative mt-1.5 block">
                   <CalendarDays aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -608,7 +608,7 @@ function Coupons() {
                 </span>
               </label>
               <label className="block text-sm font-medium text-slate-700">
-                Expiry date
+                {t('products.expiryDate')}
                 <span className="relative mt-1.5 block">
                   <CalendarDays aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -622,12 +622,12 @@ function Coupons() {
               </label>
             </div>
             <label className="block text-sm font-medium text-slate-700">
-              Description
+              {t('common.description')}
               <textarea
                 rows="3"
                 value={draft.description}
                 onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
-                placeholder="What should customers know about this promotion?"
+                placeholder={t('products.couponDescriptionPlaceholder')}
                 className="mt-1.5 w-full resize-y rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-[#1E8E3E]"
               />
             </label>
@@ -638,7 +638,7 @@ function Coupons() {
                 onChange={(event) => setDraft((current) => ({ ...current, active: event.target.checked }))}
                 className="h-4 w-4 accent-[#1E8E3E]"
               />
-              Enable coupon
+              {t('products.enableCoupon')}
             </label>
             {formError && <p role="alert" className="text-sm font-medium text-[#F04E00]">{formError}</p>}
             <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
@@ -647,13 +647,13 @@ function Coupons() {
                 onClick={closeModal}
                 className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2.5 text-sm font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="rounded-lg bg-[#1E8E3E] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0E532B]"
               >
-                {editingCoupon ? 'Save changes' : 'Create coupon'}
+                {editingCoupon ? t('saveChanges') : t('createCoupon')}
               </button>
             </div>
           </form>
@@ -661,10 +661,9 @@ function Coupons() {
       )}
 
       {deleteTarget && (
-        <Modal title="Delete coupon?" onClose={() => setDeleteTarget(null)} size="max-w-md">
+        <Modal title={`${t('common.delete')} ${t('couponCode')}?`} onClose={() => setDeleteTarget(null)} size="max-w-md">
           <p className="text-sm leading-6 text-slate-600">
-            Delete <span className="font-mono font-bold text-slate-900">{deleteTarget.code}</span>?
-            This action cannot be undone.
+            {t('products.deleteCouponConfirmation')} <span className="font-mono font-bold text-slate-900">{deleteTarget.code}</span>
           </p>
           <div className="mt-6 flex justify-end gap-2">
             <button
@@ -672,14 +671,14 @@ function Coupons() {
               onClick={() => setDeleteTarget(null)}
               className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
               onClick={confirmDelete}
               className="rounded-lg bg-[#F04E00] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#C54100]"
             >
-              Delete coupon
+              {t('products.deleteCoupon')}
             </button>
           </div>
         </Modal>

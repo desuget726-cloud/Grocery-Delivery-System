@@ -65,7 +65,7 @@ function AssignedOrders() {
       : deliveries.filter((delivery) => delivery.status === filter)
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-24 sm:px-6 lg:px-8">
+    <div className="w-full px-4 sm:px-6 lg:px-10 py-6 pb-24">
       <header>
         <p className="text-sm font-semibold text-[#1E8E3E]">{t('todaysRoute')}</p>
         <h1 className="mt-1 text-2xl font-extrabold text-slate-900">

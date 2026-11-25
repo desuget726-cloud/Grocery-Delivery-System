@@ -225,7 +225,7 @@ function Reviews() {
   const submitReply = (review) => {
     const reply = (replyDrafts[review.id] ?? '').trim()
     if (!reply) {
-      setReplyErrors((current) => ({ ...current, [review.id]: 'Write a reply before sending.' }))
+      setReplyErrors((current) => ({ ...current, [review.id]: t('common.writeReplyBeforeSending') }))
       return
     }
     updateReview(review.id, { reply })
@@ -253,21 +253,21 @@ function Reviews() {
           {t('customerReviewsRatings')}
         </h1>
         <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
-          Monitor product freshness feedback, delivery speed ratings, moderate pending reviews, and reply to buyers
+          {t('common.reviewDescription')}
         </p>
       </header>
 
-      <section aria-label="Ratings overview" className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
+      <section aria-label={t('common.ratingsOverview')} className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-12">
         <article className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm lg:col-span-5 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-slate-600">Overall rating</p>
+              <p className="text-sm font-semibold text-slate-600">{t('common.overallRating')}</p>
               <div className="mt-2 flex items-end gap-2">
                 <span className="text-5xl font-bold tracking-tight text-[#0E532B]">4.8</span>
                 <span className="mb-1 text-sm font-medium text-slate-400">/ 5.0</span>
               </div>
               <div className="mt-2"><StarRating rating={5} size={19} /></div>
-              <p className="mt-2 text-xs text-slate-500">Based on 248 verified reviews</p>
+              <p className="mt-2 text-xs text-slate-500">{t('common.basedOnVerifiedReviews')}</p>
             </div>
             <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-[#F04E00]">
               <Star size={21} className="fill-[#F04E00] text-[#F04E00]" />
@@ -295,12 +295,12 @@ function Reviews() {
         <div className="grid grid-cols-2 gap-4 lg:col-span-7">
           <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-500 sm:text-sm">Total Reviews</span>
+              <span className="text-xs font-semibold text-slate-500 sm:text-sm">{t('common.totalReviews')}</span>
               <span className="rounded-xl bg-[#EAF1F9] p-2 text-[#0B4B8C]"><MessageSquareText size={17} /></span>
             </div>
             <p className="mt-4 text-3xl font-bold tracking-tight text-[#0E532B]">{totalReviews}</p>
-            <p className="mt-1 text-xs text-slate-500">Verified customer feedback</p>
-            <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#0B4B8C]"><ThumbsUp size={13} /> All time</div>
+            <p className="mt-1 text-xs text-slate-500">{t('common.verifiedCustomerFeedback')}</p>
+            <div className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-[#0B4B8C]"><ThumbsUp size={13} /> {t('allTime')}</div>
           </article>
           <button
             type="button"
@@ -308,12 +308,12 @@ function Reviews() {
             className={`rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition sm:p-5 ${statusFilter === 'Pending' ? 'ring-2 ring-[#F04E00]/20' : 'hover:border-orange-200'}`}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#F04E00] sm:text-sm">Pending Approval</span>
+              <span className="text-xs font-semibold text-[#F04E00] sm:text-sm">{t('common.pendingApproval')}</span>
               <span className="rounded-xl bg-orange-50 p-2 text-[#F04E00]"><MessageSquareText size={17} /></span>
             </div>
             <p className="mt-4 text-3xl font-bold tracking-tight text-[#0E532B]">{pendingCount}</p>
-            <p className="mt-1 text-xs text-slate-500">Awaiting moderation</p>
-            <div className="mt-4 text-[11px] font-semibold text-[#F04E00]">Review pending feedback →</div>
+            <p className="mt-1 text-xs text-slate-500">{t('common.awaitingModeration')}</p>
+            <div className="mt-4 text-[11px] font-semibold text-[#F04E00]">{t('common.reviewPendingFeedback')}</div>
           </button>
           <button
             type="button"
@@ -324,21 +324,21 @@ function Reviews() {
             className="rounded-2xl border border-gray-100 bg-white p-4 text-left shadow-sm transition hover:border-orange-200 sm:p-5"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-[#F04E00] sm:text-sm">Low Rating Alerts (1–2★)</span>
+              <span className="text-xs font-semibold text-[#F04E00] sm:text-sm">{t('common.lowRatingAlerts')}</span>
               <span className="rounded-xl bg-white/80 p-2 text-[#F04E00]"><Star size={17} className="fill-orange-200" /></span>
             </div>
             <p className="mt-4 text-3xl font-bold tracking-tight text-[#0E532B]">{lowRatingCount}</p>
-            <p className="mt-1 text-xs text-slate-500">Needs a thoughtful response</p>
-            <div className="mt-4 text-[11px] font-semibold text-[#F04E00]">View low ratings →</div>
+            <p className="mt-1 text-xs text-slate-500">{t('common.thoughtfulResponse')}</p>
+            <div className="mt-4 text-[11px] font-semibold text-[#F04E00]">{t('common.viewLowRatings')}</div>
           </button>
           <article className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-500 sm:text-sm">Delivery Experience Avg</span>
+              <span className="text-xs font-semibold text-slate-500 sm:text-sm">{t('common.deliveryExperienceAvg')}</span>
               <span className="rounded-xl bg-[#EAF5EC] p-2 text-[#1E8E3E]"><CheckCheck size={17} /></span>
             </div>
             <p className="mt-4 flex items-baseline gap-1 text-3xl font-bold tracking-tight text-[#0E532B]">4.9 <span className="text-base text-[#F04E00]">★</span></p>
-            <p className="mt-1 text-xs text-slate-500">Rider speed &amp; care</p>
-            <div className="mt-4 text-[11px] font-semibold text-[#1E8E3E]">Excellent customer experience</div>
+            <p className="mt-1 text-xs text-slate-500">{t('common.riderSpeedCare')}</p>
+            <div className="mt-4 text-[11px] font-semibold text-[#1E8E3E]">{t('common.excellentCustomerExperience')}</div>
           </article>
         </div>
       </section>
@@ -351,8 +351,8 @@ function Reviews() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by customer, product, order ID, or comment..."
-              aria-label="Search reviews"
+              placeholder={t('common.reviewSearchPlaceholder')}
+              aria-label={t('common.search')}
               className="min-w-0 flex-1 bg-transparent text-xs text-slate-800 outline-none placeholder:text-slate-400 sm:text-sm"
             />
           </label>
@@ -382,10 +382,10 @@ function Reviews() {
               <select
                 value={ratingFilter}
                 onChange={(event) => setRatingFilter(event.target.value)}
-                aria-label="Filter by star rating"
+                aria-label={t('common.filterByRating')}
                 className="h-full w-full appearance-none bg-transparent pr-6 text-xs font-medium text-slate-600 outline-none sm:text-sm"
               >
-                {ratingOptions.map((option) => <option key={option}>{option}</option>)}
+                {ratingOptions.map((option) => <option key={option} value={option}>{t(option)}</option>)}
               </select>
               <span className="pointer-events-none absolute right-3 text-slate-400">⌄</span>
             </label>
@@ -393,7 +393,7 @@ function Reviews() {
         </div>
       </section>
 
-      <section aria-label="Customer review feed" className="space-y-4">
+      <section aria-label={t('common.customerReviewFeed')} className="space-y-4">
         {visibleReviews.map((review) => (
           <article key={review.id} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md sm:p-5">
             <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -405,11 +405,11 @@ function Reviews() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-sm font-bold text-[#0E532B]">{review.customer}</h2>
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-[#1E8E3E]">
-                      <Check size={11} /> Verified Purchase
+                      <Check size={11} /> {t('common.verifiedPurchase')}
                     </span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400">
-                    <span>Order <span className="font-semibold text-[#0B4B8C]">{review.orderId}</span></span>
+                    <span>{t('common.order')} <span className="font-semibold text-[#0B4B8C]">{review.orderId}</span></span>
                     <span aria-hidden="true">·</span>
                     <time dateTime={review.date}>{formatReviewDate(review.date)}</time>
                     <span aria-hidden="true">·</span>
@@ -444,7 +444,7 @@ function Reviews() {
 
             {review.reply && (
               <div className="mb-4 rounded-xl border border-[#DDEEE0] bg-[#F0F7F1] px-4 py-3">
-                <p className="text-[11px] font-bold text-[#0E532B]">Response from Grocery Delivery Admin:</p>
+                <p className="text-[11px] font-bold text-[#0E532B]">{t('common.responseFromAdmin')}</p>
                 <p className="mt-1.5 text-xs leading-5 text-[#355B3D]">{review.reply}</p>
               </div>
             )}
@@ -458,7 +458,7 @@ function Reviews() {
                 }}
               >
                 <label htmlFor={`reply-${review.id}`} className="mb-1.5 block text-xs font-semibold text-[#0E532B]">
-                  Reply to {review.customer}
+                  {t('common.reply')} {review.customer}
                 </label>
                 <textarea
                   id={`reply-${review.id}`}
@@ -468,14 +468,14 @@ function Reviews() {
                     setReplyDrafts((current) => ({ ...current, [review.id]: event.target.value }))
                     setReplyErrors((current) => ({ ...current, [review.id]: '' }))
                   }}
-                  placeholder="Write a helpful response to this customer..."
+                  placeholder={t('common.writeHelpfulResponse')}
                   className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-[#1E8E3E]"
                 />
-                {replyErrors[review.id] && <p role="alert" className="mt-1.5 text-xs text-[#B53B05]">{replyErrors[review.id]}</p>}
+                {replyErrors[review.id] &&                 <p role="alert" className="mt-1.5 text-xs text-[#B53B05]">{replyErrors[review.id]}</p>}
                 <div className="mt-2 flex justify-end gap-2">
-                  <button type="button" onClick={() => setReplyingTo(null)} className="h-9 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100">Cancel</button>
+                  <button type="button" onClick={() => setReplyingTo(null)} className="h-9 rounded-lg px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100">{t('common.cancel')}</button>
                   <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#1E8E3E] px-3.5 text-xs font-semibold text-white hover:bg-[#0E532B]">
-                    <Send size={13} /> Send Reply
+                    <Send size={13} /> {t('common.sendReply')}
                   </button>
                 </div>
               </form>
@@ -488,7 +488,7 @@ function Reviews() {
                   onClick={() => setReplyingTo(replyingTo === review.id ? null : review.id)}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#0B4B8C]/30 px-3 text-xs font-semibold text-[#0B4B8C] transition hover:bg-[#0B4B8C] hover:text-white"
                 >
-                  <MessageSquareText size={14} /> {replyingTo === review.id ? 'Close Reply' : review.reply ? 'Reply Again' : 'Reply'}
+                  <MessageSquareText size={14} /> {replyingTo === review.id ? t('common.closeReply') : review.reply ? t('common.replyAgain') : t('common.reply')}
                 </button>
                 {review.status === 'Pending' && (
                   <button
@@ -496,7 +496,7 @@ function Reviews() {
                     onClick={() => updateReview(review.id, { status: 'Published' })}
                     className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#1E8E3E] px-3 text-xs font-semibold text-white transition hover:bg-[#0E532B]"
                   >
-                    <Check size={14} /> Approve &amp; Publish
+                    <Check size={14} /> {t('common.approveAndPublish')}
                   </button>
                 )}
               </div>
@@ -507,7 +507,7 @@ function Reviews() {
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
                 >
                   {review.status === 'Hidden' ? <Eye size={14} /> : <EyeOff size={14} />}
-                  {review.status === 'Hidden' ? 'Unhide' : 'Hide'}
+                  {review.status === 'Hidden' ? t('common.unhide') : t('common.hide')}
                 </button>
                 <button
                   type="button"
@@ -526,8 +526,8 @@ function Reviews() {
             <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400">
               <Search size={21} />
             </span>
-            <p className="mt-3 text-sm font-semibold text-slate-700">No reviews found</p>
-            <p className="mt-1 text-xs text-slate-500">Try changing your search or filters.</p>
+            <p className="mt-3 text-sm font-semibold text-slate-700">{t('common.noReviewsFound')}</p>
+            <p className="mt-1 text-xs text-slate-500">{t('common.tryChangingSearchFilters')}</p>
           </div>
         )}
       </section>

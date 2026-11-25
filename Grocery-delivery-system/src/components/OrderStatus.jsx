@@ -1,18 +1,24 @@
 import { Check } from 'lucide-react'
 
 const statuses = [
-  'Pending',
+  'Placed',
   'Confirmed',
-  'Packed',
   'Out for Delivery',
   'Delivered',
 ]
 
-function OrderStatus({ status = 'Pending' }) {
+function OrderStatus({ status = 'Placed' }) {
+  const normalizedStatus = status.toLowerCase()
+  const statusAlias = {
+    pending: 'placed',
+    packed: 'confirmed',
+    cancelled: 'canceled',
+  }
+  const currentStatus = statusAlias[normalizedStatus] || normalizedStatus
   const currentIndex = statuses.findIndex(
-    (step) => step.toLowerCase() === status.toLowerCase(),
+    (step) => step.toLowerCase() === currentStatus,
   )
-  const activeIndex = currentIndex < 0 ? 0 : currentIndex
+  const activeIndex = currentIndex
 
   return (
     <ol

@@ -128,7 +128,7 @@ function Notifications() {
             {t('notificationBoard')}
           </h1>
           <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
-            Real-time alerts for orders, low stock, expiry warnings, COD settlements, and customer feedback
+            {t('common.notificationsDescription')}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -139,7 +139,7 @@ function Notifications() {
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#1E8E3E] hover:text-[#1E8E3E] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CheckCheck aria-hidden="true" size={16} />
-            Mark All Read
+            {t('common.markAllRead')}
           </button>
           <button
             type="button"
@@ -148,18 +148,18 @@ function Notifications() {
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#F04E00] hover:text-[#F04E00] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 aria-hidden="true" size={16} />
-            Clear Read
+            {t('common.clearRead')}
           </button>
           <Link
             to="/admin/settings"
             className="inline-flex items-center gap-2 rounded-xl bg-[#0E532B] px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1E8E3E]"
           >
-            Alert Settings
+            {t('common.alertSettings')}
           </Link>
         </div>
       </header>
 
-      <section aria-label="Notification summary" className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <section aria-label={t('common.notificationSummary')} className="mb-6 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {kpiCards.map(({ translationKey, icon: Icon, color, getValue }) => (
           <article key={translationKey} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-3">
@@ -178,7 +178,7 @@ function Notifications() {
       <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="border-b border-gray-100 p-4 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex gap-1 overflow-x-auto pb-1" role="tablist" aria-label="Filter notifications">
+            <div className="flex gap-1 overflow-x-auto pb-1" role="tablist" aria-label={t('common.filterNotifications')}>
               {filters.map((filter) => (
                 <button
                   key={filter}
@@ -202,8 +202,8 @@ function Notifications() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search notifications"
-                aria-label="Search notifications"
+                placeholder={t('search')}
+                  aria-label={t('search')}
                 className="w-full rounded-xl border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
               />
             </label>
@@ -232,15 +232,15 @@ function Notifications() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${categoryStyles[notification.category] || 'bg-slate-100 text-slate-600'}`}>
-                        {notification.category}
+                        {t(filterTranslationKeys[notification.category] || notification.category)}
                       </span>
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${priorityStyles[notification.priority] || priorityStyles.Normal}`}>
-                        {notification.priority}
+                        {t(notification.priority)}
                       </span>
                       {notification.unread && (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#F04E00]">
                           <span className="h-1.5 w-1.5 rounded-full bg-[#F04E00]" />
-                          Unread
+                          {t('unread')}
                         </span>
                       )}
                     </div>
@@ -253,7 +253,7 @@ function Notifications() {
                         onClick={() => navigate(notification.actionPath)}
                         className="inline-flex items-center rounded-xl bg-[#1E8E3E] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0E532B]"
                       >
-                        Go to Action →
+                        {t('common.goToAction')}
                       </button>
                       <button
                         type="button"
@@ -265,12 +265,12 @@ function Notifications() {
                         ) : (
                           <Bell aria-hidden="true" size={15} />
                         )}
-                        Mark as {notification.unread ? 'Read' : 'Unread'}
+                        {notification.unread ? t('common.markAsRead') : t('common.markAsUnread')}
                       </button>
                       <button
                         type="button"
                         aria-label={`Delete ${notification.title}`}
-                        title="Delete notification"
+                        title={t('delete')}
                         onClick={() => deleteNotification(notification.id)}
                         className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-slate-400 transition hover:border-red-200 hover:text-red-600"
                       >
@@ -285,8 +285,8 @@ function Notifications() {
           {visibleNotifications.length === 0 && (
             <div className="px-5 py-14 text-center">
               <Bell aria-hidden="true" size={28} className="mx-auto text-slate-300" />
-              <p className="mt-3 text-sm font-semibold text-[#0E532B]">No notifications found</p>
-              <p className="mt-1 text-sm text-slate-500">Try another filter or search term.</p>
+              <p className="mt-3 text-sm font-semibold text-[#0E532B]">{t('common.noNotificationsFound')}</p>
+              <p className="mt-1 text-sm text-slate-500">{t('common.tryAnotherFilterSearch')}</p>
             </div>
           )}
         </div>
