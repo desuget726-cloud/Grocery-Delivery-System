@@ -271,6 +271,7 @@ export const mockOrders = [
 ]
 
 const CUSTOMER_ORDERS_STORAGE_KEY = 'grocery_customer_orders'
+export const CUSTOMER_ORDERS_CHANGE_EVENT = 'grocery-customer-orders-change'
 const LEGACY_ORDERS_STORAGE_KEY = 'grocery-orders'
 
 function readOrderArray(storageKey) {
@@ -329,4 +330,5 @@ export function saveOrder(order) {
     CUSTOMER_ORDERS_STORAGE_KEY,
     JSON.stringify([order, ...savedOrders]),
   )
+  window.dispatchEvent(new CustomEvent(CUSTOMER_ORDERS_CHANGE_EVENT))
 }

@@ -7,9 +7,10 @@ import {
   Mail,
 } from 'lucide-react'
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../assets/logo.png'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 
 const demoAccounts = [
   {
@@ -30,7 +31,9 @@ const demoAccounts = [
 ]
 
 function Login() {
+  const toast = useToast()
   const { user, isAuthenticated, loading, login, getRoleRedirectPath } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -40,7 +43,11 @@ function Login() {
   const [heroImageFailed, setHeroImageFailed] = useState(false)
 
   if (isAuthenticated) {
-    return <Navigate to={getRoleRedirectPath(user.role)} replace />
+    const redirectTo =
+      user.role === 'customer'
+        ? location.state?.from || '/'
+        : getRoleRedirectPath(user.role)
+    return <Navigate to={redirectTo} replace />
   }
 
   const handleSubmit = async (event) => {
@@ -49,14 +56,20 @@ function Login() {
 
     try {
       const result = await login(email, password, rememberMe)
-      navigate(result.redirectTo, { replace: true })
+      const redirectTo =
+        result.user.role === 'customer'
+          ? location.state?.from || '/'
+          : result.redirectTo
+      navigate(redirectTo, { replace: true })
     } catch (error) {
       setErrorMessage(error.message || 'Unable to sign in. Please try again.')
     }
   }
 
   const showSocialSignInMessage = (provider) => {
-    setErrorMessage(`${provider} sign-in is not connected yet. Use your email and password.`)
+    const message = `${provider} sign-in is not connected yet. Use your email and password.`
+    setErrorMessage(message)
+    toast.error(message)
   }
 
   const fillDemoCredentials = ({ email: demoEmail, password: demoPassword }) => {
@@ -137,7 +150,7 @@ function Login() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form noValidate onSubmit={handleSubmit} className="space-y-4">
               <label className="block text-sm font-semibold text-gray-700">
                 Email
                 <span className="relative mt-2 block">
@@ -201,12 +214,12 @@ function Login() {
                   />
                   Remember me for 30 days
                 </label>
-                <a
-                  href="mailto:support@freshbasket.com?subject=Password%20reset"
+                <Link
+                  to="/forgot-password"
                   className="font-medium text-[#0B4B8C] transition hover:text-[#F04E00]"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               {errorMessage && (

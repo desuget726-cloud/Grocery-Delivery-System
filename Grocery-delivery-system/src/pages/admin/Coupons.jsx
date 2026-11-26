@@ -12,10 +12,12 @@ import {
   UsersRound,
   WandSparkles,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { coupons as couponsApi, getApiErrorMessage } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const localDateString = (date) => {
@@ -31,65 +33,6 @@ const dateOffset = (days) => {
   date.setDate(date.getDate() + days)
   return localDateString(date)
 }
-
-const initialCoupons = [
-  {
-    id: 'coupon-welcome10',
-    code: 'WELCOME10',
-    discountType: 'percentage',
-    discountValue: 10,
-    minimumOrder: 300,
-    usageLimit: 100,
-    used: 42,
-    startDate: dateOffset(-21),
-    expiryDate: dateOffset(28),
-    description: 'A warm welcome discount for your first grocery order.',
-    active: true,
-    discountGiven: 3024,
-  },
-  {
-    id: 'coupon-fresh100',
-    code: 'FRESH100',
-    discountType: 'fixed',
-    discountValue: 100,
-    minimumOrder: 800,
-    usageLimit: 50,
-    used: 18,
-    startDate: dateOffset(-14),
-    expiryDate: dateOffset(6),
-    description: 'Save 100 ETB on a fresh market basket of 800 ETB or more.',
-    active: true,
-    discountGiven: 1800,
-  },
-  {
-    id: 'coupon-freedel',
-    code: 'FREEDEL',
-    discountType: 'freeDelivery',
-    discountValue: 0,
-    minimumOrder: 500,
-    usageLimit: 200,
-    used: 65,
-    startDate: dateOffset(-14),
-    expiryDate: dateOffset(25),
-    description: 'Enjoy free delivery on orders over 500 ETB.',
-    active: true,
-    discountGiven: 3250,
-  },
-  {
-    id: 'coupon-weekend15',
-    code: 'WEEKEND15',
-    discountType: 'percentage',
-    discountValue: 15,
-    minimumOrder: 600,
-    usageLimit: 75,
-    used: 34,
-    startDate: dateOffset(-28),
-    expiryDate: dateOffset(-7),
-    description: 'Weekend savings on produce, pantry staples, and more.',
-    active: true,
-    discountGiven: 2040,
-  },
-]
 
 const emptyCoupon = {
   code: '',
@@ -187,7 +130,8 @@ function ActiveSwitch({ coupon, onToggle, compact = false }) {
 
 function Coupons() {
   const { t } = useLanguage()
-  const [coupons, setCoupons] = usePersistentState('admin-coupons', initialCoupons)
+  const toast = useToast()
+  const [coupons, setCoupons] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [editingCoupon, setEditingCoupon] = useState(null)
@@ -195,8 +139,28 @@ function Coupons() {
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [copiedCode, setCopiedCode] = useState('')
-  const [notice, setNotice] = useState('')
   const [formError, setFormError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    couponsApi.getAll()
+      .then(({ data }) => {
+        if (!active) return
+        setCoupons((data.coupons || []).map((coupon) => ({
+          ...coupon,
+          discountType: coupon.discountType === 'FREE_DELIVERY' ? 'freeDelivery' : coupon.discountType.toLowerCase(),
+          discountValue: Number(coupon.value),
+          minimumOrder: Number(coupon.minOrder),
+          used: Number(coupon.usedCount),
+          active: coupon.isActive,
+          startDate: dateOffset(0),
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load coupons.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const today = localDateString(new Date())
   const totals = useMemo(() => ({
@@ -254,57 +218,129 @@ function Coupons() {
     setDraft((current) => ({ ...current, code }))
   }
 
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault()
     const code = draft.code.trim().toUpperCase()
+    const discountValue = Number(draft.discountValue)
+    if (!code) {
+      setFormError('Enter a coupon code.')
+      toast.error('Enter a coupon code.')
+      return
+    }
     if (coupons.some((coupon) => coupon.code.toUpperCase() === code && coupon.id !== editingCoupon?.id)) {
       setFormError('A coupon with this code already exists.')
+      toast.error('A coupon with this code already exists.')
       return
     }
     if (draft.expiryDate < draft.startDate) {
       setFormError('Expiry date must be on or after the start date.')
+      toast.error('Expiry date must be on or after the start date.')
+      return
+    }
+    if (
+      draft.discountType !== 'freeDelivery' &&
+      (!Number.isFinite(discountValue || 0) || discountValue <= 0 ||
+        (draft.discountType === 'percentage' && discountValue > 100))
+    ) {
+      const message = draft.discountType === 'percentage'
+        ? 'Enter a discount percentage between 1 and 100.'
+        : 'Enter a discount amount greater than zero.'
+      setFormError(message)
+      toast.error(message)
       return
     }
 
-    const coupon = {
-      ...draft,
-      id: editingCoupon?.id || `coupon-${Date.now()}`,
+    const payload = {
       code,
-      discountValue: draft.discountType === 'freeDelivery' ? 0 : Number(draft.discountValue),
-      minimumOrder: Number(draft.minimumOrder) || 0,
-      usageLimit: Number(draft.usageLimit) || 0,
-      used: Number(draft.used) || 0,
-      discountGiven: Number(draft.discountGiven) || 0,
+      description: draft.description,
+      discountType: draft.discountType === 'freeDelivery'
+        ? 'FREE_DELIVERY'
+        : draft.discountType.toUpperCase(),
+      value: draft.discountType === 'freeDelivery' ? 0 : Number(draft.discountValue),
+      minOrder: Number(draft.minimumOrder) || 0,
+      usageLimit: Number(draft.usageLimit) || null,
+      expiryDate: draft.expiryDate || null,
+      isActive: Boolean(draft.active),
     }
-    setCoupons((current) =>
-      editingCoupon
+    let coupon
+    try {
+      const { data } = editingCoupon
+        ? await couponsApi.update(editingCoupon.id, payload)
+        : await couponsApi.create(payload)
+      coupon = {
+        ...data.coupon,
+        discountType: data.coupon.discountType === 'FREE_DELIVERY' ? 'freeDelivery' : data.coupon.discountType.toLowerCase(),
+        discountValue: Number(data.coupon.value),
+        minimumOrder: Number(data.coupon.minOrder),
+        used: Number(data.coupon.usedCount),
+        active: data.coupon.isActive,
+        startDate: dateOffset(0),
+      }
+      setCoupons((current) => editingCoupon
         ? current.map((item) => item.id === editingCoupon.id ? coupon : item)
-        : [coupon, ...current],
-    )
+        : [coupon, ...current])
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Could not save this coupon.')
+      setFormError(message)
+      toast.error(message)
+      return
+    }
+    logAuditEvent({
+      action: editingCoupon ? 'Updated coupon' : 'Created coupon',
+      category: 'Administration',
+      resource: coupon.code,
+    })
     closeModal()
     setEditingCoupon(null)
+    toast.success(editingCoupon ? 'Coupon updated successfully.' : 'Coupon created successfully.')
   }
 
-  const toggleCoupon = (coupon) => {
-    setCoupons((current) =>
-      current.map((item) => item.id === coupon.id ? { ...item, active: !item.active } : item),
-    )
+  const toggleCoupon = async (coupon) => {
+    try {
+      const { data } = await couponsApi.update(coupon.id, { isActive: !coupon.active })
+      setCoupons((current) => current.map((item) => item.id === coupon.id
+        ? { ...item, active: data.coupon.isActive }
+        : item))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update this coupon.'))
+      return
+    }
+    logAuditEvent({
+      action: coupon.active ? 'Deactivated coupon' : 'Activated coupon',
+      category: 'Administration',
+      resource: coupon.code,
+    })
+    toast.success(`${coupon.code} ${coupon.active ? 'deactivated' : 'activated'}.`)
   }
 
   const copyCode = async (code) => {
     try {
       await navigator.clipboard.writeText(code)
       setCopiedCode(code)
-      setNotice(`${code} copied to clipboard.`)
+      toast.success(`${code} copied to clipboard.`)
     } catch (error) {
       console.error('Unable to copy the coupon code:', error)
-      setNotice(`Could not copy ${code}. Select and copy the code manually.`)
+      toast.error(`Could not copy ${code}.`)
     }
   }
 
-  const confirmDelete = () => {
-    setCoupons((current) => current.filter((coupon) => coupon.id !== deleteTarget.id))
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    const deletedCode = deleteTarget.code
+    try {
+      await couponsApi.remove(deleteTarget.id)
+      setCoupons((current) => current.filter((coupon) => coupon.id !== deleteTarget.id))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not delete this coupon.'))
+      return
+    }
+    logAuditEvent({
+      action: 'Deleted coupon',
+      category: 'Administration',
+      resource: deletedCode,
+    })
     setDeleteTarget(null)
+    toast.success(`${deletedCode} deleted successfully.`)
   }
 
   const actionButtons = (coupon) => (
@@ -417,15 +453,6 @@ function Coupons() {
           </div>
         </div>
 
-        {notice && (
-          <div role="status" className="flex items-center justify-between gap-3 border-b border-emerald-100 bg-[#F0F7F1] px-4 py-2.5 text-sm text-[#0E532B] sm:px-5">
-            <span>{notice}</span>
-            <button type="button" onClick={() => setNotice('')} className="text-xs font-semibold underline underline-offset-2">
-              {t('common.dismiss')}
-            </button>
-          </div>
-        )}
-
         <div className="hidden overflow-x-auto lg:block">
           <table className="w-full min-w-[1150px] text-left text-sm">
             <thead className="bg-slate-50 text-[11px] uppercase tracking-[0.08em] text-[#0E532B]/75">
@@ -520,7 +547,7 @@ function Coupons() {
           onClose={closeModal}
           size="max-w-3xl"
         >
-          <form onSubmit={handleSave} className="space-y-5">
+          <form noValidate onSubmit={handleSave} className="space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-medium text-slate-700">
                 {t('products.couponCodeLabel')}

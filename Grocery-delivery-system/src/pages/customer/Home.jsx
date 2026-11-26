@@ -1,8 +1,9 @@
 import { ArrowRight, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../../components/ProductCard.jsx'
-import { categories, products } from '../../data/mockData.js'
+import { categories as categoriesApi, getApiErrorMessage, products as productsApi } from '../../services/api.js'
+import { useToast } from '../../context/ToastContext.jsx'
 
 const categoryDetails = {
   'Fruits & Vegetables': {
@@ -40,7 +41,24 @@ const categoryDetails = {
 }
 
 function Home() {
+  const toast = useToast()
   const [heroImageFailed, setHeroImageFailed] = useState(false)
+  const [categories, setCategories] = useState([])
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    let active = true
+    Promise.all([categoriesApi.getAll(), productsApi.getAll({ sort: 'featured' })])
+      .then(([nextCategories, nextProducts]) => {
+        if (!active) return
+        setCategories(nextCategories)
+        setProducts(nextProducts)
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load the catalog.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   return (
     <div className="space-y-12 sm:space-y-16">
@@ -110,12 +128,23 @@ function Home() {
           </Link>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {categories.map((category) => {
-            const details = categoryDetails[category]
+          {categories.map((categoryRecord) => {
+            const category = categoryRecord.name
+            const aliases = {
+              Bakery: 'Bakery & Bread',
+              'Meat & Poultry': 'Meat & Seafood',
+              'Pantry Staples': 'Pantry & Grains',
+              Beverages: 'Beverages & Juice',
+              Snacks: 'Snacks & Nuts',
+            }
+            const details = categoryDetails[category] || categoryDetails[aliases[category]] || {
+              image: categoryRecord.image || '',
+              count: categoryRecord._count?.products || 0,
+            }
             return (
               <Link
-                key={category}
-                to={`/shop?category=${encodeURIComponent(category)}`}
+                key={categoryRecord.id}
+                to={`/shop?category=${encodeURIComponent(categoryRecord.slug)}`}
                 className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
               >
                 <div className="relative h-24 overflow-hidden bg-emerald-50">
@@ -126,7 +155,7 @@ function Home() {
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                   />
                   <span className="absolute right-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-bold text-[#0E532B] shadow-sm">
-                    {details.count} Items
+                    {categoryRecord._count?.products ?? details.count} Items
                   </span>
                 </div>
                 <span className="block p-3 text-left text-sm font-semibold text-slate-800">

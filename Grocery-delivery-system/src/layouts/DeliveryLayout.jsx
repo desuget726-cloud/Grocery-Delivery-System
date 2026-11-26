@@ -12,17 +12,20 @@ import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher.jsx'
 import logo from '../assets/logo.png'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useDelivery } from '../context/DeliveryContext.jsx'
 import { useLanguage } from '../context/LanguageContext.jsx'
 
 const navigation = [
   { translationKey: 'dashboard', to: '/delivery', end: true },
   { translationKey: 'assignedOrders', to: '/delivery/assigned-orders' },
   { translationKey: 'history', to: '/delivery/history' },
+  { translationKey: 'auditLogs', to: '/delivery/audit-logs' },
 ]
 
 function DeliveryLayout() {
   const { t } = useLanguage()
   const { user, logout } = useAuth()
+  const { activeOrders, isOnline } = useDelivery()
   const navigate = useNavigate()
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef(null)
@@ -82,10 +85,10 @@ function DeliveryLayout() {
                   }`
                 }
               >
-                {t(translationKey)}
+                {translationKey === 'auditLogs' ? 'Audit Logs' : t(translationKey)}
                 {translationKey === 'assignedOrders' && (
                   <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-[#F04E00] px-1.5 text-[10px] font-bold text-white">
-                    2
+                    {activeOrders.length}
                   </span>
                 )}
               </NavLink>
@@ -136,9 +139,9 @@ function DeliveryLayout() {
                     <p className="mt-0.5 text-xs text-gray-500">
                       Bole Zone • AA-23451
                     </p>
-                    <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#1E8E3E]">
-                      <span className="h-2 w-2 rounded-full bg-[#1E8E3E]" />
-                      Online
+                    <p className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${isOnline ? 'text-[#1E8E3E]' : 'text-gray-500'}`}>
+                      <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-[#1E8E3E]' : 'bg-gray-400'}`} />
+                      {isOnline ? 'Online' : 'Offline'}
                     </p>
                   </div>
                   <div className="mt-1 border-t border-gray-100 py-1">
@@ -209,9 +212,19 @@ function DeliveryLayout() {
             {translationKey === 'dashboard' && <LayoutDashboard aria-hidden="true" size={20} />}
             {translationKey === 'assignedOrders' && <ClipboardList aria-hidden="true" size={20} />}
             {translationKey === 'history' && <History aria-hidden="true" size={20} />}
-            {translationKey === 'assignedOrders'
-              ? t('orders')
-              : t(translationKey)}
+            {translationKey === 'auditLogs' && <ClipboardList aria-hidden="true" size={20} />}
+            <span className="flex items-center gap-1.5">
+              {translationKey === 'assignedOrders'
+                ? t('orders')
+                : translationKey === 'auditLogs'
+                  ? 'Audit Logs'
+                  : t(translationKey)}
+              {translationKey === 'assignedOrders' && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#F04E00] px-1 text-[9px] font-bold text-white">
+                  {activeOrders.length}
+                </span>
+              )}
+            </span>
           </NavLink>
         ))}
       </nav>

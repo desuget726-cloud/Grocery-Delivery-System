@@ -14,7 +14,7 @@ function ProtectedRoute({ allowedRoles = [], children }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location }} />
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {

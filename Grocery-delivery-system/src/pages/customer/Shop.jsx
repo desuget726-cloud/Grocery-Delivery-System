@@ -1,16 +1,13 @@
 import { SlidersHorizontal } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import ProductCard from '../../components/ProductCard.jsx'
 import SearchBar from '../../components/SearchBar.jsx'
-import { categories, products } from '../../data/mockData.js'
+import { categories as categoriesApi, getApiErrorMessage, products as productsApi } from '../../services/api.js'
+import { useToast } from '../../context/ToastContext.jsx'
 import categorySlug from '../../utils/categorySlug.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
-const maximumPrice = Math.ceil(Math.max(...products.map((product) => product.price)))
-const categoriesBySlug = new Map(
-  categories.map((category) => [categorySlug(category), category]),
-)
 const legacyCategoryAliases = {
   Bakery: 'Bakery & Bread',
   Pantry: 'Pantry & Grains',
@@ -18,17 +15,44 @@ const legacyCategoryAliases = {
 }
 
 function Shop() {
+  const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [priceLimit, setPriceLimit] = useState(maximumPrice)
+  const [catalogProducts, setCatalogProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [priceLimit, setPriceLimit] = useState(1000)
   const [sortBy, setSortBy] = useState('featured')
-  const [onSaleOnly, setOnSaleOnly] = useState(false)
+  const [onSaleOnly, setOnSaleOnly] = useState(searchParams.get('offers') === 'true')
   const query = searchParams.get('search') || ''
   const selectedCategoryValues = (searchParams.get('category') || '')
     .split(',')
     .filter(Boolean)
-  const selectedCategories = selectedCategoryValues.map(
-    (value) => categoriesBySlug.get(value) || legacyCategoryAliases[value] || value,
+  const selectedCategories = selectedCategoryValues.map((value) =>
+    categories.find((category) => category.slug === value || category.id === value)?.name ||
+    legacyCategoryAliases[value] ||
+    value,
   )
+  const maximumPrice = useMemo(
+    () => Math.ceil(Math.max(100, ...catalogProducts.map((product) => Number(product.price) || 0))),
+    [catalogProducts],
+  )
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      productsApi.getAll(query ? { search: query } : undefined),
+      categoriesApi.getAll(),
+    ])
+      .then(([nextProducts, nextCategories]) => {
+        if (!active) return
+        setCatalogProducts(nextProducts)
+        setCategories(nextCategories)
+        setPriceLimit((current) => Math.min(current, Math.ceil(Math.max(100, ...nextProducts.map((product) => Number(product.price) || 0)))))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load products.')))
+    return () => {
+      active = false
+    }
+  }, [query, toast])
 
   const updateQuery = (key, value) => {
     const nextParams = new URLSearchParams(searchParams)
@@ -73,7 +97,7 @@ function Shop() {
   }
 
   const normalizedQuery = query.trim().toLowerCase()
-  const filteredProducts = products.filter((product) => {
+  const filteredProducts = catalogProducts.filter((product) => {
     const matchesQuery =
       !normalizedQuery ||
       `${product.name} ${product.category}`.toLowerCase().includes(normalizedQuery)
@@ -89,9 +113,9 @@ function Shop() {
   })
 
   if (sortBy === 'price-low') {
-    filteredProducts.sort((a, b) => a.price - b.price)
+    filteredProducts.sort((a, b) => Number(a.price) - Number(b.price))
   } else if (sortBy === 'price-high') {
-    filteredProducts.sort((a, b) => b.price - a.price)
+    filteredProducts.sort((a, b) => Number(b.price) - Number(a.price))
   } else if (sortBy === 'top-rated') {
     filteredProducts.sort((a, b) => (b.rating || 0) - (a.rating || 0))
   }
@@ -117,7 +141,7 @@ function Shop() {
           <fieldset id="categories" className="mt-6">
             <legend className="text-sm font-semibold text-slate-800">Category</legend>
             <div className="mt-3 space-y-3">
-              {categories.map((category) => (
+              {categories.map(({ name: category }) => (
                 <label key={category} className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
                   <input
                     type="checkbox"

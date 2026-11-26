@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Check,
   CheckCheck,
@@ -11,8 +11,10 @@ import {
   ThumbsUp,
   Trash2,
 } from 'lucide-react'
-import usePersistentState from '../../hooks/usePersistentState.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { getApiErrorMessage, reviews as reviewsApi } from '../../services/api.js'
 
 const daysAgo = (days) => {
   const date = new Date()
@@ -130,9 +132,6 @@ const initialReviews = [
 
 const ratingOptions = ['All Ratings', '5 Stars', '4 Stars', '3 Stars', '1–2 Stars']
 const reviewStatusFilters = ['All', 'Pending', 'Published', 'Hidden', 'Needs Reply']
-const initialPendingCount = initialReviews.filter((review) => review.status === 'Pending').length
-const initialLowRatingCount = initialReviews.filter((review) => review.rating <= 2).length
-const initialTotalReviews = 248
 
 function getInitials(name) {
   return name
@@ -168,13 +167,36 @@ function StarRating({ rating, size = 16 }) {
 
 function Reviews() {
   const { t } = useLanguage()
-  const [reviews, setReviews] = usePersistentState('admin-customer-reviews', initialReviews)
+  const toast = useToast()
+  const [reviews, setReviews] = useState(initialReviews)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [ratingFilter, setRatingFilter] = useState('All Ratings')
   const [replyingTo, setReplyingTo] = useState(null)
   const [replyDrafts, setReplyDrafts] = useState({})
   const [replyErrors, setReplyErrors] = useState({})
+
+  useEffect(() => {
+    let active = true
+    reviewsApi.getAll()
+      .then(({ data }) => {
+        if (!active) return
+        setReviews((data.reviews || []).map((review) => ({
+          ...review,
+          customer: review.user?.fullName || 'Customer',
+          orderId: review.orderCode,
+          date: review.createdAt,
+          product: review.product?.name || 'Product',
+          image: review.product?.image || '',
+          status: review.status === 'PUBLISHED' ? 'Published' : review.status === 'HIDDEN' ? 'Hidden' : 'Pending',
+          reply: review.adminReply || '',
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load reviews.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const visibleReviews = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -200,43 +222,76 @@ function Reviews() {
     })
   }, [reviews, search, statusFilter, ratingFilter])
 
-  const pendingCount = Math.max(
-    0,
-    10 + reviews.filter((review) => review.status === 'Pending').length - initialPendingCount,
-  )
-  const lowRatingCount = Math.max(
-    0,
-    5 + reviews.filter((review) => review.rating <= 2).length - initialLowRatingCount,
-  )
-  const totalReviews = Math.max(
-    0,
-    initialTotalReviews + reviews.length - initialReviews.length,
-  )
+  const pendingCount = reviews.filter((review) => review.status === 'Pending').length
+  const lowRatingCount = reviews.filter((review) => review.rating <= 2).length
+  const totalReviews = reviews.length
   const needsReplyCount = reviews.filter(
     (review) => !review.reply && review.status !== 'Hidden',
   ).length
 
-  const updateReview = (reviewId, changes) => {
-    setReviews((current) =>
-      current.map((review) => (review.id === reviewId ? { ...review, ...changes } : review)),
-    )
+  const updateReview = async (reviewId, changes) => {
+    const payload = {}
+    if (changes.status) {
+      payload.status = changes.status === 'Published' ? 'PUBLISHED' : changes.status.toUpperCase()
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, 'reply')) payload.adminReply = changes.reply
+    try {
+      const { data } = await reviewsApi.update(reviewId, payload)
+      setReviews((current) =>
+        current.map((review) => review.id === reviewId ? {
+          ...review,
+          ...changes,
+          status: data.review.status === 'PUBLISHED' ? 'Published' : data.review.status === 'HIDDEN' ? 'Hidden' : 'Pending',
+          reply: data.review.adminReply || '',
+        } : review),
+      )
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update this review.'))
+      return false
+    }
+    logAuditEvent({
+      action: changes.status === 'Published'
+        ? 'Approved review'
+        : changes.status === 'Hidden'
+          ? 'Hid review'
+          : 'Replied to review',
+      category: 'Administration',
+      resource: reviewId,
+    })
+    if (changes.status === 'Published') toast.success('Review approved.')
+    if (changes.status === 'Hidden') toast.success('Review hidden.')
+    return true
   }
 
-  const submitReply = (review) => {
+  const submitReply = async (review) => {
     const reply = (replyDrafts[review.id] ?? '').trim()
     if (!reply) {
       setReplyErrors((current) => ({ ...current, [review.id]: t('common.writeReplyBeforeSending') }))
+      toast.error(t('common.writeReplyBeforeSending'))
       return
     }
-    updateReview(review.id, { reply })
+    if (!await updateReview(review.id, { reply })) return
     setReplyDrafts((current) => ({ ...current, [review.id]: '' }))
     setReplyErrors((current) => ({ ...current, [review.id]: '' }))
     setReplyingTo(null)
+    toast.success('Review reply sent.')
   }
 
-  const deleteReview = (review) => {
+  const deleteReview = async (review) => {
     if (!window.confirm(`Delete the review from ${review.customer}? This cannot be undone.`)) return
-    setReviews((current) => current.filter((entry) => entry.id !== review.id))
+    try {
+      await reviewsApi.remove(review.id)
+      setReviews((current) => current.filter((entry) => entry.id !== review.id))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not delete this review.'))
+      return
+    }
+    logAuditEvent({
+      action: 'Deleted review',
+      category: 'Administration',
+      resource: review.id,
+    })
+    toast.success('Review deleted.')
   }
 
   return (

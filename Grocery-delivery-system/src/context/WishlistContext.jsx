@@ -1,118 +1,111 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { products as catalogProducts } from '../data/mockData.js'
+import { wishlist as wishlistApi, getApiErrorMessage } from '../services/api.js'
+import { logAuditEvent } from '../services/auditLog.js'
+import { useAuth } from './AuthContext.jsx'
+import { useToast } from './ToastContext.jsx'
 
 const WishlistContext = createContext(null)
-const WISHLIST_STORAGE_KEY = 'grocery_wishlist'
-const WISHLIST_UPDATED_EVENT = 'grocery-wishlist-updated'
-const catalogProductsById = new Map(catalogProducts.map((product) => [product.id, product]))
-
-function isProduct(value) {
-  return (
-    value &&
-    (typeof value.id === 'string' || typeof value.id === 'number') &&
-    typeof value.name === 'string' &&
-    Number.isFinite(Number(value.price))
-  )
-}
-
-function normalizeWishlist(value) {
-  if (!Array.isArray(value)) {
-    throw new TypeError('Saved wishlist must be an array')
-  }
-
-  const uniqueProducts = new Map()
-  value.forEach((item) => {
-    const product =
-      typeof item === 'string' ? catalogProductsById.get(item) : item
-    if (isProduct(product) && !uniqueProducts.has(product.id)) {
-      uniqueProducts.set(product.id, product)
-    }
-  })
-  return [...uniqueProducts.values()]
-}
-
-function loadWishlist() {
-  if (typeof window === 'undefined') {
-    return []
-  }
-
-  try {
-    const savedWishlist = window.localStorage.getItem(WISHLIST_STORAGE_KEY)
-    return normalizeWishlist(savedWishlist ? JSON.parse(savedWishlist) : [])
-  } catch (error) {
-    console.error('Unable to load the wishlist from localStorage:', error)
-    return []
-  }
-}
-
-function saveWishlist(items) {
-  try {
-    window.localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(items))
-  } catch (error) {
-    console.error('Unable to save the wishlist to localStorage:', error)
-    throw error
-  }
-}
 
 export function WishlistProvider({ children }) {
-  const [wishlistItems, setWishlistItems] = useState(loadWishlist)
+  const toast = useToast()
+  const { isAuthenticated, user } = useAuth()
+  const [wishlistItems, setWishlistItems] = useState([])
+  const [loading, setLoading] = useState(false)
   const wishlistRef = useRef(wishlistItems)
 
-  const commitWishlist = useCallback((nextItems) => {
-    saveWishlist(nextItems)
-    wishlistRef.current = nextItems
-    setWishlistItems(nextItems)
-    window.dispatchEvent(new Event(WISHLIST_UPDATED_EVENT))
+  const commitWishlist = useCallback((items) => {
+    wishlistRef.current = items
+    setWishlistItems(items)
   }, [])
 
-  const toggleWishlist = useCallback((product) => {
-    if (!isProduct(product)) {
+  const refreshWishlist = useCallback(async () => {
+    if (!isAuthenticated) {
+      commitWishlist([])
+      return
+    }
+    setLoading(true)
+    try {
+      commitWishlist(await wishlistApi.getAll())
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not load your wishlist.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [commitWishlist, isAuthenticated, toast])
+
+  useEffect(() => {
+    Promise.resolve().then(refreshWishlist)
+  }, [refreshWishlist, user?.id])
+
+  const toggleWishlist = useCallback(async (product) => {
+    if (!product || !product.id || !product.name) {
       throw new TypeError('A valid product is required to update the wishlist')
     }
+    if (!isAuthenticated) {
+      toast.warning('Sign in to save products to your wishlist.')
+      throw new Error('You must be signed in to update your wishlist.')
+    }
 
-    const currentItems = wishlistRef.current
-    const nextItems = currentItems.some((item) => item.id === product.id)
-      ? currentItems.filter((item) => item.id !== product.id)
-      : [...currentItems, { ...product }]
-    commitWishlist(nextItems)
-  }, [commitWishlist])
+    const removing = wishlistRef.current.some((item) => item.id === product.id)
+    try {
+      await wishlistApi.toggle(product.id)
+      const next = removing
+        ? wishlistRef.current.filter((item) => item.id !== product.id)
+        : [...wishlistRef.current, product]
+      commitWishlist(next)
+      logAuditEvent({
+        action: removing ? 'Removed from wishlist' : 'Added to wishlist',
+        category: 'Customer',
+        resource: product.name,
+      })
+      if (removing) toast.success(`${product.name} removed from your wishlist.`)
+      else toast.info(`${product.name} added to your wishlist.`)
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Unable to update your wishlist.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
+    }
+  }, [commitWishlist, isAuthenticated, toast])
 
-  const removeFromWishlist = useCallback((id) => {
-    const nextItems = wishlistRef.current.filter((item) => item.id !== id)
-    commitWishlist(nextItems)
-  }, [commitWishlist])
+  const removeFromWishlist = useCallback(async (id) => {
+    const product = wishlistRef.current.find((item) => item.id === id)
+    if (!product) return
+    await toggleWishlist(product)
+  }, [toggleWishlist])
+
+  const clearWishlist = useCallback(async () => {
+    if (!isAuthenticated) {
+      commitWishlist([])
+      return
+    }
+    const items = [...wishlistRef.current]
+    try {
+      await Promise.all(items.map((item) => wishlistApi.toggle(item.id)))
+      commitWishlist([])
+      logAuditEvent({ action: 'Cleared wishlist', category: 'Customer', resource: 'Wishlist' })
+      toast.success('Your wishlist has been cleared.')
+    } catch (error) {
+      await refreshWishlist()
+      const message = getApiErrorMessage(error, 'Unable to clear your wishlist.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
+    }
+  }, [commitWishlist, isAuthenticated, refreshWishlist, toast])
 
   const isInWishlist = useCallback(
     (id) => wishlistItems.some((item) => item.id === id),
     [wishlistItems],
   )
 
-  const clearWishlist = useCallback(() => {
-    commitWishlist([])
-  }, [commitWishlist])
-
-  useEffect(() => {
-    const syncWishlist = () => {
-      const nextItems = loadWishlist()
-      wishlistRef.current = nextItems
-      setWishlistItems(nextItems)
-    }
-    window.addEventListener('storage', syncWishlist)
-    window.addEventListener(WISHLIST_UPDATED_EVENT, syncWishlist)
-
-    return () => {
-      window.removeEventListener('storage', syncWishlist)
-      window.removeEventListener(WISHLIST_UPDATED_EVENT, syncWishlist)
-    }
-  }, [])
-
   const value = {
     wishlistItems,
+    wishlistCount: wishlistItems.length,
+    loading,
+    refreshWishlist,
     toggleWishlist,
     removeFromWishlist,
-    isInWishlist,
     clearWishlist,
-    wishlistCount: wishlistItems.length,
+    isInWishlist,
   }
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
@@ -122,8 +115,6 @@ export function WishlistProvider({ children }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useWishlist() {
   const context = useContext(WishlistContext)
-  if (context === null) {
-    throw new Error('useWishlist must be used within a WishlistProvider')
-  }
+  if (context === null) throw new Error('useWishlist must be used within a WishlistProvider')
   return context
 }

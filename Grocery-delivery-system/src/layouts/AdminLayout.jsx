@@ -26,6 +26,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { LANGUAGES, useLanguage } from '../context/LanguageContext.jsx'
+import { useToast } from '../context/ToastContext.jsx'
 import useAdminNotifications from '../hooks/useAdminNotifications.js'
 
 const pageNames = {
@@ -134,6 +135,7 @@ function AdminLayout() {
   const unreadCount = notifications.filter((notification) => notification.unread).length
   const { language, setLanguage, t } = useLanguage()
   const { logout, user } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
   const searchInputRef = useRef(null)
@@ -230,6 +232,7 @@ function AdminLayout() {
         item.id === notification.id ? { ...item, unread: false } : item,
       ),
     )
+    if (notification.unread) toast.success('Notification marked as read.')
     setOpenPopover(null)
     navigate(`/admin/notifications?highlight=${encodeURIComponent(notification.id)}`)
   }
@@ -238,6 +241,7 @@ function AdminLayout() {
     setNotifications((current) =>
       current.map((notification) => ({ ...notification, unread: false })),
     )
+    if (unreadCount > 0) toast.success('All notifications marked as read.')
   }
 
   return (

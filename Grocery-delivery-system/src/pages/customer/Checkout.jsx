@@ -1,20 +1,16 @@
 import {
   CheckCircle2,
   Clock3,
-  LoaderCircle,
   MapPin,
   ShoppingBasket,
-  X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { useCart } from '../../context/CartContext.jsx'
-import { loadOrders, saveOrder } from '../../data/mockData.js'
-import {
-  getDeliveryFee,
-  getDiscountAmount,
-} from '../../utils/cartPricing.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { getApiErrorMessage, orders as ordersApi, payments as paymentsApi } from '../../services/api.js'
+import { getDeliveryFee } from '../../utils/cartPricing.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const deliveryZones = ['Bole', 'Kazanchis', 'CMC / Ayat', 'Sarbet', 'Piassa']
@@ -24,185 +20,130 @@ const deliverySlots = [
   'Afternoon (12PM–4PM)',
   'Evening (5PM–9PM)',
 ]
-const paymentMethods = ['Telebirr', 'CBE Birr', 'Chapa Card', 'Cash on Delivery']
-const PAYMENT_TRANSACTIONS_STORAGE_KEY = 'grocery_admin_transactions'
-
-function createTransactionId() {
-  return `TXN-${Math.floor(9000 + Math.random() * 999)}`
-}
-
-function savePaymentTransaction(transaction) {
-  const savedTransactions = JSON.parse(
-    window.localStorage.getItem(PAYMENT_TRANSACTIONS_STORAGE_KEY) || '[]',
-  )
-  if (!Array.isArray(savedTransactions)) {
-    throw new TypeError('Saved payment transactions must be an array')
-  }
-  window.localStorage.setItem(
-    PAYMENT_TRANSACTIONS_STORAGE_KEY,
-    JSON.stringify([
-      transaction,
-      ...savedTransactions.filter((savedTransaction) => savedTransaction.id !== transaction.id),
-    ]),
-  )
-}
-
-function createOrderId() {
-  const existingIds = new Set(loadOrders().map((order) => order.id))
-
-  for (let attempt = 0; attempt < 900; attempt += 1) {
-    const candidate = `GDS-${Math.floor(2540 + Math.random() * 900)}`
-    if (!existingIds.has(candidate)) {
-      return candidate
-    }
-  }
-
-  let candidate = `GDS-${Date.now()}`
-  while (existingIds.has(candidate)) {
-    candidate = `GDS-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-  }
-  return candidate
-}
-
-function generateDeliveryOtp() {
-  return String(Math.floor(1000 + Math.random() * 9000))
-}
+const paymentMethods = ['Chapa Card', 'Cash on Delivery']
 
 function Checkout() {
-  const { cart, totalPrice, clearCart, promoCode } = useCart()
+  const toast = useToast()
+  const { cart, totalPrice, clearCart, promoCode, coupon } = useCart()
   const { user } = useAuth()
   const [paymentMethod, setPaymentMethod] = useState('Cash on Delivery')
   const [deliverySlot, setDeliverySlot] = useState(deliverySlots[0])
   const [errorMessage, setErrorMessage] = useState('')
   const [placedOrder, setPlacedOrder] = useState(null)
-  const [pendingOrder, setPendingOrder] = useState(null)
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
-  const [paymentPhone, setPaymentPhone] = useState('')
-  const [chapaMethod, setChapaMethod] = useState('Card')
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentError, setPaymentError] = useState('')
-  const discount = getDiscountAmount(promoCode, totalPrice)
-  const deliveryFee = getDeliveryFee(promoCode, totalPrice)
+  const discount = coupon?.discountType === 'PERCENTAGE'
+    ? Math.min(totalPrice, totalPrice * Number(coupon.value) / 100)
+    : coupon?.discountType === 'FIXED'
+      ? Math.min(totalPrice, Number(coupon.value))
+      : 0
+  const deliveryFee = getDeliveryFee(
+    coupon?.discountType === 'FREE_DELIVERY' ? 'FREEDEL' : '',
+    totalPrice,
+  )
   const total = Math.max(0, totalPrice - discount) + deliveryFee
 
-  const finishOrder = (order, paymentStatus) => {
-    const transactionId = createTransactionId()
-    const completedOrder = {
-      ...order,
-      paymentStatus,
-      transactionId,
-    }
-    const transaction = {
-      id: transactionId,
-      orderId: completedOrder.id,
-      customer: completedOrder.address.name,
-      email: user?.email || '',
-      method: completedOrder.paymentMethod,
-      date: completedOrder.date,
-      amount: completedOrder.total,
-      subtotal: completedOrder.subtotal,
-      deliveryFee: completedOrder.deliveryFee,
-      discount: completedOrder.discount,
-      status: paymentStatus === 'Paid' ? 'Completed' : 'Pending',
-    }
-
-    try {
-      saveOrder(completedOrder)
-      savePaymentTransaction(transaction)
-      clearCart()
-      setPlacedOrder(completedOrder)
-      setIsPaymentModalOpen(false)
-      setPendingOrder(null)
-      setPaymentError('')
-    } catch (error) {
-      console.error('Unable to save the order and payment:', error)
-      const message = 'We could not save your order. Please try again.'
-      if (paymentStatus === 'Paid') {
-        setPaymentError(message)
-      } else {
-        setErrorMessage(message)
-      }
-    }
-  }
-
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setErrorMessage('')
 
     if (cart.length === 0) {
-      setErrorMessage('Your cart is empty. Add items before placing an order.')
+      const message = 'Your cart is empty. Add items before placing an order.'
+      setErrorMessage(message)
+      toast.error(message)
       return
     }
 
     const formData = new FormData(event.currentTarget)
     const zone = String(formData.get('zone'))
+    const name = String(formData.get('name')).trim()
+    const phone = String(formData.get('phone')).trim()
     const street = String(formData.get('street')).trim()
-    const order = {
-      id: createOrderId(),
-      date: new Date().toISOString(),
-      status: 'Placed',
-      subtotal: totalPrice,
-      discount,
-      deliveryFee,
-      total,
-      promoCode: promoCode || undefined,
-      deliverySlot,
-      paymentMethod,
-      paymentStatus: paymentMethod === 'Cash on Delivery' ? 'Pending COD' : 'Pending',
-      customerId: user?.id,
-      deliveryOtp: generateDeliveryOtp(),
-      address: {
-        name: String(formData.get('name')).trim(),
-        phone: String(formData.get('phone')).trim(),
-        street: `${zone} — ${street}`,
-        city: 'Addis Ababa',
-        zone,
-      },
-      items: cart.map((item) => ({ ...item })),
+    const phoneDigits = phone.replace(/\D/g, '')
+    if (name.length < 2) {
+      const message = 'Enter your full name to place this order.'
+      setErrorMessage(message)
+      toast.error(message)
+      return
     }
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      const message = 'Enter a valid phone number for delivery updates.'
+      setErrorMessage(message)
+      toast.error(message)
+      return
+    }
+    if (!deliveryZones.includes(zone) || !street) {
+      const message = 'Choose a delivery zone and enter your street or landmark.'
+      setErrorMessage(message)
+      toast.error(message)
+      return
+    }
+    setIsProcessing(true)
+    try {
+      const { data } = await ordersApi.create({
+        items: cart.map((item) => ({ productId: item.id, qty: item.quantity })),
+        deliveryZone: zone,
+        deliveryStreet: street,
+        customerPhone: phone,
+        timeSlot: deliverySlot,
+        paymentMethod: paymentMethod === 'Cash on Delivery' ? 'COD' : 'CHAPA',
+        couponCode: promoCode || undefined,
+      })
+      const order = data.order
+      clearCart()
+      if (paymentMethod === 'Cash on Delivery') {
+        setPlacedOrder(order)
+        toast.success(`Order ${order.code || order.id} placed successfully.`)
+        return
+      }
 
-    if (paymentMethod === 'Cash on Delivery') {
-      finishOrder(order, 'Pending COD')
-    } else {
-      setPendingOrder(order)
-      setPaymentPhone(order.address.phone)
+      setPlacedOrder(order)
       setPaymentError('')
-      setIsPaymentModalOpen(true)
+      setErrorMessage('')
+      toast.success(`Order ${order.code || order.id} created. Continue to Chapa to pay.`)
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'We could not place your order. Please try again.')
+      setErrorMessage(message)
+      toast.error(message)
+    } finally {
+      setIsProcessing(false)
     }
   }
 
-  const handlePayment = async (event) => {
-    event.preventDefault()
+  const handlePayment = async () => {
     setPaymentError('')
-    if (!pendingOrder) {
-      setPaymentError('Your payment session has expired. Please try again.')
+    if (!placedOrder) {
+      const message = 'Your order could not be found. Please place it again.'
+      setPaymentError(message)
+      toast.error(message)
       return
     }
 
-    if (paymentMethod !== 'Chapa Card') {
-      const normalizedPhone = paymentPhone.replace(/[\s()-]/g, '')
-      if (!/^(?:\+251|0)9\d{8}$/.test(normalizedPhone)) {
-        setPaymentError('Enter a valid Ethiopian mobile number, such as +251 9XXXXXXXX.')
-        return
-      }
-    }
-
     setIsProcessing(true)
-    await new Promise((resolve) => window.setTimeout(resolve, 1500))
-    setIsProcessing(false)
-    finishOrder(pendingOrder, 'Paid')
+    try {
+      const { data } = await paymentsApi.initializeChapa(placedOrder.id)
+      if (!data.checkoutUrl) throw new Error('Chapa did not provide a checkout URL.')
+      window.location.assign(data.checkoutUrl)
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Could not initialize Chapa payment.')
+      setPaymentError(message)
+      toast.error(message)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   if (placedOrder) {
     const isCashOnDelivery = placedOrder.paymentMethod === 'Cash on Delivery'
+    const orderCode = placedOrder.code || placedOrder.id
     return (
       <section className="mx-auto w-full max-w-2xl rounded-3xl border border-emerald-100 bg-white px-6 py-12 text-center shadow-sm sm:px-10">
         <CheckCircle2 aria-hidden="true" size={54} className="mx-auto text-[#1E8E3E]" />
         <p className="mt-5 text-sm font-bold uppercase tracking-wide text-[#1E8E3E]">
-          Order confirmed
+          {isCashOnDelivery ? 'Order confirmed' : 'Order reserved'}
         </p>
         <h1 className="mt-2 text-3xl font-extrabold text-[#0E532B]">
-          Thank you for your order!
+          {isCashOnDelivery ? 'Thank you for your order!' : 'Complete your payment to confirm.'}
         </h1>
         <p className="mt-3 text-slate-600">
           We&apos;re preparing your groceries for delivery in Addis Ababa.
@@ -214,20 +155,20 @@ function Checkout() {
               : 'bg-emerald-50 text-[#1E8E3E]'
           }`}
         >
-          {isCashOnDelivery ? 'Cash on Delivery' : `Paid via ${placedOrder.paymentMethod}`}
+          {isCashOnDelivery ? 'Cash on Delivery' : `Payment ${String(placedOrder.paymentStatus || 'PENDING').toLowerCase()}`}
         </p>
         <div className="mt-7 grid gap-4 rounded-2xl bg-[#F0F7F1] p-5 text-left sm:grid-cols-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment Status</p>
-            <p className="mt-1 font-bold text-[#0E532B]">{placedOrder.paymentStatus}</p>
+            <p className="mt-1 font-bold text-[#0E532B]">{placedOrder.paymentStatus || 'PENDING_COD'}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Transaction ID</p>
-            <p className="mt-1 font-bold text-[#0E532B]">{placedOrder.transactionId}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payment reference</p>
+            <p className="mt-1 font-bold text-[#0E532B]">{orderCode}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Order ID</p>
-            <p className="mt-1 font-bold text-[#0E532B]">{placedOrder.id}</p>
+            <p className="mt-1 font-bold text-[#0E532B]">{orderCode}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Delivery OTP</p>
@@ -242,6 +183,16 @@ function Checkout() {
             : 'Keep your OTP ready to confirm delivery.'}
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
+          {!isCashOnDelivery && (
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={handlePayment}
+              className="inline-flex items-center rounded-xl bg-[#1E8E3E] px-6 py-3 font-bold text-white transition hover:bg-[#0E532B]"
+            >
+              {isProcessing ? 'Connecting to Chapa…' : 'Continue to payment'}
+            </button>
+          )}
           <Link
             to="/my-orders"
             className="inline-flex items-center gap-2 rounded-xl bg-[#1E8E3E] px-6 py-3 font-bold text-white transition hover:bg-[#0E532B]"
@@ -255,6 +206,11 @@ function Checkout() {
             Continue Shopping
           </Link>
         </div>
+        {paymentError && (
+          <p role="alert" className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">
+            {paymentError}
+          </p>
+        )}
       </section>
     )
   }
@@ -283,6 +239,7 @@ function Checkout() {
       </header>
 
       <form
+        noValidate
         onSubmit={handleSubmit}
         className="grid w-full items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"
       >
@@ -446,121 +403,19 @@ function Checkout() {
           </dl>
           <button
             type="submit"
+            disabled={isProcessing}
             className="mt-6 w-full rounded-xl bg-[#1E8E3E] px-4 py-3 font-bold text-white transition hover:bg-[#0E532B]"
           >
-            {paymentMethod === 'Cash on Delivery'
+            {isProcessing ? 'Placing order…' : paymentMethod === 'Cash on Delivery'
               ? 'Place Order (Cash on Delivery)'
               : `Pay ${formatCurrency(total)}`}
           </button>
           <p className="mt-3 text-center text-xs text-slate-500">
-            Your order details will be saved on this device.
+            Order inventory and payment are processed securely by the backend.
           </p>
         </aside>
       </form>
 
-      {isPaymentModalOpen && pendingOrder && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !isProcessing) {
-              setIsPaymentModalOpen(false)
-              setPaymentError('')
-            }
-          }}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="payment-modal-title"
-            className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
-          >
-            <header className="relative bg-gradient-to-br from-[#0E532B] to-[#1E8E3E] px-6 py-6 text-white">
-              <button
-                type="button"
-                aria-label="Close payment"
-                disabled={isProcessing}
-                onClick={() => {
-                  setIsPaymentModalOpen(false)
-                  setPaymentError('')
-                }}
-                className="absolute right-4 top-4 rounded-full p-2 text-white/80 transition hover:bg-white/15 hover:text-white disabled:opacity-50"
-              >
-                <X aria-hidden="true" size={18} />
-              </button>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-100">
-                Secure checkout
-              </p>
-              <h2 id="payment-modal-title" className="mt-2 text-2xl font-extrabold">
-                {paymentMethod === 'Telebirr'
-                  ? 'Telebirr Express Pay'
-                  : paymentMethod === 'CBE Birr'
-                    ? 'CBE Birr'
-                    : 'Chapa Checkout'}
-              </h2>
-              <p className="mt-3 text-3xl font-extrabold">{formatCurrency(total)}</p>
-              <p className="mt-1 text-sm text-emerald-100">Order reference: {pendingOrder.id}</p>
-            </header>
-
-            <form onSubmit={handlePayment} className="space-y-5 p-6">
-              {paymentMethod === 'Chapa Card' ? (
-                <label className="block text-sm font-semibold text-slate-700">
-                  Payment method
-                  <select
-                    value={chapaMethod}
-                    onChange={(event) => setChapaMethod(event.target.value)}
-                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15"
-                  >
-                    <option>Card</option>
-                    <option>Bank transfer</option>
-                  </select>
-                </label>
-              ) : (
-                <label className="block text-sm font-semibold text-slate-700">
-                  Registered mobile number
-                  <input
-                    required
-                    type="tel"
-                    autoComplete="tel"
-                    value={paymentPhone}
-                    onChange={(event) => setPaymentPhone(event.target.value)}
-                    placeholder="+251 9XXXXXXXX"
-                    className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-3 outline-none focus:border-[#1E8E3E] focus:ring-2 focus:ring-[#1E8E3E]/15"
-                  />
-                </label>
-              )}
-              <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
-                {paymentMethod === 'Chapa Card'
-                  ? `Continue securely with Chapa ${chapaMethod.toLowerCase()}.`
-                  : 'A simulated verification will be sent to your registered mobile number.'}
-              </div>
-              {paymentError && (
-                <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm font-medium text-rose-700">
-                  {paymentError}
-                </p>
-              )}
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-3 font-bold text-white transition hover:bg-[#0E532B] disabled:cursor-wait disabled:opacity-80"
-              >
-                {isProcessing ? (
-                  <>
-                    <LoaderCircle aria-hidden="true" size={18} className="animate-spin" />
-                    Processing payment...
-                  </>
-                ) : paymentMethod === 'Chapa Card' ? (
-                  'Authorize Payment'
-                ) : (
-                  'Confirm Payment'
-                )}
-              </button>
-              <p className="text-center text-xs text-slate-400">
-                This is a simulated payment. No real funds will be charged.
-              </p>
-            </form>
-          </section>
-        </div>
-      )}
     </div>
   )
 }

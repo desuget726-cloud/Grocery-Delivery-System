@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ArrowUpRight,
   Banknote,
@@ -9,8 +9,8 @@ import {
   CreditCard,
   Download,
   Eye,
-  FileText,
   Filter,
+  Printer,
   RotateCcw,
   Search,
   Smartphone,
@@ -18,7 +18,9 @@ import {
 import logo from '../../assets/logo.png'
 import { Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { getApiErrorMessage, orders as ordersApi, payments as paymentsApi } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const dateDaysAgo = (days, hour = 10) => {
@@ -183,29 +185,6 @@ const methodIcons = {
   'Cash on Delivery': Banknote,
 }
 const money = formatCurrency
-const LEGACY_TRANSACTIONS_STORAGE_KEY = 'admin-payment-transactions'
-
-function loadInitialTransactions() {
-  if (typeof window === 'undefined') {
-    return initialTransactions
-  }
-
-  try {
-    const savedTransactions = window.localStorage.getItem(LEGACY_TRANSACTIONS_STORAGE_KEY)
-    if (savedTransactions === null) {
-      return initialTransactions
-    }
-    const transactions = JSON.parse(savedTransactions)
-    if (!Array.isArray(transactions)) {
-      throw new TypeError('Saved payment transactions must be an array')
-    }
-    return transactions
-  } catch (error) {
-    console.error('Unable to migrate saved payment transactions:', error)
-    return initialTransactions
-  }
-}
-
 function getRangeStart(range) {
   const start = new Date()
   start.setHours(0, 0, 0, 0)
@@ -227,17 +206,83 @@ function formatTransactionDate(value) {
   })
 }
 
+function PaymentReceiptBarcode({ value }) {
+  const bits = `101${String(value)
+    .split('')
+    .map((character) => character.charCodeAt(0).toString(2).padStart(7, '0'))
+    .join('')}101`
+  const width = bits.length * 2
+  const offset = (180 - width) / 2
+
+  return (
+    <svg aria-hidden="true" viewBox="0 0 180 40" className="mx-auto h-10 w-44">
+      {bits.split('').map((bit, index) =>
+        bit === '1' ? (
+          <rect
+            key={index}
+            x={offset + index * 2}
+            y="1"
+            width="1.5"
+            height="34"
+            rx="0.3"
+            fill="#0E532B"
+          />
+        ) : null,
+      )}
+    </svg>
+  )
+}
+
 function Payments() {
   const { t } = useLanguage()
-  const [transactions, setTransactions] = usePersistentState(
-    'grocery_admin_transactions',
-    loadInitialTransactions,
-  )
+  const toast = useToast()
+  const [transactions, setTransactions] = useState(initialTransactions)
   const [dateRange, setDateRange] = useState('This Month')
   const [statusFilter, setStatusFilter] = useState('All')
   const [methodFilter, setMethodFilter] = useState('All Methods')
   const [search, setSearch] = useState('')
   const [receiptId, setReceiptId] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    ordersApi.getAll()
+      .then((orders) => {
+        if (!active) return
+        setTransactions(orders.flatMap((order) => (order.transactions || []).map((transaction) => {
+          const methodNames = {
+            COD: 'Cash on Delivery',
+            CHAPA: 'Chapa Card',
+            CBE_BIRR: 'CBE Birr',
+            TELEBIRR: 'Telebirr',
+          }
+          const statusNames = {
+            PENDING: 'Pending',
+            PENDING_COD: 'Pending',
+            PAID: 'Completed',
+            COMPLETED: 'Completed',
+            FAILED: 'Failed',
+          }
+          return {
+            id: transaction.txnCode || transaction.txRef || transaction.id,
+            orderId: order.code || order.id,
+            customer: order.customerName || 'Customer',
+            email: order.email || '',
+            method: methodNames[transaction.method] || transaction.method,
+            date: transaction.createdAt || order.date,
+            amount: Number(transaction.amount) || 0,
+            subtotal: Number(order.subtotal) || 0,
+            deliveryFee: Number(order.deliveryFee) || 0,
+            discount: Number(order.discount) || 0,
+            status: statusNames[transaction.status] || transaction.status,
+            riderId: order.rider?.id,
+          }
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load payment transactions.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const rangeStart = getRangeStart(dateRange)
   const rangeTransactions = useMemo(
@@ -266,13 +311,42 @@ function Payments() {
   const pendingTotal = pendingTransactions.reduce((sum, item) => sum + item.amount, 0)
   const attentionTotal = attentionTransactions.reduce((sum, item) => sum + item.amount, 0)
   const selectedReceipt = transactions.find((item) => item.id === receiptId)
+  const selectedReceiptPaid = selectedReceipt?.status === 'Completed'
+  const selectedReceiptMethod = selectedReceipt?.method || 'Not specified'
+  const selectedReceiptIsCod = /cash|cod/i.test(selectedReceiptMethod)
+  const receiptPaymentLabel = selectedReceiptPaid
+    ? `✓ Paid via ${selectedReceiptMethod}`
+    : selectedReceiptIsCod && selectedReceipt?.status === 'Pending'
+      ? 'Cash on Delivery (Pending)'
+      : `${selectedReceipt ? t(selectedReceipt.status) : ''} via ${selectedReceiptMethod}`
+  const receiptTotalLabel =
+    selectedReceipt?.status === 'Completed'
+      ? t('transactions.totalPaid')
+      : selectedReceipt?.status === 'Refunded'
+        ? 'Total Refunded'
+        : 'Total Due'
 
-  const markSettled = (transaction) => {
-    setTransactions((current) =>
-      current.map((item) =>
-        item.id === transaction.id ? { ...item, status: 'Completed', settledAt: new Date().toISOString() } : item,
-      ),
-    )
+  const markSettled = async (transaction) => {
+    if (!transaction.riderId) {
+      toast.error('This COD transaction is not associated with a delivery rider.')
+      return
+    }
+    try {
+      await paymentsApi.settleCod({ riderId: transaction.riderId, amount: transaction.amount })
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not settle this COD transaction.'))
+      return
+    }
+    setTransactions((current) => current.map((item) =>
+      item.id === transaction.id ? { ...item, status: 'Completed', settledAt: new Date().toISOString() } : item,
+    ))
+    logAuditEvent({
+      action: 'Settled cash payment',
+      category: 'Administration',
+      resource: transaction.id,
+      details: `Order ${transaction.orderId}`,
+    })
+    toast.success(`COD payment for ${transaction.orderId} settled.`)
   }
 
   const refundTransaction = (transaction) => {
@@ -283,13 +357,7 @@ function Payments() {
     ) {
       return
     }
-    setTransactions((current) =>
-      current.map((item) =>
-        item.id === transaction.id
-          ? { ...item, status: 'Refunded', refundedAt: new Date().toISOString() }
-          : item,
-      ),
-    )
+    toast.warning('Refunds are not available through the current payment API.')
   }
 
   const exportCsv = () => {
@@ -314,6 +382,7 @@ function Payments() {
     anchor.download = `grocery-transactions-${dateRange.toLowerCase().replaceAll(' ', '-')}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
+    toast.success('Transaction report exported successfully.')
   }
 
   const methodBreakdown = methods.map((method) => {
@@ -595,55 +664,123 @@ function Payments() {
       </section>
 
       {selectedReceipt && (
-        <Modal title={t('transactions.paymentReceipt')} onClose={() => setReceiptId(null)} size="max-w-xl">
+        <Modal title={t('transactions.paymentReceipt')} onClose={() => setReceiptId(null)} size="max-w-2xl">
           <style>{`
             @media print {
               body * { visibility: hidden !important; }
               .payment-receipt-print, .payment-receipt-print * { visibility: visible !important; }
-              .payment-receipt-print { position: absolute !important; inset: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; box-shadow: none !important; }
+              .payment-receipt-print { position: fixed !important; inset: 0 !important; width: 100% !important; max-width: none !important; height: 100vh !important; margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: white !important; }
               .payment-receipt-no-print { display: none !important; }
             }
           `}</style>
-          <div className="payment-receipt-print rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-            <div className="flex flex-col items-center border-b border-dashed border-slate-200 pb-5 text-center">
-              <img src={logo} alt="Grocery Delivery" className="mb-2 h-14 w-36 object-contain" />
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em]">
-                <span className="text-[#0E532B]">GROCERY</span>{' '}
-                <span className="text-[#F04E00]">DELIVERY</span>{' '}
-                <span className="text-[#0B4B8C]">SYSTEM</span>
-              </p>
-              <p className="mt-1 text-xs text-slate-500">{t('transactions.paymentReceipt')}</p>
-              <p className="mt-3 text-lg font-bold text-[#0E532B]">{money(selectedReceipt.amount)}</p>
-              <span className={`mt-2 rounded-full px-2.5 py-1 text-[10px] font-semibold ${statusClassNames[selectedReceipt.status]}`}>
-                {t(selectedReceipt.status)}
+          <div className="payment-receipt-print overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <header className="flex flex-wrap items-start justify-between gap-4 border-b border-dashed border-gray-300 bg-gradient-to-r from-[#F3FAF6] via-white to-[#FFF4EC] px-5 py-4 sm:px-6">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                  <img src={logo} alt="" className="h-11 w-11 rounded-xl bg-white p-1 shadow-sm" />
+                  <div>
+                    <p className="text-sm font-extrabold tracking-tight">
+                      <span className="text-[#0E532B]">GROCERY</span>{' '}
+                      <span className="text-[#F04E00]">DELIVERY</span>{' '}
+                      <span className="text-[#0B4B8C]">SYSTEM</span>
+                    </p>
+                    <p className="mt-0.5 text-[10px] font-semibold tracking-[0.16em] text-gray-500">
+                      SPEED • FRESH • DIRECT
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-3 text-[11px] leading-5 text-gray-500">
+                  Bole Road, Addis Ababa • +251 962714305 • TIN: 0048291042
+                </p>
+              </div>
+              <span className="rounded-full border border-[#0B4B8C]/15 bg-white/80 px-3 py-1.5 text-[11px] font-bold text-[#0B4B8C]">
+                Receipt # RCP-{selectedReceipt.orderId || selectedReceipt.id}
               </span>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-dashed border-slate-200 py-4 text-xs">
-              <div><p className="text-slate-400">{t('transactions.transactionId')}</p><p className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.id}</p></div>
-              <div><p className="text-slate-400">{t('transactions.orderId')}</p><p className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.orderId}</p></div>
-              <div><p className="text-slate-400">{t('common.dateTime')}</p><p className="mt-1 font-semibold text-slate-800">{formatTransactionDate(selectedReceipt.date)}</p></div>
-              <div><p className="text-slate-400">{t('transactions.paymentMethod')}</p><p className="mt-1 font-semibold text-slate-800">{selectedReceipt.method}</p></div>
-            </div>
-            <div className="border-b border-dashed border-slate-200 py-4 text-xs">
-              <p className="mb-2 font-semibold text-slate-700">{t('common.customer')}</p>
-              <p className="font-semibold text-slate-800">{selectedReceipt.customer}</p>
-              <p className="mt-1 text-slate-500">{selectedReceipt.email}</p>
-            </div>
-            <div className="space-y-2.5 py-4 text-xs">
-              <div className="flex justify-between gap-4 text-slate-600"><span>{t('transactions.subtotal')}</span><span className="font-semibold text-[#0E532B]">{money(selectedReceipt.subtotal)}</span></div>
-              <div className="flex justify-between gap-4 text-slate-600"><span>{t('transactions.deliveryFee')}</span><span className="font-semibold text-[#0E532B]">{money(selectedReceipt.deliveryFee)}</span></div>
-              <div className="flex justify-between gap-4 text-slate-600"><span>{t('transactions.discount')}</span><span className="font-semibold text-[#0E532B]">-{money(selectedReceipt.discount)}</span></div>
-              <div className="flex justify-between gap-4 border-t border-slate-200 pt-3 text-sm font-bold text-[#0E532B]"><span>{t('transactions.totalPaid')}</span><span>{money(selectedReceipt.amount)}</span></div>
-            </div>
-            <p className="pt-2 text-center text-[10px] text-slate-400">{t('transactions.thankYou')}</p>
-          </div>
-          <div className="payment-receipt-no-print mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => setReceiptId(null)} className="h-10 rounded-xl border border-[#0B4B8C]/30 px-4 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">
-              {t('common.close')}
-            </button>
-            <button type="button" onClick={() => window.print()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0E532B] px-4 text-sm font-semibold text-white hover:bg-[#1E8E3E]">
-              <FileText size={16} /> {t('transactions.printReceipt')}
-            </button>
+            </header>
+
+            <section className="border-b border-dashed border-gray-200 px-5 py-4 sm:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                  selectedReceiptPaid
+                    ? 'bg-emerald-100 text-[#0E722F]'
+                    : selectedReceiptIsCod
+                      ? 'bg-orange-50 text-[#F04E00]'
+                      : 'bg-amber-50 text-amber-700'
+                }`}>
+                  {receiptPaymentLabel}
+                </span>
+                <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${statusClassNames[selectedReceipt.status]}`}>
+                  {t(selectedReceipt.status)}
+                </span>
+              </div>
+              <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-xs sm:grid-cols-2">
+                <div>
+                  <dt className="text-gray-400">{t('transactions.orderId')}</dt>
+                  <dd className="mt-1 font-extrabold text-[#0B4B8C]">{selectedReceipt.orderId}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">{t('common.dateTime')}</dt>
+                  <dd className="mt-1 font-semibold text-gray-800">{formatTransactionDate(selectedReceipt.date)}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">{t('common.customer')}</dt>
+                  <dd className="mt-1 font-semibold text-gray-800">{selectedReceipt.customer}</dd>
+                  <dd className="mt-0.5 text-gray-500">{selectedReceipt.email}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-400">{t('transactions.transactionId')}</dt>
+                  <dd className="mt-1 font-semibold text-[#0B4B8C]">{selectedReceipt.id}</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="px-5 py-4 sm:px-6">
+              <div className="rounded-xl bg-gray-50 p-4 text-xs">
+                <div className="flex justify-between gap-4 text-gray-600">
+                  <span>{t('transactions.subtotal')}</span>
+                  <span>{money(selectedReceipt.subtotal)}</span>
+                </div>
+                <div className="mt-2 flex justify-between gap-4 text-gray-600">
+                  <span>{t('transactions.discount')}</span>
+                  <span className="text-[#1E8E3E]">−{money(selectedReceipt.discount)}</span>
+                </div>
+                <div className="mt-2 flex justify-between gap-4 text-gray-600">
+                  <span>{t('transactions.deliveryFee')}</span>
+                  <span>{money(selectedReceipt.deliveryFee)}</span>
+                </div>
+                <div className="mt-3 flex justify-between gap-4 border-t border-gray-200 pt-3 text-lg font-extrabold text-[#0E532B]">
+                  <span>{receiptTotalLabel}</span>
+                  <span>{money(selectedReceipt.amount)}</span>
+                </div>
+              </div>
+            </section>
+
+            <footer className="border-t border-dashed border-gray-300 px-5 py-4 text-center sm:px-6">
+              <PaymentReceiptBarcode value={selectedReceipt.orderId || selectedReceipt.id} />
+              <p className="mt-1 font-mono text-xs font-semibold tracking-[0.22em] text-gray-600">
+                *{selectedReceipt.orderId || selectedReceipt.id}*
+              </p>
+              <p className="mt-3 text-xs font-medium text-gray-500">
+                Thank you for shopping fresh with Grocery Delivery System!
+              </p>
+              <div className="payment-receipt-no-print mt-4 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setReceiptId(null)}
+                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-[#0B4B8C] hover:text-[#0B4B8C]"
+                >
+                  {t('common.close')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#1E8E3E] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0E532B]"
+                >
+                  <Printer aria-hidden="true" size={16} />
+                  Print / Save PDF
+                </button>
+              </div>
+            </footer>
           </div>
         </Modal>
       )}

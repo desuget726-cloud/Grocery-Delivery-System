@@ -1,6 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import formatCurrency from '../../utils/formatCurrency.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { customers as customersApi, getApiErrorMessage } from '../../services/api.js'
 import {
   Award,
   Check,
@@ -208,7 +211,7 @@ function TierBadge({ tier }) {
 
 function CustomerModal({ onClose, onAdd }) {
   const { t } = useLanguage()
-  const [form, setForm] = useState({ name: '', email: '', phone: '+251 ', area: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '+251 ', area: '', password: '' })
   const update = (field) => (event) =>
     setForm((current) => ({ ...current, [field]: event.target.value }))
 
@@ -247,7 +250,7 @@ function CustomerModal({ onClose, onAdd }) {
             <X aria-hidden="true" size={18} />
           </button>
         </div>
-        <form onSubmit={submit} className="space-y-4">
+        <form noValidate onSubmit={submit} className="space-y-4">
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold text-gray-700">{t('customers.fullName')}</span>
             <input
@@ -256,6 +259,18 @@ function CustomerModal({ onClose, onAdd }) {
               value={form.name}
               onChange={update('name')}
               placeholder="e.g. Hana Girma"
+              className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-gray-700">Temporary password</span>
+            <input
+              required
+              type="password"
+              minLength={8}
+              value={form.password}
+              onChange={update('password')}
+              autoComplete="new-password"
               className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
             />
           </label>
@@ -457,12 +472,40 @@ function CustomerDrawer({ customer, onClose, onToggleStatus }) {
 
 function Customers() {
   const { t } = useLanguage()
+  const toast = useToast()
   const [customers, setCustomers] = useState(initialCustomers)
   const [search, setSearch] = useState('')
   const [segment, setSegment] = useState('All')
   const [sort, setSort] = useState('spent')
   const [selectedId, setSelectedId] = useState(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    customersApi.getAll()
+      .then(({ data }) => {
+        if (!active) return
+        setCustomers((data.users || []).map((customer) => ({
+          id: customer.id,
+          name: customer.fullName,
+          email: customer.email,
+          phone: customer.phone || '',
+          area: customer.addresses?.[0]?.zone || '',
+          orders: 0,
+          spent: 0,
+          lastOrder: 'No orders yet',
+          tier: 'New',
+          status: customer.status === 'SUSPENDED' ? 'Suspended' : 'Active',
+          createdAt: customer.createdAt,
+          addresses: (customer.addresses || []).map((address) => address.street),
+          recentOrders: [],
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load customers.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const visibleCustomers = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -491,40 +534,93 @@ function Customers() {
   const vipCount = customers.filter((customer) => customer.tier === 'VIP').length
   const activeCount = customers.filter((customer) => customer.status === 'Active').length
 
-  const toggleStatus = (customer) => {
-    setCustomers((current) =>
-      current.map((item) =>
-        item.id === customer.id
-          ? { ...item, status: item.status === 'Active' ? 'Suspended' : 'Active' }
-          : item,
-      ),
-    )
+  const toggleStatus = async (customer) => {
+    const nextStatus = customer.status === 'Active' ? 'Suspended' : 'Active'
+    try {
+      await customersApi.update(customer.id, { status: nextStatus.toUpperCase() })
+      setCustomers((current) => current.map((item) =>
+        item.id === customer.id ? { ...item, status: nextStatus } : item,
+      ))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update this account.'))
+      return
+    }
+    logAuditEvent({
+      action: nextStatus === 'Suspended' ? 'Suspended customer' : 'Activated customer',
+      category: 'Administration',
+      resource: customer.name,
+    })
+    toast.success(`${customer.name}'s account ${customer.status === 'Active' ? 'suspended' : 'activated'}.`)
   }
 
-  const addCustomer = (form) => {
-    const nextCustomer = {
-      id: `C-${Date.now()}`,
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      area: form.area,
-      orders: 0,
-      spent: 0,
-      lastOrder: 'No orders yet',
-      tier: 'New',
-      status: 'Active',
-      createdAt: new Date().toISOString().slice(0, 10),
-      addresses: [form.area],
-      recentOrders: [],
+  const addCustomer = async (form) => {
+    if (
+      !form.name.trim() ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) ||
+      !form.phone.trim() ||
+      !form.area ||
+      form.password.length < 8
+    ) {
+      toast.error('Enter a valid name, email, phone number, and delivery area.')
+      return
+    }
+    if (customers.some((customer) => customer.email.toLowerCase() === form.email.trim().toLowerCase())) {
+      toast.error('A customer with this email already exists.')
+      return
+    }
+    let nextCustomer
+    try {
+      const { data } = await customersApi.create({
+        fullName: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        password: form.password,
+      })
+      nextCustomer = {
+        id: data.user.id,
+        name: data.user.fullName,
+        email: data.user.email,
+        phone: data.user.phone || '',
+        area: form.area,
+        orders: 0,
+        spent: 0,
+        lastOrder: 'No orders yet',
+        tier: 'New',
+        status: 'Active',
+        createdAt: data.user.createdAt,
+        addresses: [form.area],
+        recentOrders: [],
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not create this customer account.'))
+      return
     }
     setCustomers((current) => [nextCustomer, ...current])
+    logAuditEvent({
+      action: 'Added customer record',
+      category: 'Administration',
+      resource: nextCustomer.email,
+    })
     setAddModalOpen(false)
+    toast.success(`${nextCustomer.name} added successfully.`)
   }
 
-  const deleteCustomer = (customer) => {
+  const deleteCustomer = async (customer) => {
     if (!window.confirm(`Delete ${customer.name}'s customer record?`)) return
-    setCustomers((current) => current.filter((item) => item.id !== customer.id))
+    try {
+      await customersApi.remove(customer.id)
+      setCustomers((current) => current.filter((item) => item.id !== customer.id))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not delete this customer account.'))
+      return
+    }
+    logAuditEvent({
+      action: 'Deleted customer record',
+      category: 'Administration',
+      resource: customer.email,
+    })
     if (selectedId === customer.id) setSelectedId(null)
+    toast.success(`${customer.name} deleted successfully.`)
   }
 
   const exportCsv = () => {
@@ -549,6 +645,7 @@ function Customers() {
     link.click()
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast.success('Customer list exported successfully.')
   }
 
   return (

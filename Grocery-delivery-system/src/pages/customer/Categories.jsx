@@ -1,7 +1,8 @@
 import { ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { categories, products } from '../../data/mockData.js'
-import categorySlug from '../../utils/categorySlug.js'
+import { categories as categoriesApi, getApiErrorMessage } from '../../services/api.js'
+import { useToast } from '../../context/ToastContext.jsx'
 
 const aisleDetails = {
   'Fruits & Vegetables': {
@@ -47,6 +48,21 @@ const aisleDetails = {
 }
 
 function Categories() {
+  const toast = useToast()
+  const [categories, setCategories] = useState([])
+
+  useEffect(() => {
+    let active = true
+    categoriesApi.getAll()
+      .then((items) => {
+        if (active) setCategories(items)
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load categories.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
+
   return (
     <div className="space-y-8">
       <header className="rounded-3xl bg-gradient-to-br from-[#F3FAF6] via-white to-[#FFF4EC] p-6 sm:p-9">
@@ -67,21 +83,30 @@ function Categories() {
         className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4"
       >
         {categories.map((category) => {
-          const details = aisleDetails[category]
-          const itemCount = products.filter(
-            (product) => product.category === category,
-          ).length
+          const aliases = {
+            Bakery: 'Bakery & Bread',
+            'Meat & Poultry': 'Meat & Seafood',
+            'Pantry Staples': 'Pantry & Grains',
+            Beverages: 'Beverages & Juice',
+            Snacks: 'Snacks & Nuts',
+          }
+          const details = aisleDetails[category.name] || aisleDetails[aliases[category.name]] || {
+            image: category.image || '',
+            description: category.description || 'Explore fresh groceries and everyday essentials.',
+            popularItems: [],
+          }
+          const itemCount = category._count?.products || 0
 
           return (
             <Link
-              key={category}
-              to={`/shop?category=${categorySlug(category)}`}
+              key={category.id}
+              to={`/shop?category=${encodeURIComponent(category.slug)}`}
               className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E8E3E]"
             >
               <div className="relative aspect-[16/10] overflow-hidden bg-emerald-50">
                 <img
                   src={details.image}
-                  alt={category}
+                  alt={category.name}
                   loading="lazy"
                   className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                 />
@@ -90,7 +115,7 @@ function Categories() {
                 </span>
               </div>
               <div className="flex flex-1 flex-col p-5">
-                <h2 className="text-lg font-bold text-[#0E532B]">{category}</h2>
+                <h2 className="text-lg font-bold text-[#0E532B]">{category.name}</h2>
                 <p className="mt-2 text-sm leading-6 text-gray-600">
                   {details.description}
                 </p>

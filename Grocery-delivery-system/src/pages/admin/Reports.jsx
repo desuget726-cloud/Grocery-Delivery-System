@@ -1,15 +1,16 @@
 import { Download, TrendingUp } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AdminPageHeader, StatCard, StatusBadge } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import { loadOrders, products as initialProducts } from '../../data/mockData.js'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { getApiErrorMessage, orders as ordersApi, products as productsApi } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 function Reports() {
   const { t } = useLanguage()
-  const [orders] = usePersistentState('grocery-orders', loadOrders)
-  const [products] = usePersistentState('admin-products', initialProducts)
+  const toast = useToast()
+  const [orders, setOrders] = useState([])
+  const [products, setProducts] = useState([])
   const todayDate = new Date()
   const today = todayDate.toISOString().slice(0, 10)
   const monthAgoDate = new Date(todayDate)
@@ -17,6 +18,20 @@ function Reports() {
   const monthAgo = monthAgoDate.toISOString().slice(0, 10)
   const [startDate, setStartDate] = useState(monthAgo)
   const [endDate, setEndDate] = useState(today)
+
+  useEffect(() => {
+    let active = true
+    Promise.all([ordersApi.getAll(), productsApi.getAll({ includeInactive: 'true' })])
+      .then(([nextOrders, nextProducts]) => {
+        if (!active) return
+        setOrders(nextOrders)
+        setProducts(nextProducts)
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load report data.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const filteredOrders = useMemo(
     () =>
@@ -83,6 +98,7 @@ function Reports() {
     anchor.download = `grocery-sales-${startDate}-to-${endDate}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
+    toast.success('Sales report exported successfully.')
   }
 
   const chartMax = Math.max(1, ...dailySales.map((item) => item.amount))

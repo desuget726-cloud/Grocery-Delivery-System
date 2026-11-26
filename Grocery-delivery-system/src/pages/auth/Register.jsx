@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import saladBowl from '../../assets/register-salad.svg'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 
 const initialValues = {
   fullName: '',
@@ -26,6 +27,7 @@ const initialValues = {
 }
 
 function Register() {
+  const toast = useToast()
   const { loading, register } = useAuth()
   const navigate = useNavigate()
   const [values, setValues] = useState(initialValues)
@@ -73,6 +75,7 @@ function Register() {
     setSubmitError('')
 
     if (!validate()) {
+      toast.error('Please correct the highlighted fields before continuing.')
       return
     }
 
@@ -90,7 +93,9 @@ function Register() {
   }
 
   const showSocialSignInMessage = (provider) => {
-    setSubmitError(`${provider} sign-up is not connected yet. Please use the form above.`)
+    const message = `${provider} sign-up is not connected yet. Please use the form above.`
+    setSubmitError(message)
+    toast.error(message)
   }
 
   return (

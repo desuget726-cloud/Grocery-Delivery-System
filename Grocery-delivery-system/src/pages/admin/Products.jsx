@@ -21,27 +21,15 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import { categories as categoryOptions } from '../../data/mockData.js'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { categories as categoriesApi, getApiErrorMessage, normalizeProduct, products as productsApi } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
-
-const initialProducts = [
-  { id: 'gds-frt-01', name: 'Red Apples', sku: 'GDS-FRT-01', category: 'Fruits & Vegetables', unit: '1 kg', price: 185, compareAtPrice: 220, stock: 32, lowStockThreshold: 8, image: 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=800&q=85', description: 'Crisp, sweet red apples selected fresh from the orchard.', active: true, featured: true },
-  { id: 'gds-fvt-02', name: 'Ripe Avocados', sku: 'GDS-FRT-02', category: 'Fruits & Vegetables', unit: '500 g', price: 120, stock: 4, lowStockThreshold: 8, image: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=800&q=85', description: 'Creamy, perfectly ripe avocados, ready to enjoy.', active: true, featured: false },
-  { id: 'gds-fvt-03', name: 'Fresh Tomatoes', sku: 'GDS-FRT-03', category: 'Fruits & Vegetables', unit: '1 kg', price: 95, stock: 24, lowStockThreshold: 8, image: 'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=800&q=85', description: 'Juicy, vine-ripened tomatoes for everyday cooking.', active: true, featured: false },
-  { id: 'gds-dry-01', name: 'Whole Milk', sku: 'GDS-DRY-01', category: 'Dairy & Eggs', unit: '1 Liter', price: 110, stock: 18, lowStockThreshold: 6, image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=800&q=85', description: 'Fresh, rich whole milk from local dairy farms.', active: true, featured: true },
-  { id: 'gds-dry-02', name: 'Farm Fresh Eggs', sku: 'GDS-DRY-02', category: 'Dairy & Eggs', unit: '12 pcs', price: 165, compareAtPrice: 190, stock: 0, lowStockThreshold: 6, image: 'https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?auto=format&fit=crop&w=800&q=85', description: 'A dozen farm-fresh eggs, packed with care.', active: false, featured: false },
-  { id: 'gds-bak-01', name: 'Traditional Bread', sku: 'GDS-BAK-01', category: 'Bakery', unit: '1 Loaf', price: 75, stock: 14, lowStockThreshold: 5, image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=800&q=85', description: 'Soft, freshly baked bread with a golden crust.', active: true, featured: false },
-  { id: 'gds-pan-01', name: 'Long Grain Rice', sku: 'GDS-PAN-01', category: 'Pantry', unit: '2 kg', price: 260, stock: 9, lowStockThreshold: 5, image: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=85', description: 'Light, fluffy long-grain rice for the family table.', active: true, featured: false },
-  { id: 'gds-pan-02', name: 'Arabica Coffee', sku: 'GDS-PAN-02', category: 'Pantry', unit: '500 g', price: 480, compareAtPrice: 550, stock: 6, lowStockThreshold: 5, image: 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?auto=format&fit=crop&w=800&q=85', description: 'Aromatic, freshly roasted Arabica coffee beans.', active: true, featured: true },
-  { id: 'gds-fvt-04', name: 'Yellow Bananas', sku: 'GDS-FRT-04', category: 'Fruits & Vegetables', unit: '1 kg', price: 85, stock: 42, lowStockThreshold: 8, image: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=800&q=85', description: 'Naturally sweet bananas, a perfect everyday snack.', active: true, featured: false },
-  { id: 'gds-fvt-05', name: 'Russet Potatoes', sku: 'GDS-FRT-05', category: 'Fruits & Vegetables', unit: '1 kg', price: 70, stock: 2, lowStockThreshold: 8, image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=800&q=85', description: 'Versatile, hearty potatoes for roasting, mashing, and more.', active: true, featured: false },
-]
 
 const emptyProduct = {
   name: '',
   sku: '',
-  category: categoryOptions[0],
+  category: '',
   unit: '1 kg',
   regularPrice: '',
   price: '',
@@ -78,11 +66,9 @@ function ProductImage({ src, name, className = '' }) {
 
 function Products() {
   const { t } = useLanguage()
-  const [products, setProducts] = usePersistentState('admin-products', initialProducts)
-  const [managedCategories] = usePersistentState(
-    'admin-categories',
-    () => categoryOptions.map((name, index) => ({ id: `category-${index + 1}`, name })),
-  )
+  const toast = useToast()
+  const [products, setProducts] = useState([])
+  const [managedCategories, setManagedCategories] = useState([])
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All categories')
   const [stockFilter, setStockFilter] = useState('All')
@@ -95,6 +81,23 @@ function Products() {
   const [productModalOpen, setProductModalOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [localPreview, setLocalPreview] = useState('')
+
+  useEffect(() => {
+    let active = true
+    Promise.all([
+      productsApi.getAll({ includeInactive: 'true' }),
+      categoriesApi.getAll({ includeInactive: 'true' }),
+    ])
+      .then(([nextProducts, nextCategories]) => {
+        if (!active) return
+        setProducts(nextProducts)
+        setManagedCategories(nextCategories)
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load catalog data.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   useEffect(() => {
     return () => {
@@ -131,8 +134,57 @@ function Products() {
   const pageProducts = filteredProducts.slice((page - 1) * pageSize, page * pageSize)
   const visibleSelected = pageProducts.length > 0 && pageProducts.every((product) => selectedIds.includes(product.id))
 
-  const updateProduct = (id, changes) => {
-    setProducts((current) => current.map((product) => (product.id === id ? { ...product, ...changes } : product)))
+  const updateProduct = async (id, changes) => {
+    const product = products.find((item) => item.id === id)
+    if (!product) return
+    try {
+      let updatedProduct
+      if (Object.prototype.hasOwnProperty.call(changes, 'stock')) {
+        const quantity = Number(changes.stock) - Number(product.stock)
+        if (quantity !== 0) {
+          const type = quantity > 0 ? 'RESTOCK' : 'DAMAGED'
+          const { data } = await productsApi.updateStock(id, { quantity, type })
+          updatedProduct = data.product
+        } else {
+          updatedProduct = product
+        }
+      }
+      const details = { ...changes }
+      delete details.stock
+      if (Object.keys(details).length) {
+        if ('active' in details) {
+          details.isActive = details.active
+          delete details.active
+        }
+        if ('featured' in details) {
+          details.isFeatured = details.featured
+          delete details.featured
+        }
+        const { data } = await productsApi.update(id, details)
+        updatedProduct = data.product
+      }
+      setProducts((current) => current.map((item) =>
+        item.id === id ? { ...item, ...normalizeProduct(updatedProduct) } : item,
+      ))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update this product.'))
+      return
+    }
+    if (product) {
+      logAuditEvent({
+        action: 'Updated product',
+        category: 'Administration',
+        resource: product.name,
+        details: Object.keys(changes).join(', '),
+      })
+    }
+    if (product && 'active' in changes) {
+      toast.success(`${product.name} ${changes.active ? 'activated' : 'deactivated'}.`)
+    } else if (product && 'featured' in changes) {
+      toast.success(`${product.name} ${changes.featured ? 'featured' : 'removed from featured products'}.`)
+    } else if (product && 'stock' in changes) {
+      toast.success(`${product.name} stock updated.`)
+    }
   }
   const openAddModal = () => {
     setEditingProduct(null)
@@ -158,25 +210,75 @@ function Products() {
     setProductModalOpen(false)
     setLocalPreview('')
   }
-  const handleSaveProduct = (event) => {
+  const handleSaveProduct = async (event) => {
     event.preventDefault()
     const regularPrice = Number(draft.regularPrice || draft.price)
     const salePrice = Number(draft.price)
+    const stock = Number(draft.stock)
+    if (
+      !draft.name.trim() ||
+      !draft.sku.trim() ||
+      !Number.isFinite(regularPrice) ||
+      regularPrice <= 0 ||
+      !Number.isFinite(stock) ||
+      stock < 0
+    ) {
+      toast.error('Enter a product name, SKU, valid price, and non-negative stock amount.')
+      return
+    }
     const hasSale = Boolean(draft.price) && salePrice < regularPrice
-    const product = {
-      ...draft,
-      id: editingProduct?.id || `product-${Date.now()}`,
+    const categoryId = managedCategories.find((category) => category.name === draft.category)?.id
+    if (!categoryId) {
+      toast.error('Choose an existing category before saving this product.')
+      return
+    }
+    const payload = {
       name: draft.name.trim(),
       sku: draft.sku.trim(),
+      categoryId,
+      unit: draft.unit.trim(),
       price: hasSale ? salePrice : regularPrice,
       compareAtPrice: hasSale ? regularPrice : null,
-      stock: Math.max(0, Number(draft.stock)),
-      lowStockThreshold: Math.max(0, Number(draft.lowStockThreshold)),
+      stock: Math.max(0, stock),
+      lowStockThreshold: Math.max(0, Number(draft.lowStockThreshold) || 0),
+      image: draft.image || null,
+      description: draft.description,
+      isActive: Boolean(draft.active),
+      isFeatured: Boolean(draft.featured),
     }
-    setProducts((current) => editingProduct
-      ? current.map((item) => (item.id === editingProduct.id ? product : item))
-      : [product, ...current])
+    try {
+      let savedProduct
+      if (editingProduct) {
+        const { stock: newStock, ...productDetails } = payload
+        const { data } = await productsApi.update(editingProduct.id, productDetails)
+        savedProduct = normalizeProduct(data.product)
+        const stockAdjustment = Number(newStock) - Number(editingProduct.stock)
+        if (stockAdjustment !== 0) {
+          const { data: stockData } = await productsApi.updateStock(editingProduct.id, {
+            quantity: stockAdjustment,
+            type: stockAdjustment > 0 ? 'RESTOCK' : 'DAMAGED',
+          })
+          savedProduct = normalizeProduct(stockData.product)
+        }
+      } else {
+        const { data } = await productsApi.create(payload)
+        savedProduct = normalizeProduct(data.product)
+      }
+      setProducts((current) => editingProduct
+        ? current.map((item) => (item.id === editingProduct.id ? savedProduct : item))
+        : [savedProduct, ...current])
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not save this product.'))
+      return
+    }
+    const product = { ...payload, name: payload.name }
+    logAuditEvent({
+      action: editingProduct ? 'Updated product' : 'Created product',
+      category: 'Administration',
+      resource: product.name,
+    })
     closeProductModal()
+    toast.success(editingProduct ? 'Product updated successfully.' : 'Product created successfully.')
   }
   const toggleSelection = (id) => setSelectedIds((current) => (
     current.includes(id) ? current.filter((selectedId) => selectedId !== id) : [...current, id]
@@ -186,10 +288,27 @@ function Products() {
       ? current.filter((id) => !pageProducts.some((product) => product.id === id))
       : [...new Set([...current, ...pageProducts.map((product) => product.id)])]
   ))
-  const deleteSelected = () => {
-    setProducts((current) => current.filter((product) => !selectedIds.includes(product.id)))
+  const deleteSelected = async () => {
+    if (selectedIds.length === 0) {
+      toast.warning('Select at least one product to delete.')
+      return
+    }
+    try {
+      await Promise.all(selectedIds.map((id) => productsApi.remove(id)))
+      setProducts((current) => current.filter((product) => !selectedIds.includes(product.id)))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not delete the selected products.'))
+      return
+    }
+    logAuditEvent({
+      action: 'Deleted products',
+      category: 'Administration',
+      resource: 'Product catalog',
+      details: `Count: ${selectedIds.length}`,
+    })
     setSelectedIds([])
     setPage(1)
+    toast.success(`${selectedIds.length} product${selectedIds.length === 1 ? '' : 's'} deleted successfully.`)
   }
   const exportCsv = () => {
     const columns = ['SKU', 'Name', 'Category', 'Unit', 'Price ETB', 'Sale Price ETB', 'Stock', 'Status', 'Active']
@@ -204,11 +323,74 @@ function Products() {
     link.download = 'grocery-products.csv'
     link.click()
     URL.revokeObjectURL(url)
+    toast.success('Product list exported successfully.')
   }
-  const duplicateProduct = (product) => {
-    setProducts((current) => [{ ...product, id: `product-${Date.now()}`, name: `${product.name} (copy)`, sku: `${product.sku}-COPY` }, ...current])
+  const duplicateProduct = async (product) => {
+    try {
+      const { data } = await productsApi.create({
+        name: `${product.name} (copy)`,
+        sku: `${product.sku}-COPY`,
+        categoryId: product.categoryId,
+        unit: product.unit,
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        stock: product.stock,
+        lowStockThreshold: product.lowStockThreshold,
+        image: product.image,
+        description: product.description,
+        isActive: product.active,
+        isFeatured: product.featured,
+      })
+      setProducts((current) => [normalizeProduct(data.product), ...current])
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not duplicate this product.'))
+      return
+    }
+    logAuditEvent({
+      action: 'Duplicated product',
+      category: 'Administration',
+      resource: product.name,
+    })
+    toast.success(`${product.name} duplicated successfully.`)
   }
   const adjustStock = (product, amount) => updateProduct(product.id, { stock: Math.max(0, Number(product.stock) + amount) })
+  const markSelectedOutOfStock = async () => {
+    if (!selectedIds.length) {
+      toast.warning('Select at least one product.')
+      return
+    }
+    try {
+      await Promise.all(selectedIds.map(async (id) => {
+        const product = products.find((item) => item.id === id)
+        if (!product) return
+        const requests = [productsApi.update(id, { isActive: false })]
+        if (Number(product.stock) > 0) {
+          requests.push(productsApi.updateStock(id, { quantity: -Number(product.stock), type: 'DAMAGED' }))
+        }
+        await Promise.all(requests)
+      }))
+      setProducts(await productsApi.getAll({ includeInactive: 'true' }))
+      toast.success(`${selectedIds.length} product${selectedIds.length === 1 ? '' : 's'} marked out of stock.`)
+      setSelectedIds([])
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update selected products.'))
+    }
+  }
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    const deletedName = deleteTarget.name
+    try {
+      await productsApi.remove(deleteTarget.id)
+      setProducts((current) => current.filter((product) => product.id !== deleteTarget.id))
+      setSelectedIds((current) => current.filter((id) => id !== deleteTarget.id))
+      setPage(1)
+      setDeleteTarget(null)
+      logAuditEvent({ action: 'Deleted product', category: 'Administration', resource: deletedName })
+      toast.success(`${deletedName} deleted successfully.`)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not delete this product.'))
+    }
+  }
   const setStatusFilter = (status) => {
     setStockFilter(status)
     setPage(1)
@@ -313,7 +495,7 @@ function Products() {
             <p className="text-sm font-semibold text-[#0E532B]">{selectedIds.length} {t('common.selected')}</p>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1.5 rounded-lg border border-orange-200 bg-white px-3 py-2 text-xs font-semibold text-[#F04E00] hover:bg-orange-50"><Trash2 size={14} /> {t('products.deleteSelected')}</button>
-              <button type="button" onClick={() => { setProducts((current) => current.map((product) => selectedIds.includes(product.id) ? { ...product, stock: 0, active: false } : product)); setSelectedIds([]) }} className="rounded-lg border border-[#0B4B8C]/30 bg-white px-3 py-2 text-xs font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">{t('products.markOutOfStock')}</button>
+              <button type="button" onClick={markSelectedOutOfStock} className="rounded-lg border border-[#0B4B8C]/30 bg-white px-3 py-2 text-xs font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">{t('products.markOutOfStock')}</button>
               <button type="button" aria-label={t('products.clearSelection')} onClick={() => setSelectedIds([])} className="rounded-lg p-2 text-slate-500 hover:bg-white"><X size={15} /></button>
             </div>
           </div>
@@ -395,7 +577,7 @@ function Products() {
 
       {productModalOpen && (
         <Modal title={editingProduct ? `${t('common.edit')} ${t('products.product')}` : t('addProduct')} onClose={closeProductModal} size="max-w-3xl">
-          <form onSubmit={handleSaveProduct} className="space-y-5">
+          <form noValidate onSubmit={handleSaveProduct} className="space-y-5">
             <div className="grid gap-5 md:grid-cols-[200px_1fr]">
               <div>
                 <p className="mb-2 text-sm font-semibold text-slate-700">{t('products.productImage')}</p>
@@ -465,7 +647,7 @@ function Products() {
           <p className="text-sm text-slate-600">{t('products.deleteProductConfirmation')}</p>
           <div className="mt-6 flex justify-end gap-2">
             <button type="button" onClick={() => setDeleteTarget(null)} className="rounded-lg border border-[#0B4B8C]/30 px-4 py-2 text-sm font-semibold text-[#0B4B8C] hover:bg-[#0B4B8C] hover:text-white">{t('common.cancel')}</button>
-            <button type="button" onClick={() => { setProducts((current) => current.filter((product) => product.id !== deleteTarget.id)); setSelectedIds((current) => current.filter((id) => id !== deleteTarget.id)); setPage(1); setDeleteTarget(null) }} className="rounded-lg bg-[#F04E00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#C54100]">{t('products.deleteProduct')}</button>
+            <button type="button" onClick={confirmDelete} className="rounded-lg bg-[#F04E00] px-4 py-2 text-sm font-semibold text-white hover:bg-[#C54100]">{t('products.deleteProduct')}</button>
           </div>
         </Modal>
       )}

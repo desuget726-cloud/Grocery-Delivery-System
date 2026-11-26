@@ -1,42 +1,39 @@
 import { Check, Copy, Heart, ShoppingCart, Tag } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCart } from '../../context/CartContext.jsx'
 import { useWishlist } from '../../context/WishlistContext.jsx'
-import { products } from '../../data/mockData.js'
+import { coupons as couponsApi, getApiErrorMessage, products as productsApi } from '../../services/api.js'
+import { useToast } from '../../context/ToastContext.jsx'
 import formatCurrency from '../../utils/formatCurrency.js'
 
-const promoCodes = [
-  { code: 'WELCOME10', description: '10% Off', detail: 'A fresh welcome for your first order.' },
-  { code: 'FRESH100', description: '100 ETB Off', detail: 'Save 100 ETB on your grocery basket.' },
-  { code: 'FREEDEL', description: 'Free Delivery', detail: 'Free delivery on orders over 500 ETB.' },
-]
-
-const discountRates = [15, 20, 10, 25, 12, 18]
-
-const discountedProducts = products
-  .filter((product) => product.stock > 0)
-  .slice(0, 6)
-  .map((product, index) => {
-    const regularPrice = Number(product.originalPrice) > Number(product.price)
-      ? Number(product.originalPrice)
-      : Number(product.price) / (1 - discountRates[index % discountRates.length] / 100)
-    const discount = Math.round(
-      ((regularPrice - Number(product.price)) / regularPrice) * 100,
-    )
-
-    return {
-      ...product,
-      originalPrice: Number(regularPrice.toFixed(2)),
-      discount,
-    }
-  })
-
 function Offers() {
+  const toast = useToast()
   const { addToCart } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
+  const [promoCodes, setPromoCodes] = useState([])
+  const [discountedProducts, setDiscountedProducts] = useState([])
   const [copyStatus, setCopyStatus] = useState({})
   const [addedProductId, setAddedProductId] = useState('')
   const [wishlistError, setWishlistError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    Promise.all([couponsApi.getAll(), productsApi.getAll({ onSale: 'true' })])
+      .then(([couponResponse, products]) => {
+        if (!active) return
+        setPromoCodes(couponResponse.data.coupons || [])
+        setDiscountedProducts(products.map((product) => ({
+          ...product,
+          discount: product.originalPrice
+            ? Math.round((1 - Number(product.price) / Number(product.originalPrice)) * 100)
+            : 0,
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load current offers.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const copyPromoCode = async (code) => {
     if (!navigator.clipboard?.writeText) {
@@ -65,15 +62,14 @@ function Offers() {
     window.setTimeout(() => setAddedProductId(''), 1800)
   }
 
-  const handleWishlistToggle = (event, product) => {
+  const handleWishlistToggle = async (event, product) => {
     event.preventDefault()
     event.stopPropagation()
     try {
-      toggleWishlist(product)
+      await toggleWishlist(product)
       setWishlistError('')
     } catch (error) {
-      console.error('Unable to save the wishlist:', error)
-      setWishlistError('Wishlist could not be saved. Please try again.')
+      setWishlistError(error.message || 'Wishlist could not be saved. Please try again.')
     }
   }
 
@@ -98,9 +94,16 @@ function Offers() {
           <h2 className="mt-1 text-2xl font-bold text-[#0E532B]">Promo codes</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {promoCodes.map(({ code, description, detail }) => (
+          {promoCodes.map((coupon) => {
+            const description = coupon.discountType === 'PERCENTAGE'
+              ? `${Number(coupon.value)}% Off`
+              : coupon.discountType === 'FIXED'
+                ? `${formatCurrency(Number(coupon.value))} Off`
+                : 'Free Delivery'
+            const detail = coupon.description || `Minimum order ${formatCurrency(Number(coupon.minOrder || 0))}.`
+            return (
             <article
-              key={code}
+              key={coupon.id}
               className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
@@ -113,34 +116,35 @@ function Offers() {
               </div>
               <p className="mt-4 text-sm text-gray-600">{detail}</p>
               <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-dashed border-emerald-200 bg-[#F3FAF6] p-3">
-                <code className="font-bold tracking-wider text-[#0E532B]">{code}</code>
+                <code className="font-bold tracking-wider text-[#0E532B]">{coupon.code}</code>
                 <button
                   type="button"
-                  onClick={() => copyPromoCode(code)}
+                  onClick={() => copyPromoCode(coupon.code)}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-[#0B4B8C] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#083c70] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B4B8C]"
                 >
-                  {copyStatus[code] === 'Copied!' ? (
+                  {copyStatus[coupon.code] === 'Copied!' ? (
                     <Check aria-hidden="true" size={14} />
                   ) : (
                     <Copy aria-hidden="true" size={14} />
                   )}
-                  {copyStatus[code] === 'Copied!' ? 'Copied' : 'Copy Code'}
+                  {copyStatus[coupon.code] === 'Copied!' ? 'Copied' : 'Copy Code'}
                 </button>
               </div>
-              {copyStatus[code] && (
+              {copyStatus[coupon.code] && (
                 <p
                   role="status"
                   className={`mt-2 text-xs ${
-                    copyStatus[code] === 'Copied!'
+                    copyStatus[coupon.code] === 'Copied!'
                       ? 'text-emerald-700'
                       : 'text-rose-700'
                   }`}
                 >
-                  {copyStatus[code]}
+                  {copyStatus[coupon.code]}
                 </p>
               )}
             </article>
-          ))}
+            )
+          })}
         </div>
       </section>
 

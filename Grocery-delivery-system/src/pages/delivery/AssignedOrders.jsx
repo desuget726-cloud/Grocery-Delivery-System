@@ -1,68 +1,41 @@
 import { ArrowRight, Navigation, Phone } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDelivery } from '../../context/DeliveryContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 
-const deliveries = [
-  {
-    id: 'GDS-2538',
-    status: 'Out for Delivery',
-    customer: 'Abebe Kebede',
-    phone: '+251911234567',
-    dropoff: 'Bole Medhanialem, Near Edna Mall',
-    distance: '2.4 km',
-    eta: '10 mins',
-    payment: 'COD',
-    paymentLabel: 'COD: 680.00 ETB',
-    payout: '+75.00 ETB',
-  },
-  {
-    id: 'GDS-2539',
-    status: 'Ready for Pickup',
-    customer: 'Selam Tesfaye',
-    phone: '+251911345678',
-    dropoff: 'Guinea Conakry Street, Kazanchis',
-    distance: '3.1 km',
-    eta: '15 mins',
-    payment: 'Paid',
-    paymentLabel: 'Paid: Telebirr',
-    payout: '+80.00 ETB',
-  },
-  {
-    id: 'GDS-2540',
-    status: 'Out for Delivery',
-    customer: 'Yared Lemma',
-    phone: '+251922456789',
-    dropoff: 'Sunshine Real Estate, Sarbet',
-    distance: '4.8 km',
-    eta: '22 mins',
-    payment: 'COD',
-    paymentLabel: 'COD: 920.00 ETB',
-    payout: '+65.00 ETB',
-  },
-  {
-    id: 'GDS-2541',
-    status: 'Ready for Pickup',
-    customer: 'Meron Assefa',
-    phone: '+251933567890',
-    dropoff: 'Around Megenagna Square',
-    distance: '5.3 km',
-    eta: '25 mins',
-    payment: 'Paid',
-    paymentLabel: 'Paid: Telebirr',
-    payout: '+70.00 ETB',
-  },
-]
-
-const filters = ['All Active', 'Ready for Pickup', 'Out for Delivery']
+const filters = ['All Active', 'Incoming', 'Accepted', 'Picked Up', 'Out for Delivery', 'Issue Reported']
 
 function AssignedOrders() {
+  const toast = useToast()
   const { t } = useLanguage()
+  const { activeOrders, acceptOrder, advanceOrderStatus, declineOrder } = useDelivery()
   const [filter, setFilter] = useState('All Active')
+  const [actionError, setActionError] = useState('')
   const visibleDeliveries =
     filter === 'All Active'
-      ? deliveries
-      : deliveries.filter((delivery) => delivery.status === filter)
+      ? activeOrders
+      : activeOrders.filter((delivery) =>
+          filter === 'Issue Reported'
+            ? delivery.exception
+            : delivery.status === filter,
+        )
+
+  const runOrderAction = async (action, successMessage, successType = 'success') => {
+    setActionError('')
+    try {
+      await action()
+      toast[successType](successMessage)
+    } catch (error) {
+      setActionError(error.message)
+      if (error.message.includes('Verify every grocery item')) {
+        toast.warning(error.message)
+      } else {
+        toast.error(error.message || 'Unable to update this delivery.')
+      }
+    }
+  }
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-10 py-6 pb-24">
@@ -98,7 +71,7 @@ function AssignedOrders() {
                 <p className="text-sm font-extrabold text-[#0B4B8C]">{delivery.id}</p>
                 <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-500">
                   <Navigation aria-hidden="true" size={15} />
-                  {delivery.distance} • {delivery.eta}
+                  {[delivery.distance, delivery.eta].filter(Boolean).join(' • ') || 'Addis Ababa'}
                 </p>
               </div>
               <span
@@ -127,9 +100,9 @@ function AssignedOrders() {
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
                     {t('dropoff')}
                   </p>
-                  <p className="mt-1 font-bold text-slate-900">{delivery.customer}</p>
-                  <p className="mt-1 text-sm text-slate-600">{delivery.dropoff}, Addis Ababa</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">{delivery.phone}</p>
+                  <p className="mt-1 font-bold text-slate-900">{delivery.customerName}</p>
+                  <p className="mt-1 text-sm text-slate-600">{delivery.address}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">{delivery.customerPhone}</p>
                 </div>
               </div>
 
@@ -137,14 +110,18 @@ function AssignedOrders() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span
                     className={`rounded-lg px-3 py-2 text-sm font-extrabold ${
-                      delivery.payment === 'COD'
+                      delivery.paymentMethod === 'COD'
                         ? 'bg-[#F04E00]/10 text-[#F04E00]'
                         : 'bg-[#1E8E3E]/10 text-[#1E8E3E]'
                     }`}
                   >
-                    {delivery.paymentLabel}
+                    {delivery.paymentMethod === 'COD'
+                      ? `COD: ${Number(delivery.total).toFixed(2)} ETB`
+                      : 'Paid: Telebirr'}
                   </span>
-                  <span className="text-sm font-extrabold text-[#0E532B]">{delivery.payout}</span>
+                  <span className="text-sm font-extrabold text-[#0E532B]">
+                    +{Number(delivery.deliveryFee).toFixed(2)} ETB
+                  </span>
                 </div>
                 <p className="text-xs font-semibold text-slate-500">
                   {t('riderTripPayout')}
@@ -154,24 +131,84 @@ function AssignedOrders() {
 
             <div className="mt-5 grid grid-cols-2 gap-2">
               <a
-                href={`tel:${delivery.phone}`}
+                href={`tel:${delivery.customerPhone.replace(/\s/g, '')}`}
                 className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
               >
-                <Phone aria-hidden="true" size={17} /> {t('call')}
+                <Phone aria-hidden="true" size={17} /> Call
               </a>
-              <Link
-                to={`/delivery/details/${delivery.id}`}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-3 text-sm font-bold text-white hover:bg-[#0E532B]"
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(delivery.address)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
               >
-                {delivery.status === 'Ready for Pickup'
-                  ? t('startDelivery')
-                  : t('continue')}
-                <ArrowRight aria-hidden="true" size={17} />
-              </Link>
+                <Navigation aria-hidden="true" size={17} /> Directions
+              </a>
+              {delivery.status === 'Incoming' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => runOrderAction(() => acceptOrder(delivery.id), 'Order accepted.')}
+                    className="flex min-h-12 items-center justify-center rounded-xl bg-[#1E8E3E] px-3 text-sm font-bold text-white hover:bg-[#0E532B]"
+                  >
+                    Accept Order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => runOrderAction(() => declineOrder(delivery.id), 'Order declined.', 'info')}
+                    className="flex min-h-12 items-center justify-center rounded-xl border border-rose-200 px-3 text-sm font-bold text-rose-700 hover:bg-rose-50"
+                  >
+                    Decline
+                  </button>
+                </>
+              ) : delivery.status === 'Accepted' ? (
+                <button
+                  type="button"
+                  onClick={() => runOrderAction(() => advanceOrderStatus(delivery.id, 'Picked Up'), 'Order marked as picked up.')}
+                  className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-3 text-sm font-bold text-white hover:bg-[#0E532B]"
+                >
+                  Mark Picked Up <ArrowRight aria-hidden="true" size={17} />
+                </button>
+              ) : delivery.status === 'Picked Up' ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => runOrderAction(() => advanceOrderStatus(delivery.id, 'Out for Delivery'), 'Delivery started.')}
+                    className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-3 text-sm font-bold text-white hover:bg-[#0E532B] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Start Delivery <ArrowRight aria-hidden="true" size={17} />
+                  </button>
+                  {!delivery.items.every((item) => item.checked) && (
+                    <Link
+                      to={`/delivery/details/${delivery.id}`}
+                      className="col-span-2 text-center text-xs font-semibold text-[#0B4B8C] hover:underline"
+                    >
+                      Verify items before starting
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <Link
+                  to={`/delivery/details/${delivery.id}`}
+                  className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-3 text-sm font-bold text-white hover:bg-[#0E532B]"
+                >
+                  View &amp; Complete <ArrowRight aria-hidden="true" size={17} />
+                </Link>
+              )}
             </div>
           </article>
         ))}
       </div>
+      {actionError && (
+        <p role="alert" className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          {actionError}
+        </p>
+      )}
+      {visibleDeliveries.length === 0 && (
+        <p className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+          No orders match this filter.
+        </p>
+      )}
     </div>
   )
 }

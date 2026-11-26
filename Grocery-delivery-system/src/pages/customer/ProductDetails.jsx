@@ -4,21 +4,47 @@ import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../../components/ProductCard.jsx'
 import { useCart } from '../../context/CartContext.jsx'
 import { useWishlist } from '../../context/WishlistContext.jsx'
-import { products } from '../../data/mockData.js'
+import { getApiErrorMessage, products as productsApi } from '../../services/api.js'
+import { useToast } from '../../context/ToastContext.jsx'
 import categorySlug from '../../utils/categorySlug.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 function ProductDetails() {
   const { id, productId } = useParams()
-  const product = products.find((item) => item.id === (id || productId))
-  const { cart, addToCart, updateQuantity } = useCart()
+  const toast = useToast()
+  const [product, setProduct] = useState(null)
+  const [relatedProducts, setRelatedProducts] = useState([])
+  const [loadedProductId, setLoadedProductId] = useState(null)
+  const { addToCart } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
   const [quantity, setQuantity] = useState(1)
   const [wishlistError, setWishlistError] = useState('')
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [id, productId])
+    let active = true
+    productsApi.getById(id || productId)
+      .then((result) => {
+        if (!active) return
+        setProduct(result.product)
+        setRelatedProducts(result.relatedProducts)
+      })
+      .catch((error) => {
+        if (!active) return
+        setProduct(null)
+        toast.error(getApiErrorMessage(error, 'Could not load this product.'))
+      })
+      .finally(() => {
+        if (active) setLoadedProductId(id || productId)
+      })
+    return () => {
+      active = false
+    }
+  }, [id, productId, toast])
+
+  if (loadedProductId !== (id || productId)) {
+    return <p className="rounded-2xl bg-white p-8 text-center text-slate-500">Loading product…</p>
+  }
 
   if (!product) {
     return (
@@ -31,48 +57,23 @@ function ProductDetails() {
     )
   }
 
-  const cartItem = cart.find((item) => item.id === product.id)
   const inStock = product.stock > 0
   const image = product.image || product.imageUrl
   const isWishlisted = isInWishlist(product.id)
   const isDiscounted = Number(product.originalPrice) > Number(product.price)
-  const relatedProducts = products
-    .filter((item) => item.category === product.category && item.id !== product.id)
-    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-    .slice(0, 5)
-  const featuredProducts = products
-    .filter(
-      (item) =>
-        item.id !== product.id &&
-        !relatedProducts.some((relatedProduct) => relatedProduct.id === item.id),
-    )
-    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
-  for (const featuredProduct of featuredProducts) {
-    if (relatedProducts.length >= 5) break
-    relatedProducts.push(featuredProduct)
-  }
-
-  const handleWishlistToggle = (event) => {
+  const handleWishlistToggle = async (event) => {
     event.preventDefault()
     event.stopPropagation()
     try {
-      toggleWishlist(product)
+      await toggleWishlist(product)
       setWishlistError('')
-    } catch (error) {
-      console.error('Unable to save the wishlist:', error)
-      setWishlistError('Wishlist could not be saved. Please try again.')
+      } catch (error) {
+        setWishlistError(error.message || 'Wishlist could not be saved. Please try again.')
     }
   }
 
   const handleAddToCart = () => {
-    if (cartItem) {
-      updateQuantity(product.id, cartItem.quantity + quantity)
-    } else {
-      addToCart(product)
-      for (let count = 1; count < quantity; count += 1) {
-        addToCart(product)
-      }
-    }
+    addToCart(product, quantity)
   }
 
   return (
@@ -111,7 +112,7 @@ function ProductDetails() {
           </h1>
           <p className="mt-2 text-slate-500">{product.unit}</p>
           <p className="mt-3 text-sm font-semibold text-slate-700">
-            <span className="text-[#F04E00]">4.9 ★</span> • 42 Verified Reviews
+            <span className="text-[#F04E00]">{Number(product.rating || 0).toFixed(1)} ★</span> • {product.reviews?.length || 0} Reviews
           </p>
           <button
             type="button"

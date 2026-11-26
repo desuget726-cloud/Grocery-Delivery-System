@@ -1,232 +1,153 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  authApi,
+  getApiErrorMessage,
+  normalizeRole,
+} from '../services/api.js'
+import { logAuditEvent } from '../services/auditLog.js'
+import { useToast } from './ToastContext.jsx'
 
 const AuthContext = createContext(null)
 const AUTH_STORAGE_KEY = 'grocery-auth'
-const REGISTERED_USERS_KEY = 'registeredUsers'
-const MOCK_PASSWORDS_STORAGE_KEY = 'grocery_mock_passwords'
-const PROFILES_STORAGE_KEY = 'grocery_profiles'
-const roles = ['customer', 'admin', 'delivery']
-const mockUsers = [
-  {
-    id: 'mock-customer',
-    fullName: 'Abebe Kebede',
-    email: 'customer@grocery.et',
-    phone: '+251911223344',
-    password: 'Customer@123',
-    role: 'customer',
-  },
-  {
-    id: 'mock-delivery',
-    fullName: 'Dawit Tadesse',
-    email: 'delivery@grocery.et',
-    phone: '+251922334455',
-    password: 'Delivery@123',
-    role: 'delivery',
-  },
-  {
-    id: 'mock-admin',
-    fullName: 'Administrator',
-    email: 'admin@grocery.et',
-    phone: '+251933445566',
-    password: 'Admin@123',
-    role: 'admin',
-  },
-]
+const roleNames = new Set(['customer', 'admin', 'delivery'])
 
-function isValidAuthRecord(value) {
-  return (
-    value &&
-    typeof value.token === 'string' &&
-    value.user &&
-    typeof value.user.id === 'string' &&
-    typeof value.user.fullName === 'string' &&
-    typeof value.user.email === 'string' &&
-    typeof value.user.phone === 'string' &&
-    (value.expiresAt === undefined || Number.isFinite(value.expiresAt)) &&
-    roles.includes(value.user.role)
-  )
+function normalizeUser(user) {
+  return {
+    ...user,
+    role: normalizeRole(user.role),
+    phone: user.phone || '',
+  }
 }
 
-function readAuthRecord(storage, storageName) {
-  const savedValue = storage.getItem(AUTH_STORAGE_KEY)
-  if (!savedValue) {
-    return null
-  }
+function readAuthRecord(storage) {
+  const saved = storage.getItem(AUTH_STORAGE_KEY)
+  if (!saved) return null
 
-  const record = JSON.parse(savedValue)
-  if (!isValidAuthRecord(record)) {
-    throw new TypeError(`Stored ${storageName} authentication data is invalid`)
+  const record = JSON.parse(saved)
+  if (
+    !record ||
+    typeof record.token !== 'string' ||
+    !record.user ||
+    typeof record.user.id !== 'string' ||
+    typeof record.user.fullName !== 'string' ||
+    typeof record.user.email !== 'string' ||
+    !roleNames.has(normalizeRole(record.user.role))
+  ) {
+    throw new TypeError('Stored authentication data is invalid')
   }
-  if (record.expiresAt !== undefined && record.expiresAt <= Date.now()) {
-    storage.removeItem(AUTH_STORAGE_KEY)
-    storage.removeItem('token')
-    return null
-  }
-  if (record.user.id === 'mock-admin' && record.user.role === 'admin') {
-    return {
-      ...record,
-      user: { ...record.user, fullName: 'Administrator' },
-    }
-  }
-  return record
-}
-
-function loadSavedProfiles() {
-  const savedProfiles = window.localStorage.getItem(PROFILES_STORAGE_KEY)
-  if (!savedProfiles) return {}
-
-  const parsedProfiles = JSON.parse(savedProfiles)
-  if (!parsedProfiles || Array.isArray(parsedProfiles) || typeof parsedProfiles !== 'object') {
-    throw new TypeError('Saved profile data must be an object')
-  }
-  return parsedProfiles
-}
-
-function restoreSavedProfile(user) {
-  try {
-    const savedProfile = loadSavedProfiles()[user.id]
-    if (!savedProfile || typeof savedProfile !== 'object') return user
-
-    return {
-      ...user,
-      ...(typeof savedProfile.fullName === 'string' && { fullName: savedProfile.fullName }),
-      ...(typeof savedProfile.email === 'string' && { email: savedProfile.email }),
-      ...(typeof savedProfile.phone === 'string' && { phone: savedProfile.phone }),
-      ...(typeof savedProfile.avatar === 'string' && { avatar: savedProfile.avatar }),
-    }
-  } catch (error) {
-    console.error('Unable to load saved profile data:', error)
-    return user
-  }
+  return { ...record, user: normalizeUser(record.user) }
 }
 
 function loadAuthRecord() {
-  if (typeof window === 'undefined') {
-    return { user: null, token: null }
-  }
-
-  try {
-    const savedAuth = readAuthRecord(window.localStorage, 'local')
-    if (savedAuth) {
-      return { ...savedAuth, user: restoreSavedProfile(savedAuth.user) }
+  if (typeof window === 'undefined') return { user: null, token: null, rememberMe: false }
+  for (const [storage, rememberMe] of [
+    [window.localStorage, true],
+    [window.sessionStorage, false],
+  ]) {
+    try {
+      const record = readAuthRecord(storage)
+      if (record) return { ...record, rememberMe }
+    } catch (error) {
+      console.error('Unable to load saved authentication:', error)
+      storage.removeItem(AUTH_STORAGE_KEY)
+      storage.removeItem('token')
     }
-  } catch (error) {
-    console.error('Unable to load authentication from localStorage:', error)
   }
-
-  try {
-    const savedAuth = readAuthRecord(window.sessionStorage, 'session')
-    if (savedAuth) {
-      return { ...savedAuth, user: restoreSavedProfile(savedAuth.user) }
-    }
-  } catch (error) {
-    console.error('Unable to load authentication from sessionStorage:', error)
-  }
-
-  return { user: null, token: null }
+  return { user: null, token: null, rememberMe: false }
 }
 
 function persistAuthRecord(record, rememberMe) {
-  const durableStorage = rememberMe ? window.localStorage : window.sessionStorage
-  const otherStorage = rememberMe ? window.sessionStorage : window.localStorage
-  const persistedRecord = { ...record, user: { ...record.user } }
-  delete persistedRecord.user.avatar
+  const destination = rememberMe ? window.localStorage : window.sessionStorage
+  const other = rememberMe ? window.sessionStorage : window.localStorage
+  destination.setItem(AUTH_STORAGE_KEY, JSON.stringify(record))
+  destination.setItem('token', record.token)
+  other.removeItem(AUTH_STORAGE_KEY)
+  other.removeItem('token')
+}
 
-  durableStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(persistedRecord))
-  durableStorage.setItem('token', persistedRecord.token)
-  otherStorage.removeItem(AUTH_STORAGE_KEY)
-  otherStorage.removeItem('token')
+function clearPersistedAuth() {
+  window.localStorage.removeItem(AUTH_STORAGE_KEY)
+  window.localStorage.removeItem('token')
+  window.sessionStorage.removeItem(AUTH_STORAGE_KEY)
+  window.sessionStorage.removeItem('token')
 }
 
 function getRoleRedirectPath(role) {
-  if (role === 'admin') {
-    return '/admin/dashboard'
-  }
-  if (role === 'delivery') {
-    return '/delivery/dashboard'
-  }
+  if (role === 'admin') return '/admin/dashboard'
+  if (role === 'delivery') return '/delivery/dashboard'
   return '/'
 }
 
-function loadRegisteredUsers() {
-  const savedUsers = window.localStorage.getItem(REGISTERED_USERS_KEY)
-  if (!savedUsers) {
-    return []
-  }
-
-  const parsedUsers = JSON.parse(savedUsers)
-  if (!Array.isArray(parsedUsers)) {
-    throw new TypeError('Registered user data must be an array')
-  }
-  return parsedUsers.filter(
-    (registeredUser) =>
-      registeredUser &&
-      registeredUser.role === 'customer' &&
-      typeof registeredUser.email === 'string' &&
-      typeof registeredUser.password === 'string',
-  )
-}
-
-function loadMockPasswords() {
-  const savedPasswords = window.localStorage.getItem(MOCK_PASSWORDS_STORAGE_KEY)
-  if (!savedPasswords) return {}
-
-  const parsedPasswords = JSON.parse(savedPasswords)
-  if (!parsedPasswords || Array.isArray(parsedPasswords) || typeof parsedPasswords !== 'object') {
-    throw new TypeError('Saved mock password data must be an object')
-  }
-  return parsedPasswords
-}
-
 export function AuthProvider({ children }) {
+  const toast = useToast()
   const [authRecord, setAuthRecord] = useState(loadAuthRecord)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return Boolean(
+      window.localStorage.getItem(AUTH_STORAGE_KEY) ||
+      window.sessionStorage.getItem(AUTH_STORAGE_KEY),
+    )
+  })
+
+  const saveAuthResponse = useCallback((response, rememberMe) => {
+    const record = {
+      token: response.token,
+      user: normalizeUser(response.user),
+      rememberMe,
+    }
+    persistAuthRecord(record, rememberMe)
+    setAuthRecord(record)
+    return record
+  }, [])
+
+  useEffect(() => {
+    if (!authRecord.token) {
+      return undefined
+    }
+    const token = authRecord.token
+    const rememberMe = authRecord.rememberMe
+    let active = true
+    authApi.me()
+      .then(({ data }) => {
+        if (!active) return
+        const record = {
+          token,
+          rememberMe,
+          user: normalizeUser(data.user),
+        }
+        persistAuthRecord(record, rememberMe)
+        setAuthRecord(record)
+      })
+      .catch((error) => {
+        if (!active) return
+        if (error.response?.status === 401) {
+          clearPersistedAuth()
+          setAuthRecord({ user: null, token: null, rememberMe: false })
+        } else {
+          toast.error(getApiErrorMessage(error, 'Could not verify your session with the server.'))
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [authRecord.token, authRecord.rememberMe, toast])
 
   const login = async (email, password, rememberMe = false) => {
     setLoading(true)
     try {
-      if (!email?.trim() || !password) {
-        throw new Error('Invalid email or password')
-      }
-
-      const normalizedEmail = email.trim().toLowerCase()
-      const savedMockPasswords = loadMockPasswords()
-      const matchingMockUser = mockUsers.find(
-        (mockUser) =>
-          mockUser.email === normalizedEmail &&
-          (savedMockPasswords[mockUser.id] ?? mockUser.password) === password,
-      )
-      const matchingRegisteredUser = matchingMockUser
-        ? null
-        : loadRegisteredUsers().find(
-            (registeredUser) =>
-              registeredUser.email.trim().toLowerCase() === normalizedEmail &&
-              registeredUser.password === password,
-          )
-      const matchedUser = matchingMockUser || matchingRegisteredUser
-
-      if (!matchedUser) {
-        throw new Error('Invalid email or password')
-      }
-
-      const user = restoreSavedProfile({
-        id: matchedUser.id,
-        fullName: matchedUser.fullName,
-        email: matchedUser.email,
-        phone: matchedUser.phone,
-        role: matchedUser.role,
-      })
-      const token = `mock-token-${user.role}-${Date.now()}`
-      const nextRecord = {
-        user,
-        token,
-        ...(rememberMe && { expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000 }),
-      }
-
-      persistAuthRecord(nextRecord, rememberMe)
-      setAuthRecord(nextRecord)
-
-      return { user, redirectTo: getRoleRedirectPath(user.role) }
+      if (!email?.trim() || !password) throw new Error('Enter your email and password.')
+      const { data } = await authApi.login({ email: email.trim().toLowerCase(), password })
+      const record = saveAuthResponse(data, rememberMe)
+      logAuditEvent({ action: 'Signed in', category: 'Account', resource: 'Account' })
+      toast.success('Welcome back!')
+      return { user: record.user, redirectTo: getRoleRedirectPath(record.user.role) }
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Unable to sign in.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
     } finally {
       setLoading(false)
     }
@@ -238,147 +159,140 @@ export function AuthProvider({ children }) {
       if (!fullName?.trim() || !email?.trim() || !phone?.trim() || !password) {
         throw new Error('Complete all fields to create your account.')
       }
-
-      if (typeof window === 'undefined') {
-        throw new Error('Registration is only available in a browser')
-      }
-      const normalizedEmail = email.trim().toLowerCase()
-      const existingUsers = loadRegisteredUsers()
-      const emailAlreadyUsed =
-        mockUsers.some((mockUser) => mockUser.email === normalizedEmail) ||
-        existingUsers.some(
-          (registeredUser) =>
-            registeredUser.email.trim().toLowerCase() === normalizedEmail,
-        )
-
-      if (emailAlreadyUsed) {
-        throw new Error('An account with this email already exists.')
-      }
-
-      const user = restoreSavedProfile({
-        id: `user-${normalizedEmail}`,
+      const { data } = await authApi.register({
         fullName: fullName.trim(),
-        email: normalizedEmail,
+        email: email.trim().toLowerCase(),
         phone: phone.trim(),
-        role: 'customer',
+        password,
       })
-      const registeredUser = { ...user, password }
-      window.localStorage.setItem(
-        REGISTERED_USERS_KEY,
-        JSON.stringify([...existingUsers, registeredUser]),
-      )
-      const nextRecord = {
-        user,
-        token: `mock-token-${user.role}-${Date.now()}`,
-        expiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
-      }
-
-      persistAuthRecord(nextRecord, true)
-      setAuthRecord(nextRecord)
-      return { user, redirectTo: getRoleRedirectPath(user.role) }
+      const record = saveAuthResponse(data, true)
+      logAuditEvent({ action: 'Account created', category: 'Account', resource: 'Account' })
+      toast.success('Your account has been created successfully.')
+      return { user: record.user, redirectTo: getRoleRedirectPath(record.user.role) }
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Unable to create your account.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
     } finally {
       setLoading(false)
     }
   }
 
-  const updateProfile = (updates) => {
-    if (!authRecord.user || !authRecord.token) {
-      throw new Error('You must be signed in to update your profile.')
-    }
-
-    const user = {
-      ...authRecord.user,
-      fullName: updates.fullName,
-      email: updates.email,
-      phone: updates.phone,
-      avatar: updates.avatar || '',
-    }
-    const nextRecord = { ...authRecord, user }
-
+  const updateProfile = async (updates) => {
+    if (!authRecord.user || !authRecord.token) throw new Error('You must be signed in to update your profile.')
     try {
-      const savedProfiles = loadSavedProfiles()
-      savedProfiles[user.id] = {
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        avatar: user.avatar,
-      }
-      window.localStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(savedProfiles))
-      persistAuthRecord(nextRecord, authRecord.expiresAt !== undefined)
-      const registeredUsers = loadRegisteredUsers()
-      const registeredUserIndex = registeredUsers.findIndex(
-        (registeredUser) => registeredUser.id === user.id,
-      )
-      if (registeredUserIndex !== -1) {
-        registeredUsers[registeredUserIndex] = {
-          ...registeredUsers[registeredUserIndex],
-          fullName: user.fullName,
-          email: user.email,
-          phone: user.phone,
-        }
-        window.localStorage.setItem(
-          REGISTERED_USERS_KEY,
-          JSON.stringify(registeredUsers),
-        )
-      }
-      setAuthRecord(nextRecord)
+      const { data } = await authApi.updateProfile({
+        fullName: updates.fullName,
+        phone: updates.phone,
+        avatar: updates.avatar || null,
+      })
+      const record = { ...authRecord, user: normalizeUser(data.user) }
+      persistAuthRecord(record, authRecord.rememberMe)
+      setAuthRecord(record)
+      logAuditEvent({ action: 'Profile updated', category: 'Account', resource: 'Account' })
+      return record.user
     } catch (error) {
-      console.error('Unable to save profile changes:', error)
-      throw new Error('Unable to save your profile. Please try again.', { cause: error })
+      const message = getApiErrorMessage(error, 'Unable to save your profile.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
     }
   }
 
-  const changePassword = (currentPassword, nextPassword) => {
-    if (!authRecord.user || !authRecord.token) {
-      throw new Error('You must be signed in to update your password.')
+  const changePassword = async (currentPassword, newPassword) => {
+    if (!authRecord.user || !authRecord.token) throw new Error('You must be signed in to update your password.')
+    try {
+      await authApi.changePassword({ currentPassword, newPassword })
+      logAuditEvent({ action: 'Password changed', category: 'Account', resource: 'Account' })
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Unable to update your password.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
     }
+  }
 
-    const mockUser = mockUsers.find(({ id }) => id === authRecord.user.id)
-    if (mockUser) {
-      const savedPasswords = loadMockPasswords()
-      if ((savedPasswords[mockUser.id] ?? mockUser.password) !== currentPassword) {
-        throw new Error('Current password is incorrect.')
-      }
-      savedPasswords[mockUser.id] = nextPassword
-      window.localStorage.setItem(
-        MOCK_PASSWORDS_STORAGE_KEY,
-        JSON.stringify(savedPasswords),
-      )
-      return
+  const requestPasswordReset = async (email) => {
+    try {
+      const { data } = await authApi.forgotPassword(email.trim().toLowerCase())
+      return data
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Unable to request a password reset.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
     }
+  }
 
-    const registeredUsers = loadRegisteredUsers()
-    const registeredUser = registeredUsers.find(({ id }) => id === authRecord.user.id)
-    if (!registeredUser || registeredUser.password !== currentPassword) {
-      throw new Error('Current password is incorrect.')
+  const verifyPasswordResetOtp = async (email, otp) => {
+    try {
+      await authApi.verifyOtp(email.trim().toLowerCase(), otp)
+      return true
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'The verification code is invalid or expired.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
     }
-    registeredUser.password = nextPassword
-    window.localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers))
+  }
+
+  const resetPassword = async (email, otp, newPassword) => {
+    try {
+      await authApi.resetPassword(email.trim().toLowerCase(), otp, newPassword)
+      toast.success('Your password has been updated.')
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'Unable to reset your password.')
+      toast.error(message)
+      throw new Error(message, { cause: error })
+    }
+  }
+
+  const createAddress = async (address) => {
+    const { data } = await authApi.createAddress(address)
+    const addresses = [...(authRecord.user.addresses || []), data.address]
+    const record = { ...authRecord, user: { ...authRecord.user, addresses } }
+    persistAuthRecord(record, authRecord.rememberMe)
+    setAuthRecord(record)
+    return data.address
+  }
+
+  const setDefaultAddress = async (id) => {
+    await authApi.setDefaultAddress(id)
+    const addresses = (authRecord.user.addresses || []).map((address) => ({
+      ...address,
+      isDefault: address.id === id,
+    }))
+    const record = { ...authRecord, user: { ...authRecord.user, addresses } }
+    persistAuthRecord(record, authRecord.rememberMe)
+    setAuthRecord(record)
+  }
+
+  const deleteAddress = async (id) => {
+    await authApi.deleteAddress(id)
+    const { data } = await authApi.me()
+    const record = { ...authRecord, user: normalizeUser(data.user) }
+    persistAuthRecord(record, authRecord.rememberMe)
+    setAuthRecord(record)
   }
 
   const logout = () => {
-    try {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY)
-      window.localStorage.removeItem('token')
-      window.sessionStorage.removeItem(AUTH_STORAGE_KEY)
-      window.sessionStorage.removeItem('token')
-      setAuthRecord({ user: null, token: null })
-    } catch (error) {
-      console.error('Unable to clear saved authentication:', error)
-      throw error
-    }
+    logAuditEvent({ action: 'Signed out', category: 'Account', resource: 'Account' })
+    clearPersistedAuth()
+    setAuthRecord({ user: null, token: null, rememberMe: false })
+    toast.success('You have been logged out.')
   }
 
-  const isAuthenticated = Boolean(authRecord.user && authRecord.token)
   const value = {
     user: authRecord.user,
     token: authRecord.token,
     login,
     register,
+    requestPasswordReset,
+    verifyPasswordResetOtp,
+    resetPassword,
     updateProfile,
     changePassword,
+    createAddress,
+    setDefaultAddress,
+    deleteAddress,
     logout,
-    isAuthenticated,
+    isAuthenticated: Boolean(authRecord.user && authRecord.token),
     loading,
     getRoleRedirectPath,
   }
@@ -390,10 +304,6 @@ export function AuthProvider({ children }) {
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext)
-
-  if (context === null) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-
+  if (context === null) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }

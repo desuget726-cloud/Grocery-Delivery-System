@@ -12,11 +12,13 @@ import {
   UserRound,
   Users,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { deliveryStaff as deliveryStaffApi, getApiErrorMessage, orders as ordersApi } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const statusTabs = [
@@ -37,16 +39,6 @@ const statusColors = {
 }
 
 const orderStatuses = statusTabs.slice(1).map(({ label }) => label)
-
-const riders = [
-  { id: 'R-101', name: 'Dawit Tadesse', available: true },
-  { id: 'R-102', name: 'Yonas Girma', available: true },
-  { id: 'R-103', name: 'Biniyam Alemu', available: true },
-  { id: 'R-104', name: 'Mekdes Bekele', available: true },
-  { id: 'R-105', name: 'Henok Worku', available: true },
-  { id: 'R-106', name: 'Samiya Mohammed', available: true },
-  { id: 'R-107', name: 'Fitsum Haile', available: true },
-]
 
 const hoursAgo = (hours) =>
   new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
@@ -163,7 +155,9 @@ const initialOrders = [
 
 function Orders() {
   const { t } = useLanguage()
-  const [orders, setOrders] = usePersistentState('admin-grocery-orders', initialOrders)
+  const toast = useToast()
+  const [orders, setOrders] = useState(initialOrders)
+  const [riders, setRiders] = useState([])
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [unassignedOnly, setUnassignedOnly] = useState(false)
@@ -172,6 +166,35 @@ function Orders() {
   const selectedStatus = statusTabs.some(({ value }) => value === requestedStatus)
     ? requestedStatus
     : 'all'
+
+  useEffect(() => {
+    let active = true
+    Promise.all([ordersApi.getAll(), deliveryStaffApi.getAll()])
+      .then(([nextOrders, staffResponse]) => {
+        if (!active) return
+        setOrders(nextOrders.map((order) => ({
+          ...order,
+          deliveryStaff: order.rider?.id || '',
+          deliveryStaffName: order.rider?.fullName || '',
+          customerPhone: order.customerPhone || order.address?.phone || '',
+          deliveryAddress: [order.deliveryZone, order.deliveryStreet].filter(Boolean).join(', '),
+          status: order.status === 'Confirmed' || order.status === 'Packed'
+            ? 'Processing'
+            : order.status === 'Out for Delivery'
+              ? 'On The Way'
+              : order.status,
+        })))
+        setRiders((staffResponse.data.users || []).map((rider) => ({
+          id: rider.id,
+          name: rider.fullName,
+          available: rider.status === 'ACTIVE',
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load orders and delivery staff.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const todayCount = orders.filter(
     (order) => new Date(order.date).toDateString() === new Date().toDateString(),
@@ -185,7 +208,12 @@ function Orders() {
       [...orders]
         .filter((order) => {
           if (selectedStatus === 'all') return true
-          return order.status.toLowerCase().replaceAll(' ', '_') === selectedStatus
+          const statusKey = order.status === 'Processing'
+            ? 'processing'
+            : order.status === 'On The Way'
+              ? 'on_the_way'
+              : order.status.toLowerCase().replaceAll(' ', '_')
+          return statusKey === selectedStatus
         })
         .filter((order) => !unassignedOnly || !order.deliveryStaff)
         .filter((order) => {
@@ -209,12 +237,61 @@ function Orders() {
 
   const selectedOrder = orders.find((order) => order.id === selectedOrderId)
 
-  const updateOrder = (orderId, update) => {
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === orderId ? { ...order, ...update } : order,
-      ),
-    )
+  const updateOrder = async (orderId, update) => {
+    const order = orders.find((item) => item.id === orderId)
+    if (!order) {
+      toast.error('The selected order could not be found.')
+      return
+    }
+    try {
+      let updatedOrder
+      if ('deliveryStaff' in update) {
+        const { data } = await ordersApi.assignRider(orderId, update.deliveryStaff)
+        updatedOrder = data.order
+      } else if ('status' in update) {
+        const backendStatuses = {
+          Placed: 'CONFIRMED',
+          Processing: order.orderStatus === 'CONFIRMED' ? 'PACKED' : 'CONFIRMED',
+          'On The Way': 'OUT_FOR_DELIVERY',
+        }
+        const { data } = await ordersApi.updateStatus(orderId, backendStatuses[update.status])
+        updatedOrder = data.order
+      }
+      if (updatedOrder) {
+        const normalized = {
+          ...updatedOrder,
+          deliveryStaff: updatedOrder.rider?.id || update.deliveryStaff || '',
+          deliveryStaffName: updatedOrder.rider?.fullName || '',
+          status: updatedOrder.status === 'Confirmed' || updatedOrder.status === 'Packed'
+            ? 'Processing'
+            : updatedOrder.status === 'Out for Delivery'
+              ? 'On The Way'
+              : updatedOrder.status,
+        }
+        setOrders((current) => current.map((item) => item.id === orderId ? { ...item, ...normalized } : item))
+      }
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update this order.'))
+      return
+    }
+    if ('deliveryStaff' in update) {
+      const rider = riders.find((item) => item.id === update.deliveryStaff)
+      logAuditEvent({
+        action: 'Assigned delivery staff',
+        category: 'Administration',
+        resource: order.id,
+        details: rider ? rider.name : 'Assignment cleared',
+      })
+      toast.success(rider ? `${rider.name} assigned to ${order.id}.` : `Rider assignment updated for ${order.id}.`)
+    } else if ('status' in update) {
+      logAuditEvent({
+        action: 'Updated order status',
+        category: 'Administration',
+        resource: order.id,
+        details: `${order.status} to ${update.status}`,
+      })
+      toast.success(`${order.id} status updated to ${update.status}.`)
+    }
   }
 
   const selectStatus = (status) => {

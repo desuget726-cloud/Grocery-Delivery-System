@@ -1,86 +1,42 @@
-import { CheckCircle2, CircleDollarSign, MapPin, Wallet, XCircle } from 'lucide-react'
+import { CheckCircle2, CircleDollarSign, MapPin, Wallet } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useDelivery } from '../../context/DeliveryContext.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
 
-const history = [
-  {
-    id: 'GDS-2531',
-    customer: 'Hiwot Alemu',
-    neighborhood: 'Bole',
-    address: 'Bole Atlas, Addis Ababa',
-    status: 'Delivered',
-    payment: 'Cash on Delivery',
-    earnings: 80,
-    tip: 20,
-    timestamp: '2026-11-23T18:42:00',
-  },
-  {
-    id: 'GDS-2529',
-    customer: 'Yonatan Bekele',
-    neighborhood: 'Kazanchis',
-    address: 'Guinea Conakry Street, Addis Ababa',
-    status: 'Delivered',
-    payment: 'Telebirr',
-    earnings: 75,
-    tip: 15,
-    timestamp: '2026-11-23T16:18:00',
-  },
-  {
-    id: 'GDS-2527',
-    customer: 'Liya Girma',
-    neighborhood: 'CMC',
-    address: 'Sunshine Real Estate, Addis Ababa',
-    status: 'Canceled',
-    payment: 'Cash on Delivery',
-    earnings: 0,
-    tip: 0,
-    timestamp: '2026-11-23T14:05:00',
-  },
-  {
-    id: 'GDS-2524',
-    customer: 'Daniel Haile',
-    neighborhood: 'Sarbet',
-    address: 'Bisrate Gebriel, Addis Ababa',
-    status: 'Delivered',
-    payment: 'Cash on Delivery',
-    earnings: 70,
-    tip: 10,
-    timestamp: '2026-11-22T19:30:00',
-  },
-]
-
-const filters = ['All', 'Delivered', 'Canceled']
+const filters = ['All', 'Delivered']
 
 function History() {
   const { t } = useLanguage()
+  const { completedHistory } = useDelivery()
   const [filter, setFilter] = useState('All')
   const visible = useMemo(
-    () => history.filter((order) => filter === 'All' || order.status === filter),
-    [filter],
+    () => completedHistory.filter((order) => filter === 'All' || order.status === filter),
+    [completedHistory, filter],
   )
-  const delivered = history.filter((order) => order.status === 'Delivered')
-  const earned = delivered.reduce((sum, order) => sum + order.earnings + order.tip, 0)
-  const codSettled = delivered
-    .filter((order) => order.payment === 'Cash on Delivery')
-    .reduce((sum) => sum + 680, 0)
+  const earned = completedHistory.reduce(
+    (sum, order) => sum + (Number(order.earnings) || Number(order.deliveryFee) || 0),
+    0,
+  )
+  const codCollected = completedHistory
+    .filter((order) => order.paymentMethod === 'COD')
+    .reduce(
+      (sum, order) => sum + (Number(order.cashCollected) || Number(order.total) || 0),
+      0,
+    )
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-10 py-6 pb-24">
+    <div className="w-full px-4 py-6 pb-24 sm:px-6 lg:px-10">
       <header>
-        <p className="text-sm font-semibold text-[#1E8E3E]">
-          {t('yourCompletedWork')}
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold text-slate-900">
-          {t('deliveryHistory')}
-        </h1>
+        <p className="text-sm font-semibold text-[#1E8E3E]">{t('yourCompletedWork')}</p>
+        <h1 className="mt-1 text-2xl font-extrabold text-slate-900">{t('deliveryHistory')}</h1>
       </header>
 
       <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           {
             labelKey: 'totalCompletedTrips',
-            value: String(delivered.length),
+            value: String(completedHistory.length),
             icon: CheckCircle2,
             tone: 'bg-[#1E8E3E]/10 text-[#1E8E3E]',
           },
@@ -92,7 +48,7 @@ function History() {
           },
           {
             labelKey: 'codCashSettled',
-            value: `${codSettled.toFixed(2)} ETB`,
+            value: `${codCollected.toFixed(2)} ETB`,
             icon: Wallet,
             tone: 'bg-[#F04E00]/10 text-[#F04E00]',
           },
@@ -112,6 +68,7 @@ function History() {
           <button
             key={item}
             type="button"
+            aria-pressed={filter === item}
             onClick={() => setFilter(item)}
             className={`rounded-full px-4 py-2 text-sm font-bold ${
               filter === item
@@ -124,57 +81,65 @@ function History() {
         ))}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-        {visible.map((order) => (
-          <Link
-            key={order.id}
-            to={`/delivery/details/${order.id}`}
-            className="block rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[#1E8E3E]/30"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-extrabold text-[#0B4B8C]">{order.id}</p>
-                <h2 className="mt-1 font-bold text-slate-900">{order.customer}</h2>
-              </div>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold ${
-                  order.status === 'Delivered'
-                    ? 'bg-[#1E8E3E]/10 text-[#1E8E3E]'
-                    : 'bg-slate-100 text-slate-600'
-                }`}
+      {visible.length === 0 ? (
+        <p className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+          Completed deliveries will appear here.
+        </p>
+      ) : (
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          {visible.map((order) => {
+            const neighborhood = order.address.split(',')[0]
+            const timestamp = order.completedAt || order.date
+            return (
+              <Link
+                key={order.id}
+                to={`/delivery/details/${order.id}`}
+                className="block rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:border-[#1E8E3E]/30"
               >
-                {order.status === 'Delivered'
-                  ? <CheckCircle2 aria-hidden="true" size={14} />
-                  : <XCircle aria-hidden="true" size={14} />}
-                {t(order.status)}
-              </span>
-            </div>
-            <p className="mt-3 flex items-start gap-2 text-sm text-slate-600">
-              <MapPin aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-[#0B4B8C]" />
-              {order.neighborhood} • {order.address}
-            </p>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-              <div>
-                <p className="text-xs text-slate-500">
-                  {order.status === 'Delivered'
-                    ? new Date(order.timestamp).toLocaleString([], {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })
-                    : 'Canceled delivery'}
-                </p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">{order.payment}</p>
-              </div>
-              {order.status === 'Delivered' && (
-                <div className="text-right">
-                  <p className="text-sm font-extrabold text-[#0E532B]">+{order.earnings.toFixed(2)} ETB</p>
-                  <p className="mt-1 text-xs font-bold text-[#F04E00]">Tip +{order.tip.toFixed(2)} ETB</p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-extrabold text-[#0B4B8C]">{order.id}</p>
+                    <h2 className="mt-1 font-bold text-slate-900">{order.customerName}</h2>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#1E8E3E]/10 px-3 py-1.5 text-xs font-bold text-[#1E8E3E]">
+                    <CheckCircle2 aria-hidden="true" size={14} />
+                    {t('Delivered')}
+                  </span>
                 </div>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
+                <p className="mt-3 flex items-start gap-2 text-sm text-slate-600">
+                  <MapPin aria-hidden="true" size={16} className="mt-0.5 shrink-0 text-[#0B4B8C]" />
+                  {neighborhood} • {order.address}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                  <div>
+                    <p className="text-xs text-slate-500">
+                      {timestamp
+                        ? new Date(timestamp).toLocaleString([], {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })
+                        : 'Completed'}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                      {order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Telebirr'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-extrabold text-[#0E532B]">
+                      +{(Number(order.earnings) || Number(order.deliveryFee) || 0).toFixed(2)} ETB
+                    </p>
+                    {order.paymentMethod === 'COD' && (
+                      <p className="mt-1 text-xs font-bold text-[#F04E00]">
+                        Cash +{(Number(order.cashCollected) || Number(order.total) || 0).toFixed(2)} ETB
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

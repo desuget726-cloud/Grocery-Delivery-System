@@ -1,6 +1,7 @@
 import {
   Archive,
   ChevronDown,
+  ClipboardList,
   CircleHelp,
   CreditCard,
   Home,
@@ -320,6 +321,14 @@ function Sidebar({ open, onClose }) {
             >
               10
             </span>
+          </Link>
+          <Link
+            to="/admin/audit-logs"
+            onClick={closeAfterNavigation}
+            className={linkClass({ isActive: pathname === '/admin/audit-logs' })}
+          >
+            <ClipboardList aria-hidden="true" size={18} className="shrink-0" />
+            <span className={collapsed ? 'lg:hidden' : ''}>Audit Logs</span>
           </Link>
         </div>
 

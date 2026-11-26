@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ArrowUpRight,
   BookOpen,
@@ -23,6 +23,8 @@ import {
   X,
 } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
 
 const initialTickets = [
   {
@@ -161,6 +163,7 @@ function initials(name) {
 }
 
 function Support() {
+  const toast = useToast()
   const { t } = useLanguage()
   const [activeTab, setActiveTab] = useState(tabs[0])
   const [search, setSearch] = useState('')
@@ -169,14 +172,7 @@ function Support() {
   const [tickets, setTickets] = useState(initialTickets)
   const [reply, setReply] = useState('')
   const [openFaq, setOpenFaq] = useState(null)
-  const [toast, setToast] = useState('')
   const [formSubmitted, setFormSubmitted] = useState(false)
-
-  useEffect(() => {
-    if (!toast) return undefined
-    const timer = window.setTimeout(() => setToast(''), 3200)
-    return () => window.clearTimeout(timer)
-  }, [toast])
 
   const normalizedSearch = search.trim().toLowerCase()
   const filteredTickets = useMemo(
@@ -226,28 +222,54 @@ function Support() {
 
   const handleReply = (event) => {
     event.preventDefault()
-    if (!reply.trim()) return
+    if (!reply.trim()) {
+      toast.error('Write a reply before sending it.')
+      return
+    }
     addAdminMessage(reply)
+    if (selectedTicket) {
+      logAuditEvent({
+        action: 'Replied to support ticket',
+        category: 'Administration',
+        resource: selectedTicket.id,
+      })
+    }
     setReply('')
+    toast.success('Support ticket reply sent.')
   }
 
   const handleResolve = () => {
     if (!selectedTicket) return
     updateTicket(selectedTicket.id, { status: 'Resolved', updated: 'Just now' })
-    setToast(`${selectedTicket.id} ${t('common.markedAsResolved')}`)
+    logAuditEvent({
+      action: 'Resolved support ticket',
+      category: 'Administration',
+      resource: selectedTicket.id,
+    })
+    toast.success(`${selectedTicket.id} ${t('common.markedAsResolved')}`)
   }
 
   const handleCoupon = () => {
     if (!selectedTicket) return
     addAdminMessage('I’ve added a 10% apology coupon to your account. We appreciate your patience.')
-    setToast(t('common.apologyCouponSent'))
+    logAuditEvent({
+      action: 'Issued support coupon',
+      category: 'Administration',
+      resource: selectedTicket.id,
+    })
+    toast.success(t('common.apologyCouponSent'))
   }
 
   const handleSupportRequest = (event) => {
     event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    if (!String(formData.get('subject') || '').trim() || String(formData.get('description') || '').trim().length < 10) {
+      toast.error('Enter a subject and a more detailed support request.')
+      return
+    }
     setFormSubmitted(true)
     event.currentTarget.reset()
-    setToast(t('common.supportRequestSubmitted'))
+    toast.success(t('common.supportRequestSubmitted'))
   }
 
   return (
@@ -727,7 +749,7 @@ function Support() {
                   <p className="mt-1 text-sm text-slate-500">{t('common.reportSystemIssue')}</p>
                 </div>
               </div>
-              <form onSubmit={handleSupportRequest} onChange={() => setFormSubmitted(false)} className="space-y-4 rounded-2xl border border-slate-200 p-4 sm:p-5">
+              <form noValidate onSubmit={handleSupportRequest} onChange={() => setFormSubmitted(false)} className="space-y-4 rounded-2xl border border-slate-200 p-4 sm:p-5">
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold text-slate-700">{t('common.subject')}</span>
                   <input
@@ -808,15 +830,6 @@ function Support() {
         )}
       </section>
 
-      {toast && (
-        <div
-          role="status"
-          className="fixed bottom-5 right-5 z-50 flex max-w-sm items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-xl"
-        >
-          <CheckCircle2 aria-hidden="true" size={18} className="shrink-0 text-emerald-400" />
-          {toast}
-        </div>
-      )}
     </div>
   )
 }

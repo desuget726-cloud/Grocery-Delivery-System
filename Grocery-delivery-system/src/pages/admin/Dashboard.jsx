@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const kpis = [
@@ -519,6 +520,7 @@ function initials(name) {
 
 function RecentOrders() {
   const { t } = useLanguage()
+  const toast = useToast()
   const [orders, setOrders] = useState(initialOrders)
   const [statusFilter, setStatusFilter] = useState('Show All')
   const [openActionId, setOpenActionId] = useState(null)
@@ -533,6 +535,7 @@ function RecentOrders() {
       currentOrders.filter((order) => order.id !== orderId),
     )
     setOpenActionId(null)
+    toast.success(`${orderId} deleted from recent orders.`)
   }
 
   return (

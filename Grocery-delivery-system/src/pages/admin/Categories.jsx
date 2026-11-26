@@ -17,7 +17,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminPageHeader, Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { categories as categoriesApi, getApiErrorMessage } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const initialCategories = [
@@ -149,73 +151,17 @@ const slugify = (value) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
 
-const legacyNames = {
-  bakery: 'grocery-bakery-bread',
-  pantry: 'grocery-pantry-grains',
-  snacks: 'grocery-snacks-nuts',
-}
-
-function normalizeCategories(savedCategories) {
-  const saved = Array.isArray(savedCategories)
-    ? savedCategories.filter((category) => category && typeof category === 'object')
-    : []
-  if (saved.some((category) => category.schemaVersion === 2)) return saved
-
-  const consumed = new Set()
-  const seeded = initialCategories.map((defaultCategory) => {
-    const matchesCategory = (category) => {
-      const key = String(category.slug || slugify(category.name || '')).toLowerCase()
-      return category.id === defaultCategory.id
-        || category.id === defaultCategory.id.replace('grocery-', 'category-')
-        || key === defaultCategory.slug
-        || key === slugify(defaultCategory.name)
-        || legacyNames[key] === defaultCategory.id
-    }
-    const matches = saved.filter(matchesCategory)
-    const existing = matches.find((category) => category.id === defaultCategory.id) || matches[0]
-    matches.forEach((category) => consumed.add(category))
-    return {
-      ...defaultCategory,
-      ...(existing || {}),
-      id: defaultCategory.id,
-      name: existing?.name ? (
-        legacyNames[slugify(existing.name)] === defaultCategory.id
-          ? defaultCategory.name
-          : existing.name
-      ) : defaultCategory.name,
-      slug: existing?.slug || defaultCategory.slug,
-      description: existing?.description || defaultCategory.description,
-      image: existing?.image || defaultCategory.image,
-      productCount: Number.isFinite(Number(existing?.productCount))
-        ? Number(existing.productCount)
-        : defaultCategory.productCount,
-      weeklySales: Number.isFinite(Number(existing?.weeklySales))
-        ? Number(existing.weeklySales)
-        : defaultCategory.weeklySales,
-      order: Number.isFinite(Number(existing?.order))
-        ? Number(existing.order)
-        : defaultCategory.order,
-      active: typeof existing?.active === 'boolean' ? existing.active : defaultCategory.active,
-      featured: typeof existing?.featured === 'boolean' ? existing.featured : defaultCategory.featured,
-      tags: Array.isArray(existing?.tags) ? existing.tags : defaultCategory.tags,
-      schemaVersion: 2,
-    }
-  })
-  const custom = saved
-    .filter((category) => !consumed.has(category))
-    .map((category, index) => ({
-      ...emptyCategory,
-      ...category,
-      slug: category.slug || slugify(category.name || ''),
-      order: Number(category.order) || seeded.length + index + 1,
-      active: typeof category.active === 'boolean' ? category.active : true,
-      featured: Boolean(category.featured),
-      productCount: Number(category.productCount) || 0,
-      weeklySales: Number(category.weeklySales) || 0,
-      tags: Array.isArray(category.tags) ? category.tags : [],
-      schemaVersion: 2,
-    }))
-  return [...seeded, ...custom]
+function normalizeCategories(items) {
+  return items.map((category) => ({
+    ...category,
+    image: category.image || '',
+    order: Number(category.displayOrder) || 0,
+    active: category.isActive,
+    featured: category.isFeatured,
+    productCount: Number(category._count?.products) || 0,
+    weeklySales: 0,
+    tags: [],
+  }))
 }
 
 function CategoryImage({ src, name, className = '' }) {
@@ -260,11 +206,8 @@ function VisibilitySwitch({ category, onToggle, compact = false }) {
 
 function Categories() {
   const { t } = useLanguage()
-  const [categories, setCategories] = usePersistentState(
-    'admin-categories',
-    initialCategories,
-    normalizeCategories,
-  )
+  const toast = useToast()
+  const [categories, setCategories] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortBy, setSortBy] = useState('order')
@@ -274,6 +217,18 @@ function Categories() {
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [localPreview, setLocalPreview] = useState('')
+
+  useEffect(() => {
+    let active = true
+    categoriesApi.getAll({ includeInactive: 'true' })
+      .then((items) => {
+        if (active) setCategories(normalizeCategories(items))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load categories.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   useEffect(() => () => {
     if (localPreview) URL.revokeObjectURL(localPreview)
@@ -305,10 +260,31 @@ function Categories() {
     })
   }, [search, sortBy, statusFilter, visibleCategories])
 
-  const updateCategory = (category, changes) => {
-    setCategories((current) =>
-      current.map((item) => item.id === category.id ? { ...item, ...changes } : item),
-    )
+  const updateCategory = async (category, changes) => {
+    const payload = {}
+    if ('active' in changes) payload.isActive = changes.active
+    if ('featured' in changes) payload.isFeatured = changes.featured
+    if ('order' in changes) payload.displayOrder = changes.order
+    try {
+      const { data } = await categoriesApi.update(category.id, payload)
+      const saved = normalizeCategories([data.category])[0]
+      setCategories((current) =>
+        current.map((item) => item.id === category.id ? { ...item, ...saved } : item),
+      )
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not update this category.'))
+      return
+    }
+    logAuditEvent({
+      action: typeof changes.active === 'boolean'
+        ? changes.active ? 'Published category' : 'Hid category'
+        : 'Updated category',
+      category: 'Administration',
+      resource: category.name,
+    })
+    if (typeof changes.active === 'boolean') {
+      toast.success(`${category.name} ${changes.active ? 'is now visible' : 'is now hidden'}.`)
+    }
   }
 
   const openAddModal = () => {
@@ -335,30 +311,70 @@ function Categories() {
     setLocalPreview('')
   }
 
-  const handleSave = (event) => {
+  const handleSave = async (event) => {
     event.preventDefault()
-    const updatedCategory = {
-      ...draft,
-      id: editingCategory?.id || `category-${Date.now()}`,
-      name: draft.name.trim(),
-      slug: slugify(draft.name),
-      image: draft.image.trim(),
-      order: Math.max(1, Number(draft.order) || 1),
-      schemaVersion: 2,
+    const name = draft.name.trim()
+    if (!name) {
+      toast.error('Enter a category name.')
+      return
     }
-
-    setCategories((current) =>
-      editingCategory
-        ? current.map((item) => item.id === editingCategory.id ? updatedCategory : item)
-        : [...current, updatedCategory],
-    )
+    if (categories.some((category) =>
+      category.name.toLowerCase() === name.toLowerCase() && category.id !== editingCategory?.id,
+    )) {
+      toast.error('A category with this name already exists.')
+      return
+    }
+    const payload = {
+      name,
+      slug: slugify(name),
+      description: draft.description,
+      image: draft.image.trim(),
+      displayOrder: Math.max(1, Number(draft.order) || 1),
+      isActive: Boolean(draft.active),
+      isFeatured: Boolean(draft.featured),
+    }
+    let updatedCategory
+    try {
+      const { data } = editingCategory
+        ? await categoriesApi.update(editingCategory.id, payload)
+        : await categoriesApi.create(payload)
+      updatedCategory = normalizeCategories([data.category])[0]
+      setCategories((current) =>
+        editingCategory
+          ? current.map((item) => item.id === editingCategory.id ? updatedCategory : item)
+          : [...current, updatedCategory],
+      )
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not save this category.'))
+      return
+    }
+    logAuditEvent({
+      action: editingCategory ? 'Updated category' : 'Created category',
+      category: 'Administration',
+      resource: updatedCategory.name,
+    })
     closeModal()
+    toast.success(editingCategory ? 'Category updated successfully.' : 'Category created successfully.')
     setEditingCategory(null)
   }
 
-  const confirmDelete = () => {
-    setCategories((current) => current.filter((category) => category.id !== deleteTarget.id))
+  const confirmDelete = async () => {
+    const deletedName = deleteTarget?.name
+    if (!deleteTarget) return
+    try {
+      await categoriesApi.remove(deleteTarget.id)
+      setCategories((current) => current.filter((category) => category.id !== deleteTarget.id))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not delete this category.'))
+      return
+    }
+    logAuditEvent({
+      action: 'Deleted category',
+      category: 'Administration',
+      resource: deletedName,
+    })
     setDeleteTarget(null)
+    toast.success(`${deletedName} deleted successfully.`)
   }
 
   const handleImageUpload = (event) => {
@@ -368,8 +384,14 @@ function Categories() {
     if (localPreview) URL.revokeObjectURL(localPreview)
     setLocalPreview(URL.createObjectURL(file))
     const reader = new FileReader()
-    reader.onload = () => setDraft((current) => ({ ...current, image: String(reader.result || '') }))
-    reader.onerror = () => console.error('Unable to preview the selected category image.')
+    reader.onload = () => {
+      setDraft((current) => ({ ...current, image: String(reader.result || '') }))
+      toast.success('Category image selected.')
+    }
+    reader.onerror = () => {
+      console.error('Unable to preview the selected category image.')
+      toast.error('Unable to read the selected category image.')
+    }
     reader.readAsDataURL(file)
   }
 
@@ -658,7 +680,7 @@ function Categories() {
           onClose={closeModal}
           size="max-w-4xl"
         >
-          <form onSubmit={handleSave} className="space-y-5">
+          <form noValidate onSubmit={handleSave} className="space-y-5">
             <div className="grid gap-5 md:grid-cols-[240px_1fr]">
               <aside>
                 <p className="mb-2 text-sm font-semibold text-slate-700">{t('products.storefrontPreview')}</p>

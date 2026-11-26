@@ -8,6 +8,7 @@ function SearchBar({
   initialValue = '',
   initialCategory = '',
   onSearch,
+  variant = 'default',
 }) {
   const navigate = useNavigate()
   const [query, setQuery] = useState(initialValue)
@@ -35,7 +36,11 @@ function SearchBar({
     <form
       role="search"
       onSubmit={handleSubmit}
-      className="flex min-w-0 w-full items-center overflow-hidden rounded-lg border border-gray-200 bg-white transition focus-within:border-[#1E8E3E] focus-within:ring-2 focus-within:ring-[#1E8E3E]/10"
+      className={`flex min-w-0 w-full items-center overflow-hidden bg-white text-gray-800 transition focus-within:ring-2 focus-within:ring-[#1E8E3E]/10 ${
+        variant === 'header'
+          ? 'rounded-xl shadow-sm'
+          : 'rounded-lg border border-gray-200 focus-within:border-[#1E8E3E]'
+      }`}
     >
       <input
         type="search"
@@ -61,7 +66,11 @@ function SearchBar({
       <button
         type="submit"
         aria-label="Search"
-        className="flex h-11 w-12 shrink-0 items-center justify-center bg-[#1E8E3E] text-white transition hover:bg-[#0E532B] sm:w-auto sm:gap-2 sm:px-4"
+        className={`flex h-11 w-12 shrink-0 items-center justify-center text-white transition sm:w-auto sm:gap-2 sm:px-4 ${
+          variant === 'header'
+            ? 'bg-[#F04E00] hover:bg-[#d94400]'
+            : 'bg-[#1E8E3E] hover:bg-[#0E532B]'
+        }`}
       >
         <Search aria-hidden="true" size={18} />
         <span className="hidden text-sm font-semibold sm:inline">Search</span>

@@ -1,7 +1,6 @@
 import {
   BadgeCheck,
   Camera,
-  Check,
   Eye,
   EyeOff,
   Heart,
@@ -18,44 +17,18 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
 import { useWishlist } from '../../context/WishlistContext.jsx'
-import { loadOrders } from '../../data/mockData.js'
+import { getApiErrorMessage, orders as orderApi } from '../../services/api.js'
 
-const ADDRESS_STORAGE_KEY = 'grocery_saved_addresses'
 const ADDIS_ZONES = ['Bole', 'Kazanchis', 'CMC', 'Sarbet', 'Piassa']
 const PROFILE_INPUT =
   'w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#1E8E3E] focus:ring-4 focus:ring-[#1E8E3E]/10'
 const PASSWORD_INPUT =
   'w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-12 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#1E8E3E] focus:ring-4 focus:ring-[#1E8E3E]/10'
 
-function loadSavedAddresses() {
-  try {
-    const storedAddresses = window.localStorage.getItem(ADDRESS_STORAGE_KEY)
-    if (!storedAddresses) return []
-
-    const parsedAddresses = JSON.parse(storedAddresses)
-    if (
-      !Array.isArray(parsedAddresses) ||
-      parsedAddresses.some(
-        (address) =>
-          !address ||
-          typeof address.id !== 'string' ||
-          typeof address.label !== 'string' ||
-          typeof address.zone !== 'string' ||
-          typeof address.details !== 'string',
-      )
-    ) {
-      throw new TypeError('Saved address data is invalid')
-    }
-
-    return parsedAddresses
-  } catch (error) {
-    console.error('Unable to load saved delivery addresses:', error)
-    return []
-  }
-}
-
-function ProfileField({ icon: Icon, label, name, onChange, type = 'text', value, placeholder }) {
+function ProfileField({ icon: Icon, label, name, onChange, type = 'text', value, placeholder, readOnly = false }) {
   return (
     <label className="block text-sm font-semibold text-slate-700">
       {label}
@@ -72,6 +45,7 @@ function ProfileField({ icon: Icon, label, name, onChange, type = 'text', value,
           value={value}
           onChange={onChange}
           placeholder={placeholder}
+          readOnly={readOnly}
           className={PROFILE_INPUT}
         />
       </span>
@@ -80,7 +54,15 @@ function ProfileField({ icon: Icon, label, name, onChange, type = 'text', value,
 }
 
 function Profile() {
-  const { user, updateProfile } = useAuth()
+  const {
+    user,
+    updateProfile,
+    changePassword,
+    createAddress,
+    setDefaultAddress: saveDefaultAddress,
+    deleteAddress: removeAddress,
+  } = useAuth()
+  const toast = useToast()
   const { wishlistCount } = useWishlist()
   const photoInputRef = useRef(null)
   const [profile, setProfile] = useState({
@@ -89,7 +71,10 @@ function Profile() {
     phone: user?.phone ?? '',
     avatar: user?.avatar ?? '',
   })
-  const [addresses, setAddresses] = useState(loadSavedAddresses)
+  const addresses = (user?.addresses || []).map((address) => ({
+    ...address,
+    details: address.street,
+  }))
   const [addressDraft, setAddressDraft] = useState({
     label: 'Home',
     zone: ADDIS_ZONES[0],
@@ -101,8 +86,7 @@ function Profile() {
     next: false,
     confirm: false,
   })
-  const [toast, setToast] = useState(null)
-  const ordersCount = loadOrders().filter((order) => order.customerId === user?.id).length
+  const [ordersCount, setOrdersCount] = useState(0)
   const displayName = profile.fullName.trim() || 'Guest Shopper'
   const displayEmail = profile.email || 'Add an email address'
   const displayPhone = profile.phone || 'Add a phone number'
@@ -110,12 +94,29 @@ function Profile() {
     addresses.find((address) => address.isDefault)?.zone || 'Not set yet'
 
   useEffect(() => {
-    if (!toast) return undefined
-    const timeoutId = window.setTimeout(() => setToast(null), 3500)
-    return () => window.clearTimeout(timeoutId)
-  }, [toast])
+    Promise.resolve().then(() => setProfile({
+      fullName: user?.fullName ?? '',
+      email: user?.email ?? '',
+      phone: user?.phone ?? '',
+      avatar: user?.avatar ?? '',
+    }))
+  }, [user?.id, user?.fullName, user?.email, user?.phone, user?.avatar])
 
-  const showToast = (type, message) => setToast({ type, message })
+  useEffect(() => {
+    let active = true
+    orderApi.getMyOrders()
+      .then((customerOrders) => {
+        if (active) setOrdersCount(customerOrders.length)
+      })
+      .catch((error) => {
+        if (active) toast.error(getApiErrorMessage(error, 'Could not load your order count.'))
+      })
+    return () => {
+      active = false
+    }
+  }, [toast, user?.id])
+
+  const showToast = (type, message) => toast[type](message)
 
   const handleProfileChange = (event) => {
     const { name, value } = event.target
@@ -124,20 +125,29 @@ function Profile() {
 
   const handleProfileSubmit = (event) => {
     event.preventDefault()
+    const phoneDigits = profile.phone.replace(/\D/g, '')
+    if (
+      profile.fullName.trim().length < 2 ||
+      phoneDigits.length < 7 ||
+      phoneDigits.length > 15
+    ) {
+      showToast('error', 'Enter a valid name, email address, and phone number.')
+      return
+    }
+
     const updates = {
       fullName: profile.fullName.trim(),
-      email: profile.email.trim(),
       phone: profile.phone.trim(),
       avatar: profile.avatar,
     }
 
-    try {
-      updateProfile(updates)
+    updateProfile(updates).then((savedUser) => {
       setProfile(updates)
+      setProfile((current) => ({ ...current, ...savedUser }))
       showToast('success', 'Your profile has been saved.')
-    } catch (error) {
+    }).catch((error) => {
       showToast('error', error.message || 'Unable to save your profile.')
-    }
+    })
   }
 
   const handlePhotoChange = (event) => {
@@ -163,77 +173,85 @@ function Profile() {
       }
 
       const updates = { ...profile, avatar: reader.result }
-      try {
-        updateProfile(updates)
+      updateProfile(updates).then(() => {
         setProfile(updates)
         showToast('success', 'Your profile photo has been updated.')
-      } catch (error) {
+      }).catch((error) => {
         showToast('error', error.message || 'Unable to save your profile photo.')
-      }
+      })
     }
     reader.readAsDataURL(file)
   }
 
   const handleRemovePhoto = () => {
     const updates = { ...profile, avatar: '' }
-    try {
-      updateProfile(updates)
+    updateProfile(updates).then(() => {
       setProfile(updates)
       showToast('success', 'Your profile photo has been removed.')
-    } catch (error) {
+    }).catch((error) => {
       showToast('error', error.message || 'Unable to remove your profile photo.')
-    }
+    })
   }
 
-  const persistAddresses = (nextAddresses, successMessage) => {
-    try {
-      window.localStorage.setItem(ADDRESS_STORAGE_KEY, JSON.stringify(nextAddresses))
-      setAddresses(nextAddresses)
-      if (successMessage) showToast('success', successMessage)
-      return true
-    } catch (error) {
-      console.error('Unable to save delivery addresses:', error)
-      showToast('error', 'Unable to save this address. Please try again.')
-      return false
-    }
-  }
-
-  const handleAddressSubmit = (event) => {
+  const handleAddressSubmit = async (event) => {
     event.preventDefault()
     const details = addressDraft.details.trim()
-    if (!details) return
+    if (!details) {
+      showToast('error', 'Enter your delivery address details.')
+      return
+    }
 
-    const nextAddresses = [
-      ...addresses,
-      {
-        id: `address-${Date.now()}`,
+    try {
+      await createAddress({
         label: addressDraft.label,
         zone: addressDraft.zone,
-        details,
+        street: details,
         isDefault: addresses.length === 0,
-      },
-    ]
-    if (persistAddresses(nextAddresses, 'Your delivery address has been added.')) {
+      })
+      showToast('success', 'Your delivery address has been added.')
+      logAuditEvent({
+        action: 'Added delivery address',
+        category: 'Customer',
+        resource: addressDraft.label || addressDraft.zone,
+      })
       setAddressDraft((current) => ({ ...current, details: '' }))
+    } catch (error) {
+      showToast('error', error.message || 'Unable to save this address. Please try again.')
     }
   }
 
-  const setDefaultAddress = (addressId) => {
-    persistAddresses(
-      addresses.map((address) => ({ ...address, isDefault: address.id === addressId })),
-      'Your default delivery address has been updated.',
-    )
-  }
-
-  const deleteAddress = (addressId) => {
-    const remainingAddresses = addresses.filter((address) => address.id !== addressId)
-    if (addresses.find((address) => address.id === addressId)?.isDefault && remainingAddresses.length) {
-      remainingAddresses[0] = { ...remainingAddresses[0], isDefault: true }
+  const setDefaultAddress = async (addressId) => {
+    try {
+      await saveDefaultAddress(addressId)
+      showToast('success', 'Your default delivery address has been updated.')
+      logAuditEvent({
+        action: 'Changed default delivery address',
+        category: 'Customer',
+        resource: 'Delivery addresses',
+      })
+    } catch (error) {
+      showToast('error', error.message || 'Unable to update your default address.')
     }
-    persistAddresses(remainingAddresses, 'The delivery address has been removed.')
   }
 
-  const handlePasswordSubmit = (event) => {
+  const deleteAddress = async (addressId) => {
+    const removedAddress = addresses.find((address) => address.id === addressId)
+    try {
+      await removeAddress(addressId)
+      showToast('success', 'The delivery address has been removed.')
+      if (removedAddress) {
+      logAuditEvent({
+        action: 'Removed delivery address',
+        category: 'Customer',
+        resource: removedAddress.label || removedAddress.zone,
+      })
+      }
+    } catch (error) {
+      showToast('error', error.message || 'Unable to remove this address.')
+    }
+  }
+
+  const handlePasswordSubmit = async (event) => {
     event.preventDefault()
     if (passwords.next.length < 8) {
       showToast('error', 'Your new password must be at least 8 characters.')
@@ -244,10 +262,12 @@ function Profile() {
       return
     }
 
-    showToast(
-      'error',
-      'Password changes are not connected to the secure account service yet.',
-    )
+    changePassword(passwords.current, passwords.next).then(() => {
+      setPasswords({ current: '', next: '', confirm: '' })
+      showToast('success', 'Your password has been updated.')
+    }).catch((error) => {
+      showToast('error', error.message || 'Unable to update your password.')
+    })
   }
 
   const stats = [
@@ -258,24 +278,6 @@ function Profile() {
 
   return (
     <div className="w-full px-4 py-8 sm:px-6 lg:px-10">
-      {toast && (
-        <div
-          role={toast.type === 'error' ? 'alert' : 'status'}
-          className={`fixed right-4 top-24 z-50 flex max-w-sm items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-lg ${
-            toast.type === 'success'
-              ? 'border-emerald-200 bg-white text-[#0E532B]'
-              : 'border-rose-200 bg-white text-rose-700'
-          }`}
-        >
-          {toast.type === 'success' ? (
-            <Check aria-hidden="true" size={18} />
-          ) : (
-            <ShieldCheck aria-hidden="true" size={18} />
-          )}
-          {toast.message}
-        </div>
-      )}
-
       <header className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#F04E00]">
@@ -410,7 +412,7 @@ function Profile() {
               </div>
             </div>
 
-            <form onSubmit={handleProfileSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
+            <form noValidate onSubmit={handleProfileSubmit} className="mt-5 grid gap-4 sm:grid-cols-2">
               <ProfileField
                 icon={UserRound}
                 label="Full Name"
@@ -426,6 +428,7 @@ function Profile() {
                 type="email"
                 value={profile.email}
                 onChange={handleProfileChange}
+                readOnly
                 placeholder="you@example.com"
               />
               <div className="sm:col-span-2">

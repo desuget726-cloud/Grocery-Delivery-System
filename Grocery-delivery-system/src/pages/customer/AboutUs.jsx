@@ -1,5 +1,6 @@
-import { ArrowRight, HandCoins, Leaf, Mail, MapPin, Truck } from 'lucide-react'
+import { ArrowRight, HandCoins, Leaf, Mail, MapPin, Truck, UsersRound, Zap } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 
 const values = [
   {
@@ -23,20 +24,40 @@ const values = [
 ]
 
 const stats = [
-  { value: '5,000+', label: 'Happy Families' },
-  { value: '8+', label: 'Addis Ababa Zones' },
-  { value: '99.2%', label: 'On-Time' },
+  {
+    value: '5,000+',
+    label: 'Happy Families',
+    icon: UsersRound,
+    iconClassName: 'bg-[#0E532B]/10 text-[#0E532B]',
+    valueClassName: 'text-[#0E532B]',
+  },
+  {
+    value: '8+',
+    label: 'Addis Ababa Zones',
+    icon: MapPin,
+    iconClassName: 'bg-[#F04E00]/10 text-[#F04E00]',
+    valueClassName: 'text-[#F04E00]',
+  },
+  {
+    value: '99.2%',
+    label: 'On-Time Delivery',
+    icon: Truck,
+    iconClassName: 'bg-[#0B4B8C]/10 text-[#0B4B8C]',
+    valueClassName: 'text-[#0B4B8C]',
+  },
 ]
 
 function AboutUs() {
+  const [heroImageFailed, setHeroImageFailed] = useState(false)
+
   return (
     <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#F3FAF6] via-white to-[#FFF4EC] p-7 sm:p-12">
+      <section className="relative grid grid-cols-1 items-center gap-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#F3FAF6] via-white to-[#FFF4EC] p-7 sm:p-12 lg:grid-cols-12">
         <div
           aria-hidden="true"
           className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[#1E8E3E]/10 blur-3xl"
         />
-        <div className="relative max-w-3xl">
+        <div className="relative z-10 max-w-3xl lg:col-span-7">
           <p className="inline-flex items-center gap-2 rounded-full bg-[#0B4B8C]/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wider text-[#0B4B8C]">
             <MapPin aria-hidden="true" size={14} />
             Addis Ababa, Ethiopia
@@ -54,6 +75,24 @@ function AboutUs() {
             convenient delivery, we help good groceries get from our shelves to
             your door.
           </p>
+        </div>
+        <div className="relative z-10 lg:col-span-5">
+          <div className="relative h-64 overflow-hidden rounded-2xl ring-4 ring-white shadow-xl sm:h-72">
+            {heroImageFailed ? (
+              <div className="h-full w-full bg-gradient-to-br from-emerald-300 via-[#1E8E3E] to-[#072916]" />
+            ) : (
+              <img
+                src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&q=85"
+                alt="A colorful basket of fresh market produce"
+                onError={() => setHeroImageFailed(true)}
+                className="h-full w-full object-cover"
+              />
+            )}
+            <div className="absolute bottom-3 left-3 flex w-max max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-2xl border border-white/70 bg-white px-4 py-3 text-sm font-bold text-[#0E532B] shadow-xl sm:bottom-4 sm:left-4">
+              <Zap aria-hidden="true" size={18} className="shrink-0 fill-[#F04E00] text-[#F04E00]" />
+              <span>Fast &amp; Fresh Across Addis Ababa</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -82,15 +121,19 @@ function AboutUs() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-[#0E532B] p-6 text-white sm:p-9">
-        <div className="grid gap-6 sm:grid-cols-3">
-          {stats.map(({ value, label }) => (
-            <div key={label} className="text-center">
-              <p className="text-3xl font-extrabold text-white sm:text-4xl">{value}</p>
-              <p className="mt-2 text-sm font-medium text-emerald-100">{label}</p>
-            </div>
-          ))}
-        </div>
+      <section className="grid grid-cols-1 divide-y divide-gray-200/80 rounded-3xl border border-emerald-100 bg-gradient-to-r from-[#F3FAF6] via-white to-[#EEF6FA] px-6 py-8 shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {stats.map(({ value, label, icon: Icon, iconClassName, valueClassName }) => (
+          <div
+            key={label}
+            className="flex flex-col items-center py-6 text-center first:pt-0 last:pb-0 sm:px-4 sm:py-0 sm:first:pl-0 sm:last:pr-0"
+          >
+            <span className={`mb-3 flex h-11 w-11 items-center justify-center rounded-full ${iconClassName}`}>
+              <Icon aria-hidden="true" size={20} />
+            </span>
+            <p className={`text-3xl font-extrabold ${valueClassName}`}>{value}</p>
+            <p className="mt-2 text-sm font-medium text-gray-600">{label}</p>
+          </div>
+        ))}
       </section>
 
       <section className="flex flex-col items-start justify-between gap-5 rounded-2xl border border-orange-100 bg-[#FFF4EC] p-6 sm:flex-row sm:items-center sm:p-8">

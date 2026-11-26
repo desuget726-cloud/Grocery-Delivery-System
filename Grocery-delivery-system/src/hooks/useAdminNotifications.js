@@ -1,72 +1,85 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  ADMIN_NOTIFICATIONS_KEY,
-  initialAdminNotifications,
-} from '../data/adminNotifications.js'
+import { getApiErrorMessage, notifications as notificationsApi } from '../services/api.js'
+import { useToast } from '../context/ToastContext.jsx'
 
-const notificationEvent = 'grocery-admin-notifications-change'
+const categoryNames = {
+  ORDER: 'Orders',
+  INVENTORY: 'Inventory',
+  REVIEW: 'Reviews',
+  PAYMENT: 'Payments',
+  SUPPORT: 'Support',
+}
 
-function readNotifications() {
-  try {
-    const saved = window.localStorage.getItem(ADMIN_NOTIFICATIONS_KEY)
-    if (saved !== null) {
-      const parsed = JSON.parse(saved)
-      if (Array.isArray(parsed)) return parsed
-      console.error(`${ADMIN_NOTIFICATIONS_KEY} must contain an array.`)
-      return initialAdminNotifications
-    }
+const categoryValues = Object.fromEntries(
+  Object.entries(categoryNames).map(([key, value]) => [value, key]),
+)
 
-    window.localStorage.setItem(
-      ADMIN_NOTIFICATIONS_KEY,
-      JSON.stringify(initialAdminNotifications),
-    )
-  } catch (error) {
-    console.error(`Unable to load ${ADMIN_NOTIFICATIONS_KEY} from localStorage:`, error)
+function normalizeNotification(notification) {
+  return {
+    ...notification,
+    category: categoryNames[notification.category] || notification.category,
+    description: notification.message,
+    unread: !notification.isRead,
+    priority: String(notification.priority || 'NORMAL').toLowerCase().replace(/^./, (letter) => letter.toUpperCase()),
   }
-
-  return initialAdminNotifications
 }
 
 function useAdminNotifications() {
-  const [notifications, setNotificationsState] = useState(readNotifications)
+  const toast = useToast()
+  const [notifications, setNotifications] = useState([])
   const notificationsRef = useRef(notifications)
 
   useEffect(() => {
-    const syncNotifications = (event) => {
-      const next = event.type === notificationEvent ? event.detail : readNotifications()
-      if (Array.isArray(next)) {
-        notificationsRef.current = next
-        setNotificationsState(next)
-      }
-    }
-
-    window.addEventListener(notificationEvent, syncNotifications)
-    window.addEventListener('storage', syncNotifications)
+    let active = true
+    notificationsApi.getAll()
+      .then(({ data }) => {
+        if (!active) return
+        const items = (data.notifications || []).map(normalizeNotification)
+        notificationsRef.current = items
+        setNotifications(items)
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load notifications.')))
     return () => {
-      window.removeEventListener(notificationEvent, syncNotifications)
-      window.removeEventListener('storage', syncNotifications)
+      active = false
     }
-  }, [])
+  }, [toast])
 
-  const setNotifications = useCallback((update) => {
-    const next =
-      typeof update === 'function' ? update(notificationsRef.current) : update
+  const updateNotifications = useCallback((update) => {
+    const previous = notificationsRef.current
+    const next = typeof update === 'function' ? update(previous) : update
     if (!Array.isArray(next)) {
-      console.error('Admin notifications must be stored as an array.')
+      toast.error('Notifications could not be updated.')
       return
     }
-
     notificationsRef.current = next
-    setNotificationsState(next)
-    try {
-      window.localStorage.setItem(ADMIN_NOTIFICATIONS_KEY, JSON.stringify(next))
-    } catch (error) {
-      console.error(`Unable to save ${ADMIN_NOTIFICATIONS_KEY} to localStorage:`, error)
-    }
-    window.dispatchEvent(new CustomEvent(notificationEvent, { detail: next }))
-  }, [])
+    setNotifications(next)
 
-  return [notifications, setNotifications]
+    const nextById = new Map(next.map((item) => [item.id, item]))
+    const previousById = new Map(previous.map((item) => [item.id, item]))
+    const requests = []
+    for (const oldItem of previous) {
+      if (!nextById.has(oldItem.id)) {
+        requests.push(notificationsApi.remove(oldItem.id))
+      } else if (oldItem.unread && !nextById.get(oldItem.id).unread) {
+        requests.push(notificationsApi.markRead(oldItem.id))
+      }
+    }
+    for (const item of next) {
+      if (previousById.has(item.id)) continue
+      requests.push(notificationsApi.create({
+        title: item.title,
+        message: item.description || item.message || '',
+        category: categoryValues[item.category] || 'ORDER',
+        priority: String(item.priority || 'NORMAL').toUpperCase(),
+        actionPath: item.actionPath,
+      }))
+    }
+    Promise.all(requests).catch((error) => {
+      toast.error(getApiErrorMessage(error, 'Could not save notification changes.'))
+    })
+  }, [toast])
+
+  return [notifications, updateNotifications]
 }
 
 export default useAdminNotifications

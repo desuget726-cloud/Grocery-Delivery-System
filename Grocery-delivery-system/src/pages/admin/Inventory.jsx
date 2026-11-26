@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -20,7 +20,9 @@ import {
 } from 'lucide-react'
 import { Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { getApiErrorMessage, products as productsApi } from '../../services/api.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const initialInventory = [
@@ -192,8 +194,9 @@ function getFreshness(item) {
 
 function Inventory() {
   const { t } = useLanguage()
-  const [inventory, setInventory] = usePersistentState('admin-warehouse-inventory', initialInventory)
-  const [movements, setMovements] = usePersistentState('admin-warehouse-movements', [])
+  const toast = useToast()
+  const [inventory, setInventory] = useState(initialInventory)
+  const [movements, setMovements] = useState([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All categories')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -204,6 +207,29 @@ function Inventory() {
   const [movementQuantity, setMovementQuantity] = useState('')
   const [movementNote, setMovementNote] = useState('')
   const [formError, setFormError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    productsApi.getAll({ includeInactive: 'true' })
+      .then((items) => {
+        if (!active) return
+        setInventory(items.map((item) => ({
+          ...item,
+          unitCost: Number(item.price) || 0,
+          capacity: Number(item.stock) || 0,
+          minimum: Number(item.lowStockThreshold) || 0,
+          expiryDays: item.expiryDate
+            ? Math.ceil((new Date(item.expiryDate).getTime() - Date.now()) / 86400000)
+            : Number.POSITIVE_INFINITY,
+          supplier: item.supplier || '—',
+          category: item.category || 'Uncategorized',
+        })))
+      })
+      .catch((error) => toast.error(getApiErrorMessage(error, 'Could not load inventory.')))
+    return () => {
+      active = false
+    }
+  }, [toast])
 
   const categories = useMemo(
     () => [...new Set(inventory.map((item) => item.category))],
@@ -242,7 +268,7 @@ function Inventory() {
     setFormError('')
   }
 
-  const recordMovement = (itemId, type, quantity, note = '') => {
+  const recordMovement = async (itemId, type, quantity, note = '') => {
     const numericQuantity = Number(quantity)
     if (!Number.isFinite(numericQuantity) || numericQuantity <= 0) {
       return 'Enter a quantity greater than zero.'
@@ -255,11 +281,23 @@ function Inventory() {
     }
 
     const change = isStockIn ? numericQuantity : -numericQuantity
-    setInventory((current) =>
-      current.map((entry) =>
-        entry.id === itemId ? { ...entry, stock: Math.max(0, entry.stock + change) } : entry,
-      ),
-    )
+    const movementTypes = {
+      [movementOptions[0]]: 'RESTOCK',
+      [movementOptions[1]]: 'DAMAGED',
+      [movementOptions[2]]: 'EXPIRED',
+    }
+    try {
+      const { data } = await productsApi.updateStock(itemId, {
+        quantity: change,
+        type: movementTypes[type],
+        note,
+      })
+      setInventory((current) => current.map((entry) =>
+        entry.id === itemId ? { ...entry, stock: Number(data.product.stock) } : entry,
+      ))
+    } catch (error) {
+      return getApiErrorMessage(error, 'Could not record this stock movement.')
+    }
     setMovements((current) => [
       {
         id: `${Date.now()}-${itemId}`,
@@ -274,26 +312,36 @@ function Inventory() {
       },
       ...current,
     ])
+    logAuditEvent({
+      action: type,
+      category: 'Administration',
+      resource: item.name,
+      details: `${numericQuantity} ${item.unit}${note.trim() ? `; ${note.trim()}` : ''}`,
+    })
     return ''
   }
 
-  const handleModalSubmit = (event) => {
+  const handleModalSubmit = async (event) => {
     event.preventDefault()
-    const error = recordMovement(modalItemId, movementType, movementQuantity, movementNote)
+    const error = await recordMovement(modalItemId, movementType, movementQuantity, movementNote)
     if (error) {
       setFormError(error)
+      toast.error(error)
       return
     }
+    toast.success(movementType === movementOptions[0] ? 'Stock restocked successfully.' : 'Stock spoiled/removed successfully.')
     setModalItemId(null)
   }
 
-  const handleQuickRestock = (item) => {
-    const error = recordMovement(item.id, movementOptions[0], quickAmounts[item.id])
+  const handleQuickRestock = async (item) => {
+    const error = await recordMovement(item.id, movementOptions[0], quickAmounts[item.id])
     if (error) {
       setQuickAmounts((current) => ({ ...current, [`error-${item.id}`]: error }))
+      toast.error(error)
       return
     }
     setQuickAmounts((current) => ({ ...current, [item.id]: '', [`error-${item.id}`]: '' }))
+    toast.success(`${item.name} restocked successfully.`)
   }
 
   const exportCsv = () => {
@@ -321,6 +369,7 @@ function Inventory() {
     link.download = 'grocery-warehouse-stock.csv'
     link.click()
     URL.revokeObjectURL(url)
+    toast.success('Inventory report exported successfully.')
   }
 
   return (

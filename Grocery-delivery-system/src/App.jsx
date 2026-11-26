@@ -2,11 +2,14 @@ import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import { AuthProvider } from './context/AuthContext.jsx'
 import { CartProvider } from './context/CartContext.jsx'
+import { DeliveryProvider } from './context/DeliveryContext.jsx'
 import { LanguageProvider } from './context/LanguageContext.jsx'
+import { ToastProvider } from './context/ToastContext.jsx'
 import { WishlistProvider } from './context/WishlistContext.jsx'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import CustomerLayout from './layouts/CustomerLayout.jsx'
 import DeliveryLayout from './layouts/DeliveryLayout.jsx'
+import AuditLogs from './pages/AuditLogs.jsx'
 import AdminCategories from './pages/admin/Categories.jsx'
 import AdminCustomers from './pages/admin/Customers.jsx'
 import AdminCoupons from './pages/admin/Coupons.jsx'
@@ -26,6 +29,7 @@ import DeliveryDetails from './pages/delivery/DeliveryDetails.jsx'
 import DeliveryDashboard from './pages/delivery/Dashboard.jsx'
 import DeliveryHistory from './pages/delivery/History.jsx'
 import LoginPage from './pages/auth/Login.jsx'
+import ForgotPassword from './pages/auth/ForgotPassword.jsx'
 import RegisterPage from './pages/auth/Register.jsx'
 import Cart from './pages/customer/Cart.jsx'
 import Checkout from './pages/customer/Checkout.jsx'
@@ -54,13 +58,16 @@ function NotFound() {
 
 function App() {
   return (
-    <LanguageProvider>
-      <WishlistProvider>
-        <CartProvider>
-          <AuthProvider>
-            <BrowserRouter>
+    <ToastProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <WishlistProvider>
+            <CartProvider>
+              <DeliveryProvider>
+                <BrowserRouter>
             <Routes>
               <Route path="login" element={<LoginPage />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="register" element={<RegisterPage />} />
 
               <Route path="/" element={<CustomerLayout />}>
@@ -82,13 +89,35 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route path="my-orders" element={<MyOrders />} />
-                <Route path="my-orders/:orderId" element={<MyOrders />} />
+                <Route
+                  path="my-orders"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer', 'admin', 'delivery']}>
+                      <MyOrders />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="my-orders/:orderId"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer', 'admin', 'delivery']}>
+                      <MyOrders />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="profile"
                   element={
-                    <ProtectedRoute allowedRoles={['customer']}>
+                    <ProtectedRoute allowedRoles={['customer', 'admin', 'delivery']}>
                       <Profile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="audit-logs"
+                  element={
+                    <ProtectedRoute allowedRoles={['customer', 'admin', 'delivery']}>
+                      <AuditLogs />
                     </ProtectedRoute>
                   }
                 />
@@ -117,6 +146,7 @@ function App() {
                 <Route path="settings" element={<AdminSettings />} />
                 <Route path="support" element={<AdminSupport />} />
                 <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="audit-logs" element={<AuditLogs />} />
               </Route>
 
               <Route
@@ -134,15 +164,18 @@ function App() {
                 <Route path="details/:orderId" element={<DeliveryDetails />} />
                 <Route path="orders/:orderId" element={<DeliveryDetails />} />
                 <Route path="history" element={<DeliveryHistory />} />
+                <Route path="audit-logs" element={<AuditLogs />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>
-            </BrowserRouter>
-          </AuthProvider>
-        </CartProvider>
-      </WishlistProvider>
-    </LanguageProvider>
+                </BrowserRouter>
+              </DeliveryProvider>
+            </CartProvider>
+          </WishlistProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ToastProvider>
   )
 }
 

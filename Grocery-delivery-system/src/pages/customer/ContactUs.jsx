@@ -1,7 +1,7 @@
 import { Clock3, Mail, MapPin, Navigation, Phone, Send, Star } from 'lucide-react'
 import { useState } from 'react'
-
-const STORAGE_KEY = 'grocery_support_tickets'
+import { useToast } from '../../context/ToastContext.jsx'
+import { getApiErrorMessage, support as supportApi } from '../../services/api.js'
 
 const initialForm = {
   fullName: '',
@@ -56,6 +56,7 @@ const faqs = [
 ]
 
 function ContactUs() {
+  const toast = useToast()
   const [form, setForm] = useState(initialForm)
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -67,66 +68,61 @@ function ContactUs() {
     setSuccessMessage('')
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+    const rejectSubmission = (message) => {
+      setErrorMessage(message)
+      toast.error(message)
+    }
 
     const normalizedPhone = form.phone.replace(/[\s-]/g, '')
     const normalizedOrderId = form.orderId.trim()
     if (form.fullName.trim().length < 2) {
-      setErrorMessage('Please enter your full name.')
+      rejectSubmission('Please enter your full name.')
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      setErrorMessage('Please enter a valid email address.')
+      rejectSubmission('Please enter a valid email address.')
       return
     }
     if (!/^\+251\d{9}$/.test(normalizedPhone)) {
-      setErrorMessage('Enter a valid Ethiopian phone number, such as +251 962714305.')
+      rejectSubmission('Enter a valid Ethiopian phone number, such as +251 962714305.')
       return
     }
     if (normalizedOrderId && !/^GDS-[A-Z0-9-]+$/i.test(normalizedOrderId)) {
-      setErrorMessage('Order IDs should use the format GDS-12345.')
+      rejectSubmission('Order IDs should use the format GDS-12345.')
       return
     }
     if (!form.topic) {
-      setErrorMessage('Please choose a support topic.')
+      rejectSubmission('Please choose a support topic.')
       return
     }
     if (form.message.trim().length < 10) {
-      setErrorMessage('Please include a little more detail in your message.')
+      rejectSubmission('Please include a little more detail in your message.')
       return
     }
 
-    const ticket = {
-      id: `GDS-${Date.now()}`,
-      fullName: form.fullName.trim(),
-      email: form.email.trim(),
-      phone: normalizedPhone,
-      orderId: normalizedOrderId,
-      topic: form.topic,
-      message: form.message.trim(),
-      submittedAt: new Date().toISOString(),
-    }
-
     try {
-      const savedTickets = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '[]')
-      if (!Array.isArray(savedTickets)) {
-        throw new TypeError('Saved support tickets must be an array')
-      }
-
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify([ticket, ...savedTickets]),
-      )
+      const { data } = await supportApi.create({
+        name: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: normalizedPhone,
+        orderCode: normalizedOrderId || undefined,
+        topic: form.topic,
+        message: form.message.trim(),
+      })
+      const ticketCode = data.ticket?.ticketCode || data.ticket?.id
       setForm(initialForm)
       setSuccessMessage(
-        `Thanks, ${ticket.fullName}. Your support request ${ticket.id} has been saved.`,
+        `Thanks, ${form.fullName.trim()}. Your support request ${ticketCode} has been submitted.`,
       )
+      toast.success('Your support request has been submitted.')
     } catch (error) {
-      console.error('Unable to save the support ticket:', error)
+      const message = getApiErrorMessage(error, 'We could not submit your support request. Please try again.')
       setErrorMessage(
-        'We could not save your request. Please try again or contact us by phone or email.',
+        message,
       )
+      toast.error(message)
     }
   }
 

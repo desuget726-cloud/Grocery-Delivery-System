@@ -1,43 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
+import { Minus, Plus, ShoppingCart, Trash2, X } from 'lucide-react'
 import { useCart } from '../context/CartContext.jsx'
 import formatCurrency from '../utils/formatCurrency.js'
 
 const FREE_DELIVERY_THRESHOLD = 500
-const TOAST_DURATION = 3500
-
 function CartDrawer() {
   const {
     cart,
     closeCart,
     isCartOpen,
-    lastAddedItem,
-    openCart,
     removeFromCart,
     totalItems,
     totalPrice,
     updateQuantity,
   } = useCart()
-  const [dismissedToast, setDismissedToast] = useState(null)
-  const toastVisible = lastAddedItem && dismissedToast !== lastAddedItem
   const remainingForFreeDelivery = Math.max(0, FREE_DELIVERY_THRESHOLD - totalPrice)
   const deliveryProgress = Math.min(
     100,
     (totalPrice / FREE_DELIVERY_THRESHOLD) * 100,
   )
-
-  useEffect(() => {
-    if (!lastAddedItem) {
-      return undefined
-    }
-
-    const timeoutId = window.setTimeout(
-      () => setDismissedToast(lastAddedItem),
-      TOAST_DURATION,
-    )
-    return () => window.clearTimeout(timeoutId)
-  }, [lastAddedItem])
 
   useEffect(() => {
     if (!isCartOpen) {
@@ -61,37 +43,6 @@ function CartDrawer() {
 
   return (
     <>
-      {toastVisible && (
-        <div
-          role="status"
-          className="fixed bottom-5 right-5 z-[60] flex max-w-[calc(100vw-2.5rem)] items-center gap-3 rounded-2xl bg-slate-900 px-4 py-3 text-sm text-white shadow-2xl"
-        >
-          <Check aria-hidden="true" size={18} className="shrink-0 text-emerald-400" />
-          <span className="min-w-0">
-            Added <strong className="font-semibold">{lastAddedItem.name}</strong> to cart
-            <span aria-hidden="true"> • </span>
-            <button
-              type="button"
-              onClick={() => {
-                openCart()
-                setDismissedToast(lastAddedItem)
-              }}
-              className="font-bold text-emerald-300 underline underline-offset-2 hover:text-white"
-            >
-              View Cart
-            </button>
-          </span>
-          <button
-            type="button"
-            aria-label="Dismiss notification"
-            onClick={() => setDismissedToast(lastAddedItem)}
-            className="shrink-0 rounded-full p-1 text-slate-300 hover:bg-white/10 hover:text-white"
-          >
-            <X aria-hidden="true" size={16} />
-          </button>
-        </div>
-      )}
-
       {isCartOpen && (
         <div className="fixed inset-0 z-50">
           <button

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Bike,
   CheckCircle,
@@ -22,142 +22,20 @@ import {
 } from 'lucide-react'
 import { Modal } from '../../components/admin/AdminUI.jsx'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-import usePersistentState from '../../hooks/usePersistentState.js'
+import { useToast } from '../../context/ToastContext.jsx'
+import { deliveryStaff as deliveryStaffApi, getApiErrorMessage, orders as ordersApi, payments as paymentsApi } from '../../services/api.js'
+import { logAuditEvent } from '../../services/auditLog.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 const zones = ['Bole', 'Kazanchis', 'CMC / Ayat', 'Sarbet', 'Piassa']
 const statuses = ['All', 'Available', 'On Delivery', 'Offline']
 const vehicleTypes = ['Motorbike', 'Delivery Van', 'Electric Scooter']
 
-const initialFleet = [
-  {
-    id: 'RDR-01',
-    name: 'Dawit Tadesse',
-    phone: '+251 911 234 567',
-    email: 'dawit.tadesse@grocerydelivery.et',
-    vehicle: 'Motorbike',
-    plate: 'AA-23451',
-    zone: 'Bole',
-    activeOrders: 1,
-    completed: 142,
-    rating: 4.9,
-    codHeld: 1240,
-    status: 'Available',
-    recentDeliveries: [
-      { id: 'GDS-2531', area: 'Bole', date: 'Nov 22, 2026', amount: 680 },
-      { id: 'GDS-2504', area: 'Bole', date: 'Nov 21, 2026', amount: 1250 },
-      { id: 'GDS-2472', area: 'Bole', date: 'Nov 20, 2026', amount: 940 },
-    ],
-  },
-  {
-    id: 'RDR-02',
-    name: 'Yonas Girma',
-    phone: '+251 912 345 678',
-    email: 'yonas.girma@grocerydelivery.et',
-    vehicle: 'Delivery Van',
-    plate: 'AA-78124',
-    zone: 'Kazanchis',
-    activeOrders: 2,
-    completed: 126,
-    rating: 4.8,
-    codHeld: 860,
-    status: 'On Delivery',
-    recentDeliveries: [
-      { id: 'GDS-2526', area: 'Kazanchis', date: 'Nov 22, 2026', amount: 520 },
-      { id: 'GDS-2496', area: 'Piassa', date: 'Nov 21, 2026', amount: 1780 },
-      { id: 'GDS-2460', area: 'Kazanchis', date: 'Nov 19, 2026', amount: 610 },
-    ],
-  },
-  {
-    id: 'RDR-03',
-    name: 'Biniyam Alemu',
-    phone: '+251 913 456 789',
-    email: 'biniyam.alemu@grocerydelivery.et',
-    vehicle: 'Electric Scooter',
-    plate: 'AA-59036',
-    zone: 'CMC / Ayat',
-    activeOrders: 0,
-    completed: 98,
-    rating: 4.8,
-    codHeld: 0,
-    status: 'Available',
-    recentDeliveries: [
-      { id: 'GDS-2517', area: 'CMC', date: 'Nov 22, 2026', amount: 740 },
-      { id: 'GDS-2482', area: 'Ayat', date: 'Nov 20, 2026', amount: 560 },
-      { id: 'GDS-2441', area: 'CMC', date: 'Nov 18, 2026', amount: 920 },
-    ],
-  },
-  {
-    id: 'RDR-04',
-    name: 'Henok Solomon',
-    phone: '+251 914 567 890',
-    email: 'henok.solomon@grocerydelivery.et',
-    vehicle: 'Motorbike',
-    plate: 'AA-31608',
-    zone: 'Sarbet',
-    activeOrders: 0,
-    completed: 76,
-    rating: 4.7,
-    codHeld: 0,
-    status: 'Offline',
-    recentDeliveries: [
-      { id: 'GDS-2508', area: 'Sarbet', date: 'Nov 21, 2026', amount: 435 },
-      { id: 'GDS-2457', area: 'Old Airport', date: 'Nov 19, 2026', amount: 890 },
-      { id: 'GDS-2418', area: 'Sarbet', date: 'Nov 16, 2026', amount: 720 },
-    ],
-  },
-  {
-    id: 'RDR-05',
-    name: 'Bereket Teshome',
-    phone: '+251 915 678 901',
-    email: 'bereket.teshome@grocerydelivery.et',
-    vehicle: 'Delivery Van',
-    plate: 'AA-45219',
-    zone: 'Piassa',
-    activeOrders: 2,
-    completed: 113,
-    rating: 4.9,
-    codHeld: 2150,
-    status: 'On Delivery',
-    recentDeliveries: [
-      { id: 'GDS-2521', area: 'Piassa', date: 'Nov 22, 2026', amount: 1200 },
-      { id: 'GDS-2489', area: 'Arat Kilo', date: 'Nov 20, 2026', amount: 540 },
-      { id: 'GDS-2445', area: 'Piassa', date: 'Nov 18, 2026', amount: 760 },
-    ],
-  },
-  {
-    id: 'RDR-06',
-    name: 'Natnael Bekele',
-    phone: '+251 916 789 012',
-    email: 'natnael.bekele@grocerydelivery.et',
-    vehicle: 'Electric Scooter',
-    plate: 'AA-82743',
-    zone: 'Bole',
-    activeOrders: 0,
-    completed: 64,
-    rating: 4.8,
-    codHeld: 0,
-    status: 'Available',
-    recentDeliveries: [
-      { id: 'GDS-2513', area: 'Bole', date: 'Nov 22, 2026', amount: 610 },
-      { id: 'GDS-2476', area: 'Bole', date: 'Nov 20, 2026', amount: 980 },
-      { id: 'GDS-2429', area: 'Bole', date: 'Nov 17, 2026', amount: 350 },
-    ],
-  },
-]
-
-const initialUnassignedOrders = [
-  { id: 'GDS-2538', zone: 'Bole', address: 'Bole, near Friendship Square', amount: 680, paymentMethod: 'Cash on Delivery' },
-  { id: 'GDS-2539', zone: 'Kazanchis', address: 'Kazanchis, Guinea Conakry Street', amount: 1240, paymentMethod: 'Telebirr' },
-  { id: 'GDS-2540', zone: 'CMC / Ayat', address: 'CMC, around Sunshine Real Estate', amount: 920, paymentMethod: 'Cash on Delivery' },
-  { id: 'GDS-2541', zone: 'Sarbet', address: 'Sarbet, Africa Avenue', amount: 540, paymentMethod: 'Cash on Delivery' },
-  { id: 'GDS-2542', zone: 'Piassa', address: 'Piassa, near St. George Cathedral', amount: 875, paymentMethod: 'Telebirr' },
-]
-
 const blankDraft = {
   name: '',
   phone: '+251 ',
   email: '',
+  password: '',
   vehicle: 'Motorbike',
   plate: '',
   zone: 'Bole',
@@ -259,7 +137,7 @@ function RiderModal({ rider, draft, setDraft, onClose, onSave }) {
 
   return (
     <Modal title={rider ? t('delivery.editRider') : t('common.addRider')} onClose={onClose} size="max-w-xl">
-      <form onSubmit={onSave} className="space-y-4">
+      <form noValidate onSubmit={onSave} className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block text-sm font-medium text-gray-700">
             {t('customers.fullName')}
@@ -294,6 +172,20 @@ function RiderModal({ rider, draft, setDraft, onClose, onSave }) {
               className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
             />
           </label>
+          {!rider && (
+            <label className="block text-sm font-medium text-gray-700 sm:col-span-2">
+              Temporary password
+              <input
+                required
+                minLength={8}
+                type="password"
+                autoComplete="new-password"
+                value={draft.password}
+                onChange={update('password')}
+                className="mt-1.5 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none transition focus:border-[#1E8E3E] focus:ring-2 focus:ring-emerald-100"
+              />
+            </label>
+          )}
           <label className="block text-sm font-medium text-gray-700">
             {t('delivery.vehicleType')}
             <select
@@ -373,7 +265,7 @@ function AssignOrderModal({ rider, orders, onClose, onAssign }) {
                   <ClipboardList aria-hidden="true" size={17} />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#0B4B8C]">{order.id}</p>
+                  <p className="text-sm font-bold text-[#0B4B8C]">{order.code || order.id}</p>
                   <p className="mt-0.5 truncate text-xs text-gray-500">{order.zone} · {order.address}</p>
                   <p className="mt-1 text-[11px] text-gray-400">{order.paymentMethod}</p>
                 </div>
@@ -533,10 +425,57 @@ function RiderDrawer({ rider, onClose, onSettleCod }) {
   )
 }
 
+function normalizeFleetRider(user, orders) {
+  const riderOrders = orders.filter((order) => order.rider?.id === user.id)
+  const activeOrders = riderOrders.filter((order) => !['Delivered', 'Canceled'].includes(order.status))
+  const deliveries = riderOrders
+    .filter((order) => order.status === 'Delivered')
+    .sort((first, second) => new Date(second.date) - new Date(first.date))
+
+  return {
+    id: user.id,
+    name: user.fullName,
+    phone: user.phone || '',
+    email: user.email,
+    vehicle: user.vehicleType || 'Motorbike',
+    plate: user.plateNumber || '',
+    zone: user.assignedZone || '',
+    isOnline: Boolean(user.isOnline),
+    activeOrders: activeOrders.length,
+    completed: deliveries.length,
+    rating: Number(user.rating) || 0,
+    codHeld: Number(user.codCashHeld) || 0,
+    status: activeOrders.length ? 'On Delivery' : user.isOnline ? 'Available' : 'Offline',
+    recentDeliveries: deliveries.slice(0, 3).map((order) => ({
+      id: order.code || order.id,
+      area: order.deliveryZone || '',
+      date: order.date ? new Date(order.date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }) : '',
+      amount: Number(order.total) || 0,
+    })),
+  }
+}
+
+function normalizeUnassignedOrder(order) {
+  return {
+    id: order.id,
+    code: order.code || order.id,
+    zone: order.deliveryZone || '',
+    address: [order.deliveryZone, order.deliveryStreet].filter(Boolean).join(', '),
+    amount: Number(order.total) || 0,
+    paymentMethod: order.paymentMethod,
+  }
+}
+
 function DeliveryStaff() {
   const { t } = useLanguage()
-  const [fleet, setFleet] = usePersistentState('admin-fleet-riders', initialFleet)
-  const [orders, setOrders] = usePersistentState('admin-fleet-orders', initialUnassignedOrders)
+  const toast = useToast()
+  const [fleet, setFleet] = useState([])
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [zoneFilter, setZoneFilter] = useState('All Zones')
@@ -546,6 +485,29 @@ function DeliveryStaff() {
   const [draft, setDraft] = useState(blankDraft)
   const [riderModalOpen, setRiderModalOpen] = useState(false)
   const [assigningRiderId, setAssigningRiderId] = useState(null)
+
+  const refreshFleet = useCallback(async () => {
+    setLoading(true)
+    try {
+      const [staffResponse, allOrders] = await Promise.all([
+        deliveryStaffApi.getAll(),
+        ordersApi.getAll(),
+      ])
+      const users = staffResponse.data.users || []
+      setFleet(users.map((user) => normalizeFleetRider(user, allOrders)))
+      setOrders(allOrders
+        .filter((order) => !order.rider && !['Delivered', 'Canceled'].includes(order.status))
+        .map(normalizeUnassignedOrder))
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Could not load delivery staff and orders.'))
+    } finally {
+      setLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    Promise.resolve().then(refreshFleet)
+  }, [refreshFleet])
 
   const filteredFleet = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -577,6 +539,7 @@ function DeliveryStaff() {
       name: rider.name,
       phone: rider.phone,
       email: rider.email,
+      password: '',
       vehicle: rider.vehicle,
       plate: rider.plate,
       zone: rider.zone,
@@ -585,8 +548,16 @@ function DeliveryStaff() {
     setRiderModalOpen(true)
   }
 
-  const saveRider = (event) => {
+  const saveRider = async (event) => {
     event.preventDefault()
+    if (!draft.name.trim() || !draft.phone.trim() || !draft.email.trim() || !draft.plate.trim() || !draft.zone) {
+      toast.error('Complete all required rider details before saving.')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim())) {
+      toast.error('Enter a valid rider email address.')
+      return
+    }
     const riderDetails = {
       ...draft,
       name: draft.name.trim(),
@@ -595,72 +566,94 @@ function DeliveryStaff() {
       plate: draft.plate.trim().toUpperCase(),
     }
 
-    if (editingRider) {
-      setFleet((current) =>
-        current.map((rider) =>
-          rider.id === editingRider.id ? { ...rider, ...riderDetails } : rider,
-        ),
-      )
-    } else {
-      const nextNumber = fleet.reduce((max, rider) => {
-        const number = Number(rider.id.match(/\d+$/)?.[0] || 0)
-        return Math.max(max, number)
-      }, 0) + 1
-      setFleet((current) => [
-        {
-          id: `RDR-${String(nextNumber).padStart(2, '0')}`,
-          ...riderDetails,
-          activeOrders: 0,
-          completed: 0,
-          rating: 0,
-          codHeld: 0,
-          recentDeliveries: [],
-        },
-        ...current,
-      ])
+    if (!editingRider && draft.password.length < 8) {
+      toast.error('The temporary password must be at least 8 characters.')
+      return
     }
-    setRiderModalOpen(false)
-    setEditingRider(null)
+    try {
+      const payload = {
+        fullName: riderDetails.name,
+        phone: riderDetails.phone,
+        email: riderDetails.email,
+        vehicleType: riderDetails.vehicle,
+        plateNumber: riderDetails.plate,
+        assignedZone: riderDetails.zone,
+        isOnline: riderDetails.status !== 'Offline',
+      }
+      if (editingRider) {
+        await deliveryStaffApi.update(editingRider.id, payload)
+      } else {
+        await deliveryStaffApi.create({ ...payload, password: draft.password })
+      }
+      await refreshFleet()
+      logAuditEvent({
+        action: editingRider ? 'Updated delivery staff' : 'Added delivery staff',
+        category: 'Administration',
+        resource: riderDetails.name,
+      })
+      setRiderModalOpen(false)
+      setEditingRider(null)
+      toast.success(editingRider ? 'Rider details updated.' : 'Rider added successfully.')
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to save delivery staff details.'))
+    }
   }
 
-  const updateStatus = (rider) => {
-    const nextStatus = rider.status === 'Offline' ? 'Available' : 'Offline'
-    setFleet((current) =>
-      current.map((item) => item.id === rider.id ? { ...item, status: nextStatus } : item),
-    )
+  const updateStatus = async (rider) => {
+    const isOnline = !rider.isOnline
+    try {
+      await deliveryStaffApi.update(rider.id, { isOnline })
+      await refreshFleet()
+      const nextStatus = isOnline ? 'Available' : 'Offline'
+      logAuditEvent({
+        action: 'Updated delivery staff availability',
+        category: 'Administration',
+        resource: rider.name,
+        details: nextStatus,
+      })
+      toast.success(`${rider.name} marked ${nextStatus.toLowerCase()}.`)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to update delivery staff availability.'))
+    }
   }
 
-  const removeRider = (rider) => {
+  const removeRider = async (rider) => {
     if (!window.confirm(`Remove ${rider.name} from the fleet?`)) return
-    setFleet((current) => current.filter((item) => item.id !== rider.id))
-    if (selectedRiderId === rider.id) setSelectedRiderId(null)
+    try {
+      await deliveryStaffApi.remove(rider.id)
+      await refreshFleet()
+      logAuditEvent({
+        action: 'Removed delivery staff',
+        category: 'Administration',
+        resource: rider.name,
+      })
+      if (selectedRiderId === rider.id) setSelectedRiderId(null)
+      toast.success(`${rider.name} removed from the fleet.`)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to remove delivery staff.'))
+    }
   }
 
-  const assignOrder = (order) => {
+  const assignOrder = async (order) => {
     if (!assigningRider) return
-    setOrders((current) =>
-      current.map((item) =>
-        item.id === order.id ? { ...item, assignedRiderId: assigningRider.id } : item,
-      ),
-    )
-    setFleet((current) =>
-      current.map((rider) =>
-        rider.id === assigningRider.id
-          ? {
-              ...rider,
-              activeOrders: rider.activeOrders + 1,
-              status: 'On Delivery',
-            }
-          : rider,
-      ),
-    )
-    setAssigningRiderId(null)
+    try {
+      await ordersApi.assignRider(order.id, assigningRider.id)
+      await refreshFleet()
+      setAssigningRiderId(null)
+      toast.success(`${assigningRider.name} assigned to ${order.code || order.id}.`)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to assign this order.'))
+    }
   }
 
-  const settleCod = (rider) => {
-    setFleet((current) =>
-      current.map((item) => item.id === rider.id ? { ...item, codHeld: 0 } : item),
-    )
+  const settleCod = async (rider) => {
+    try {
+      await paymentsApi.settleCod({ riderId: rider.id, amount: rider.codHeld })
+      await refreshFleet()
+      toast.success(`COD payment settled for ${rider.name}.`)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, 'Unable to settle COD cash.'))
+    }
   }
 
   const exportCsv = () => {
@@ -688,6 +681,7 @@ function DeliveryStaff() {
     link.click()
     link.remove()
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast.success('Delivery staff list exported successfully.')
   }
 
   const openAssignModal = (rider) => {
@@ -922,8 +916,10 @@ function DeliveryStaff() {
                       <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gray-100 text-gray-400">
                         <Search aria-hidden="true" size={19} />
                       </div>
-                      <p className="mt-3 text-sm font-semibold text-gray-700">{t('delivery.noRidersFound')}</p>
-                      <p className="mt-1 text-xs text-gray-500">{t('delivery.tryAnotherSearchStatusZone')}</p>
+                      <p className="mt-3 text-sm font-semibold text-gray-700">
+                        {loading ? 'Loading delivery staff...' : t('delivery.noRidersFound')}
+                      </p>
+                      {!loading && <p className="mt-1 text-xs text-gray-500">{t('delivery.tryAnotherSearchStatusZone')}</p>}
                     </td>
                   </tr>
                 )}
@@ -1001,8 +997,10 @@ function DeliveryStaff() {
             {filteredFleet.length === 0 && (
               <div className="rounded-2xl border border-dashed border-gray-200 px-5 py-14 text-center md:col-span-2 xl:col-span-3">
                 <Search aria-hidden="true" size={22} className="mx-auto text-gray-400" />
-                <p className="mt-3 text-sm font-semibold text-gray-700">{t('delivery.noRidersFound')}</p>
-                <p className="mt-1 text-xs text-gray-500">{t('delivery.tryAnotherSearchStatusZone')}</p>
+                <p className="mt-3 text-sm font-semibold text-gray-700">
+                  {loading ? 'Loading delivery staff...' : t('delivery.noRidersFound')}
+                </p>
+                {!loading && <p className="mt-1 text-xs text-gray-500">{t('delivery.tryAnotherSearchStatusZone')}</p>}
               </div>
             )}
           </div>

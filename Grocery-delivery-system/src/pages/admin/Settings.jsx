@@ -1,6 +1,5 @@
 import { useEffect, useId, useState } from 'react'
 import {
-  AlertCircle,
   Bell,
   Check,
   CreditCard,
@@ -19,11 +18,10 @@ import {
 } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import { useAuth } from '../../context/AuthContext.jsx'
-import { ADMIN_NOTIFICATIONS_KEY } from '../../data/adminNotifications.js'
-import useAdminNotifications from '../../hooks/useAdminNotifications.js'
+import { logAuditEvent } from '../../services/auditLog.js'
+import { adminApi, getApiErrorMessage, notifications as notificationsApi, settings as settingsApi } from '../../services/api.js'
 import { useLanguage } from '../../context/LanguageContext.jsx'
-
-const STORAGE_KEY = 'grocery_admin_settings'
+import { useToast } from '../../context/ToastContext.jsx'
 
 const DEFAULT_SETTINGS = {
   storeProfile: {
@@ -104,61 +102,82 @@ const settingTabs = [
   { id: 'security', translationKey: 'securityTab', icon: ShieldCheck },
 ]
 
-function loadSettings() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS
-  try {
-    const saved = window.localStorage.getItem(STORAGE_KEY)
-    if (!saved) return DEFAULT_SETTINGS
-    const parsed = JSON.parse(saved)
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new TypeError('Stored admin settings must be an object')
-    }
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      storeProfile: { ...DEFAULT_SETTINGS.storeProfile, ...parsed.storeProfile },
-      delivery: {
-        ...DEFAULT_SETTINGS.delivery,
-        ...parsed.delivery,
-        zones: Array.isArray(parsed.delivery?.zones)
-          ? parsed.delivery.zones
-          : DEFAULT_SETTINGS.delivery.zones,
-        timeSlots: [
-          ...DEFAULT_SETTINGS.delivery.timeSlots.map((defaultSlot) => ({
-            ...defaultSlot,
-            ...(Array.isArray(parsed.delivery?.timeSlots)
-              ? parsed.delivery.timeSlots.find((slot) => slot.id === defaultSlot.id)
-              : {}),
-          })),
-          ...(Array.isArray(parsed.delivery?.timeSlots)
-            ? parsed.delivery.timeSlots.filter(
-                (slot) => !DEFAULT_SETTINGS.delivery.timeSlots.some(
-                  (defaultSlot) => defaultSlot.id === slot.id,
-                ),
-              )
-            : []),
-        ],
-      },
-      payments: {
-        ...DEFAULT_SETTINGS.payments,
-        ...parsed.payments,
-        telebirr: { ...DEFAULT_SETTINGS.payments.telebirr, ...parsed.payments?.telebirr },
-        cbeBirr: { ...DEFAULT_SETTINGS.payments.cbeBirr, ...parsed.payments?.cbeBirr },
-        chapa: { ...DEFAULT_SETTINGS.payments.chapa, ...parsed.payments?.chapa },
-        cod: { ...DEFAULT_SETTINGS.payments.cod, ...parsed.payments?.cod },
-      },
-      rules: { ...DEFAULT_SETTINGS.rules, ...parsed.rules },
-      notifications: {
-        ...DEFAULT_SETTINGS.notifications,
-        ...parsed.notifications,
-        admin: { ...DEFAULT_SETTINGS.notifications.admin, ...parsed.notifications?.admin },
-        customer: { ...DEFAULT_SETTINGS.notifications.customer, ...parsed.notifications?.customer },
-      },
-      security: { ...DEFAULT_SETTINGS.security, ...parsed.security },
-    }
-  } catch (error) {
-    console.error('Unable to load admin settings from localStorage:', error)
-    return DEFAULT_SETTINGS
+function fromApiSettings(record) {
+  const paymentGateways = record.paymentGateways || {}
+  const zones = Array.isArray(record.zones)
+    ? record.zones.map((zone, index) => {
+        if (typeof zone !== 'string') return zone
+        const defaults = DEFAULT_SETTINGS.delivery.zones.find((item) => item.name === zone)
+        return defaults || { id: `zone-${index}`, name: zone, fee: 0, active: true }
+      })
+    : DEFAULT_SETTINGS.delivery.zones
+  const timeSlots = Array.isArray(record.timeSlots)
+    ? record.timeSlots.map((slot, index) => typeof slot === 'string'
+        ? { id: `slot-${index}`, name: slot, hours: slot, active: true }
+        : slot)
+    : DEFAULT_SETTINGS.delivery.timeSlots
+
+  return {
+    ...DEFAULT_SETTINGS,
+    storeProfile: {
+      ...DEFAULT_SETTINGS.storeProfile,
+      name: record.storeName ?? DEFAULT_SETTINGS.storeProfile.name,
+      tagline: record.tagline ?? DEFAULT_SETTINGS.storeProfile.tagline,
+      supportEmail: record.supportEmail ?? DEFAULT_SETTINGS.storeProfile.supportEmail,
+      supportPhone: record.supportPhone ?? DEFAULT_SETTINGS.storeProfile.supportPhone,
+      address: record.warehouseAddress ?? DEFAULT_SETTINGS.storeProfile.address,
+      logo: record.logoUrl ?? '',
+      isOpen: record.isStoreOpen ?? DEFAULT_SETTINGS.storeProfile.isOpen,
+      maintenanceMessage: record.maintenanceMessage ?? DEFAULT_SETTINGS.storeProfile.maintenanceMessage,
+    },
+    delivery: {
+      ...DEFAULT_SETTINGS.delivery,
+      freeThreshold: Number(record.freeDeliveryThreshold ?? DEFAULT_SETTINGS.delivery.freeThreshold),
+      standardFee: Number(record.standardFee ?? DEFAULT_SETTINGS.delivery.standardFee),
+      expressFee: Number(record.expressFee ?? DEFAULT_SETTINGS.delivery.expressFee),
+      minimumOrder: Number(record.minOrderAmount ?? DEFAULT_SETTINGS.delivery.minimumOrder),
+      zones,
+      timeSlots,
+    },
+    payments: {
+      ...DEFAULT_SETTINGS.payments,
+      telebirr: { ...DEFAULT_SETTINGS.payments.telebirr, active: paymentGateways.telebirr ?? true },
+      cbeBirr: { ...DEFAULT_SETTINGS.payments.cbeBirr, active: paymentGateways.cbeBirr ?? true },
+      chapa: { ...DEFAULT_SETTINGS.payments.chapa, active: paymentGateways.chapa ?? true },
+      cod: { ...DEFAULT_SETTINGS.payments.cod, active: paymentGateways.cashOnDelivery ?? paymentGateways.cod ?? true },
+      vatRate: Number(record.vatRate ?? 0.15) * 100,
+    },
+    rules: {
+      ...DEFAULT_SETTINGS.rules,
+      requireOtp: record.requireDeliveryOtp ?? DEFAULT_SETTINGS.rules.requireOtp,
+    },
+  }
+}
+
+function toApiSettings(settings) {
+  return {
+    storeName: settings.storeProfile.name,
+    tagline: settings.storeProfile.tagline,
+    supportEmail: settings.storeProfile.supportEmail,
+    supportPhone: settings.storeProfile.supportPhone,
+    warehouseAddress: settings.storeProfile.address,
+    logoUrl: settings.storeProfile.logo || null,
+    isStoreOpen: settings.storeProfile.isOpen,
+    maintenanceMessage: settings.storeProfile.maintenanceMessage,
+    freeDeliveryThreshold: Number(settings.delivery.freeThreshold),
+    standardFee: Number(settings.delivery.standardFee),
+    expressFee: Number(settings.delivery.expressFee),
+    minOrderAmount: Number(settings.delivery.minimumOrder),
+    vatRate: Number(settings.payments.vatRate) / 100,
+    requireDeliveryOtp: settings.rules.requireOtp,
+    zones: settings.delivery.zones,
+    timeSlots: settings.delivery.timeSlots,
+    paymentGateways: {
+      telebirr: settings.payments.telebirr.active,
+      cbeBirr: settings.payments.cbeBirr.active,
+      chapa: settings.payments.chapa.active,
+      cashOnDelivery: settings.payments.cod.active,
+    },
   }
 }
 
@@ -266,12 +285,15 @@ function Card({ title, description, children, badge, className = '' }) {
 
 function Settings() {
   const { t } = useLanguage()
+  const toast = useToast()
   const { changePassword, token } = useAuth()
-  const [, setNotifications] = useAdminNotifications()
-  const [settings, setSettings] = useState(loadSettings)
-  const [savedSettingsSnapshot, setSavedSettingsSnapshot] = useState(() => JSON.stringify(settings))
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [savedSettingsSnapshot, setSavedSettingsSnapshot] = useState('')
+  const [loadingSettings, setLoadingSettings] = useState(true)
+  const [auditLogs, setAuditLogs] = useState([])
+  const [auditLogsLoading, setAuditLogsLoading] = useState(false)
+  const [auditLogsError, setAuditLogsError] = useState('')
   const [activeTab, setActiveTab] = useState('store')
-  const [toast, setToast] = useState(null)
   const [zoneName, setZoneName] = useState('')
   const [zoneFee, setZoneFee] = useState('')
   const [zoneError, setZoneError] = useState('')
@@ -285,13 +307,50 @@ function Settings() {
   const [showPasswords, setShowPasswords] = useState(false)
   const [showGatewayKeys, setShowGatewayKeys] = useState({})
   const [gatewayChecks, setGatewayChecks] = useState({})
-  const hasUnsavedChanges = JSON.stringify(settings) !== savedSettingsSnapshot
+  const hasUnsavedChanges = JSON.stringify(toApiSettings(settings)) !== savedSettingsSnapshot
 
   useEffect(() => {
-    if (!toast) return undefined
-    const timeoutId = window.setTimeout(() => setToast(null), 3500)
-    return () => window.clearTimeout(timeoutId)
+    let active = true
+    settingsApi.getPublic()
+      .then(({ data }) => {
+        if (!active) return
+        const nextSettings = fromApiSettings(data.settings || {})
+        setSettings(nextSettings)
+        setSavedSettingsSnapshot(JSON.stringify(toApiSettings(nextSettings)))
+      })
+      .catch((error) => {
+        if (active) toast.error(getApiErrorMessage(error, 'Could not load store settings.'))
+      })
+      .finally(() => {
+        if (active) setLoadingSettings(false)
+      })
+    return () => {
+      active = false
+    }
   }, [toast])
+
+  useEffect(() => {
+    if (activeTab !== 'security') return undefined
+    let active = true
+    adminApi.auditLogs({ page: 1, limit: 20 })
+      .then(({ data }) => {
+        if (!active) return
+        setAuditLogs(data.logs || [])
+        setAuditLogsError('')
+      })
+      .catch((error) => {
+        if (!active) return
+        const message = getApiErrorMessage(error, 'Could not load security activity.')
+        setAuditLogsError(message)
+        toast.error(message)
+      })
+      .finally(() => {
+        if (active) setAuditLogsLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [activeTab, toast])
 
   const updateSection = (section, field, value) => {
     setSettings((current) => ({
@@ -310,46 +369,55 @@ function Settings() {
     }))
   }
 
-  const persistSettings = (nextSettings, successMessage = t('settings.settingsSavedSuccessfully')) => {
+  const persistSettings = async (nextSettings, successMessage = t('settings.settingsSavedSuccessfully')) => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSettings))
-      setSettings(nextSettings)
-      setSavedSettingsSnapshot(JSON.stringify(nextSettings))
+      const { data } = await settingsApi.update(toApiSettings(nextSettings))
+      const savedSettings = fromApiSettings(data.settings || {})
+      setSettings(savedSettings)
+      setSavedSettingsSnapshot(JSON.stringify(toApiSettings(savedSettings)))
       window.dispatchEvent(
         new CustomEvent('grocery-store-status-change', {
-          detail: { isOpen: nextSettings.storeProfile.isOpen },
+          detail: { isOpen: savedSettings.storeProfile.isOpen },
         }),
       )
-      setToast({ type: 'success', message: successMessage })
+      logAuditEvent({
+        action: 'Updated store settings',
+        category: 'Administration',
+        resource: 'Store settings',
+      })
+      toast.success(successMessage)
     } catch (error) {
-      console.error('Unable to save admin settings:', error)
-      setToast({ type: 'error', message: t('settings.saveSettingsError') })
+      toast.error(getApiErrorMessage(error, t('settings.saveSettingsError')))
     }
   }
 
-  const updateStoreAvailability = (isOpen) => {
+  const updateStoreAvailability = async (isOpen) => {
     try {
-      const savedSettings = loadSettings()
-      const nextSavedSettings = {
-        ...savedSettings,
-        storeProfile: {
-          ...savedSettings.storeProfile,
-          isOpen,
-          maintenanceMessage: settings.storeProfile.maintenanceMessage,
-        },
-      }
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSavedSettings))
+      await settingsApi.update({
+        isStoreOpen: isOpen,
+        maintenanceMessage: settings.storeProfile.maintenanceMessage,
+      })
       setSettings((current) => ({
         ...current,
         storeProfile: { ...current.storeProfile, isOpen },
       }))
-      setSavedSettingsSnapshot(JSON.stringify(nextSavedSettings))
+      const savedSnapshot = savedSettingsSnapshot ? JSON.parse(savedSettingsSnapshot) : toApiSettings(settings)
+      setSavedSettingsSnapshot(JSON.stringify({
+        ...savedSnapshot,
+        isStoreOpen: isOpen,
+        maintenanceMessage: settings.storeProfile.maintenanceMessage,
+      }))
       window.dispatchEvent(
         new CustomEvent('grocery-store-status-change', { detail: { isOpen } }),
       )
+      logAuditEvent({
+        action: isOpen ? 'Opened store' : 'Closed store',
+        category: 'Administration',
+        resource: 'Store availability',
+      })
+      toast.success(isOpen ? 'Store opened successfully.' : 'Store closed successfully.')
     } catch (error) {
-      console.error('Unable to update store availability:', error)
-      setToast({ type: 'error', message: t('settings.saveSettingsError') })
+      toast.error(getApiErrorMessage(error, t('settings.saveSettingsError')))
     }
   }
 
@@ -357,12 +425,12 @@ function Settings() {
     const file = event.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) {
-      setToast({ type: 'error', message: 'Choose a valid image file.' })
+      toast.error('Choose a valid image file.')
       event.target.value = ''
       return
     }
     if (file.size > 2 * 1024 * 1024) {
-      setToast({ type: 'error', message: 'Store logo must be 2 MB or smaller.' })
+      toast.error('Store logo must be 2 MB or smaller.')
       event.target.value = ''
       return
     }
@@ -370,14 +438,14 @@ function Settings() {
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result !== 'string') {
-        setToast({ type: 'error', message: 'Unable to read the selected logo.' })
+        toast.error('Unable to read the selected logo.')
         return
       }
       updateSection('storeProfile', 'logo', reader.result)
     }
     reader.onerror = () => {
       console.error('Unable to read the selected store logo:', reader.error)
-      setToast({ type: 'error', message: 'Unable to read the selected logo.' })
+      toast.error('Unable to read the selected logo.')
     }
     reader.readAsDataURL(file)
   }
@@ -385,13 +453,14 @@ function Settings() {
   const testGateway = (gateway, credentials) => {
     if (!credentials.some((credential) => credential.trim())) {
       setGatewayChecks((current) => ({ ...current, [gateway]: false }))
-      setToast({ type: 'error', message: 'Add gateway credentials before testing.' })
+      toast.error('Add gateway credentials before testing.')
       return
     }
     setGatewayChecks((current) => ({ ...current, [gateway]: true }))
+    toast.success('Payment gateway credentials verified.')
   }
 
-  const sendTestNotification = () => {
+  const sendTestNotification = async () => {
     const now = new Date()
     const notification = {
       id: `test-${now.getTime()}`,
@@ -405,18 +474,16 @@ function Settings() {
       unread: true,
     }
     try {
-      const saved = window.localStorage.getItem(ADMIN_NOTIFICATIONS_KEY)
-      const current = saved ? JSON.parse(saved) : []
-      if (!Array.isArray(current)) {
-        throw new TypeError(`${ADMIN_NOTIFICATIONS_KEY} must contain an array`)
-      }
-      const next = [notification, ...current]
-      window.localStorage.setItem(ADMIN_NOTIFICATIONS_KEY, JSON.stringify(next))
-      setNotifications(next)
-      setToast({ type: 'success', message: 'Test notification sent.' })
+      await notificationsApi.create({
+        title: notification.title,
+        message: notification.description,
+        category: 'SYSTEM',
+        priority: 'NORMAL',
+        actionPath: notification.actionPath,
+      })
+      toast.success('Test notification sent.')
     } catch (error) {
-      console.error('Unable to send test admin notification:', error)
-      setToast({ type: 'error', message: 'Unable to send test notification.' })
+      toast.error(getApiErrorMessage(error, 'Unable to send test notification.'))
     }
   }
 
@@ -432,14 +499,17 @@ function Settings() {
     const fee = Number(zoneFee)
     if (!name) {
       setZoneError(t('settings.enterZoneName'))
+      toast.error(t('settings.enterZoneName'))
       return
     }
     if (!zoneFee.trim() || !Number.isFinite(fee) || fee < 0) {
       setZoneError(t('settings.enterValidDeliveryFee'))
+      toast.error(t('settings.enterValidDeliveryFee'))
       return
     }
     if (settings.delivery.zones.some((zone) => zone.name.toLowerCase() === name.toLowerCase())) {
       setZoneError(t('settings.zoneAlreadyExists'))
+      toast.error(t('settings.zoneAlreadyExists'))
       return
     }
     updateSection('delivery', 'zones', [
@@ -449,34 +519,36 @@ function Settings() {
     setZoneName('')
     setZoneFee('')
     setZoneError('')
+    toast.info('Delivery zone added. Save changes to apply it.')
   }
 
-  const submitPasswordChange = (event) => {
+  const submitPasswordChange = async (event) => {
     event.preventDefault()
     setPasswordError('')
     setPasswordNotice('')
     if (!passwordFields.current) {
       setPasswordError(t('settings.enterCurrentPassword'))
+      toast.error(t('settings.enterCurrentPassword'))
       return
     }
     if (passwordFields.next.length < 8) {
       setPasswordError(t('settings.passwordMinimumLength'))
+      toast.error(t('settings.passwordMinimumLength'))
       return
     }
     if (passwordFields.next !== passwordFields.confirm) {
       setPasswordError(t('settings.passwordsDoNotMatch'))
+      toast.error(t('settings.passwordsDoNotMatch'))
       return
     }
     try {
-      changePassword(passwordFields.current, passwordFields.next)
+      await changePassword(passwordFields.current, passwordFields.next)
       setPasswordFields({ current: '', next: '', confirm: '' })
       setPasswordNotice('Password updated successfully.')
-      setToast({ type: 'success', message: 'Password updated successfully.' })
+      toast.success('Password updated successfully.')
     } catch (error) {
-      if (error.message !== 'Current password is incorrect.') {
-        console.error('Unable to update admin password:', error)
-      }
-      setPasswordError(error.message || 'Unable to update password. Please try again.')
+      const message = error.message || 'Unable to update password. Please try again.'
+      setPasswordError(message)
     }
   }
 
@@ -489,13 +561,10 @@ function Settings() {
         : window.localStorage
       otherStorage.removeItem('grocery-auth')
       otherStorage.removeItem('token')
-      setToast({
-        type: 'success',
-        message: 'Other saved sessions on this browser have been signed out.',
-      })
+      toast.success('Other saved sessions on this browser have been signed out.')
     } catch (error) {
       console.error('Unable to sign out other admin sessions:', error)
-      setToast({ type: 'error', message: 'Unable to sign out other sessions.' })
+      toast.error('Unable to sign out other sessions.')
     }
   }
 
@@ -900,17 +969,32 @@ function Settings() {
         <p className="mt-2 text-[10px] text-slate-400">This clears other saved sign-ins on this browser.</p>
       </Card>
       <Card title="Recent security activity" description="A concise audit trail of recent administrator activity.">
-        <ol className="divide-y divide-slate-100">
-          {[
-            { event: 'Admin logged in • Addis Ababa', time: 'Today' },
-            { event: 'Delivery settings updated', time: 'Today' },
-          ].map(({ event, time }) => (
-            <li key={event} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-              <span className="text-sm font-medium text-slate-700">{event}</span>
-              <span className="shrink-0 text-xs text-slate-400">{time}</span>
-            </li>
-          ))}
-        </ol>
+        {auditLogsLoading ? (
+          <p role="status" className="py-6 text-center text-sm text-slate-500">Loading security activity...</p>
+        ) : auditLogsError ? (
+          <p role="alert" className="py-6 text-center text-sm text-rose-700">{auditLogsError}</p>
+        ) : auditLogs.length ? (
+          <ol className="divide-y divide-slate-100">
+            {auditLogs.map((entry) => (
+              <li key={entry.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {entry.action.replaceAll('_', ' ')} · {entry.entity}{entry.entityId ? ` ${entry.entityId}` : ''}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {entry.actorName} ({entry.actorRole})
+                    {entry.details ? ` — ${entry.details}` : ''}
+                  </p>
+                </div>
+                <time dateTime={entry.createdAt} className="shrink-0 text-xs text-slate-400">
+                  {new Date(entry.createdAt).toLocaleString()}
+                </time>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="py-6 text-center text-sm text-slate-500">No security activity has been recorded yet.</p>
+        )}
       </Card>
     </div>
   )
@@ -935,15 +1019,6 @@ function Settings() {
 
   return (
     <div className="w-full min-w-0 pb-4">
-      {toast && (
-        <div
-          role="status"
-          className={`fixed right-5 top-20 z-50 flex max-w-sm items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-white shadow-lg ${toast.type === 'success' ? 'bg-[#1E8E3E]' : 'bg-[#F04E00]'}`}
-        >
-          {toast.type === 'success' ? <Check size={17} /> : <AlertCircle size={17} />}
-          {toast.message}
-        </div>
-      )}
       <header className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
         <div>
           <h1 className="text-2xl font-extrabold text-[#0E532B]">{t('settings')}</h1>
@@ -952,7 +1027,7 @@ function Settings() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-          {hasUnsavedChanges && (
+          {!loadingSettings && hasUnsavedChanges && (
             <span className="inline-flex items-center gap-2 text-sm font-medium text-[#F04E00]">
               <span className="h-2 w-2 rounded-full bg-[#F04E00]" />
               Unsaved changes
@@ -961,6 +1036,7 @@ function Settings() {
           <button
             type="button"
             onClick={resetDefaults}
+            disabled={loadingSettings}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 transition hover:border-orange-200 hover:bg-orange-50 hover:text-[#F04E00]"
           >
             <RotateCcw size={15} /> {t('Reset Defaults')}
@@ -968,12 +1044,16 @@ function Settings() {
           <button
             type="button"
             onClick={() => persistSettings(settings)}
+            disabled={loadingSettings}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#1E8E3E] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0E532B]"
           >
             <Check size={16} /> {t('Save Changes')}
           </button>
         </div>
       </header>
+      <p className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+        Store, delivery, gateway availability, and delivery OTP settings sync to the server. Gateway secrets, notification preferences, and security options are not stored by the current backend.
+      </p>
 
       <nav
         role="tablist"
@@ -984,7 +1064,13 @@ function Settings() {
           <button
             type="button"
             key={id}
-            onClick={() => setActiveTab(id)}
+            onClick={() => {
+              if (id === 'security') {
+                setAuditLogsLoading(true)
+                setAuditLogsError('')
+              }
+              setActiveTab(id)
+            }}
             role="tab"
             aria-selected={activeTab === id}
             className={`-mb-px inline-flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-1 pb-3 pt-2 text-sm transition ${

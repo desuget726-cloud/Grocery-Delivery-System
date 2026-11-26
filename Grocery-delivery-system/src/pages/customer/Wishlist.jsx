@@ -2,10 +2,12 @@ import { Heart, Image, ShoppingCart, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../../context/CartContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 import { useWishlist } from '../../context/WishlistContext.jsx'
 import formatCurrency from '../../utils/formatCurrency.js'
 
 function Wishlist() {
+  const toast = useToast()
   const { addToCart } = useCart()
   const {
     wishlistItems,
@@ -16,33 +18,35 @@ function Wishlist() {
   const [statusMessage, setStatusMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
 
-  const moveToCart = (product) => {
+  const moveToCart = async (product) => {
     try {
-      addToCart(product)
-      removeFromWishlist(product.id)
+      addToCart(product, 1, false)
+      await removeFromWishlist(product.id)
       setErrorMessage('')
       setStatusMessage(`${product.name} moved to your cart.`)
+      toast.success(`${product.name} moved to your cart.`)
     } catch (error) {
       console.error(`Unable to move ${product.name} to the cart:`, error)
       setErrorMessage('We could not move this item to your cart. Please try again.')
     }
   }
 
-  const moveAllToCart = () => {
+  const moveAllToCart = async () => {
     try {
-      wishlistItems.forEach((product) => addToCart(product))
-      clearWishlist()
+      wishlistItems.forEach((product) => addToCart(product, 1, false))
+      await clearWishlist()
       setErrorMessage('')
       setStatusMessage('All wishlist items moved to your cart.')
+      toast.success('All wishlist items moved to your cart.')
     } catch (error) {
       console.error('Unable to move wishlist items to the cart:', error)
       setErrorMessage('We could not move all items to your cart. Please try again.')
     }
   }
 
-  const handleClearWishlist = () => {
+  const handleClearWishlist = async () => {
     try {
-      clearWishlist()
+      await clearWishlist()
       setErrorMessage('')
       setStatusMessage('Your wishlist has been cleared.')
     } catch (error) {
@@ -51,9 +55,9 @@ function Wishlist() {
     }
   }
 
-  const handleRemove = (product) => {
+  const handleRemove = async (product) => {
     try {
-      removeFromWishlist(product.id)
+      await removeFromWishlist(product.id)
       setErrorMessage('')
       setStatusMessage(`${product.name} removed from your wishlist.`)
     } catch (error) {

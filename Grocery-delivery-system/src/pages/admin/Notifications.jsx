@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLanguage } from '../../context/LanguageContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
 import useAdminNotifications from '../../hooks/useAdminNotifications.js'
 
 const filters = ['All', 'Unread', 'Orders', 'Inventory', 'Reviews', 'Payments', 'Support']
@@ -59,6 +60,7 @@ const kpiCards = [
 
 function Notifications() {
   const { t } = useLanguage()
+  const toast = useToast()
   const [notifications, setNotifications] = useAdminNotifications()
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState('All')
@@ -94,16 +96,23 @@ function Notifications() {
     setNotifications((current) =>
       current.map((notification) => ({ ...notification, unread: false })),
     )
+    if (unreadCount > 0) toast.success('All notifications marked as read.')
   }
 
   const toggleRead = (id) => {
+    const notification = notifications.find((item) => item.id === id)
+    if (!notification?.unread) {
+      toast.info('Notifications can only be marked as read.')
+      return
+    }
     setNotifications((current) =>
       current.map((notification) =>
         notification.id === id
-          ? { ...notification, unread: !notification.unread }
+          ? { ...notification, unread: false }
           : notification,
       ),
     )
+    toast.success('Notification marked as read.')
   }
 
   const deleteNotification = (id) => {
@@ -112,6 +121,7 @@ function Notifications() {
 
   const clearRead = () => {
     setNotifications((current) => current.filter((notification) => notification.unread))
+    if (readCount > 0) toast.success('Read notifications cleared.')
   }
 
   return (

@@ -3,51 +3,70 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import CartItem from '../../components/CartItem.jsx'
 import { useCart } from '../../context/CartContext.jsx'
+import { useToast } from '../../context/ToastContext.jsx'
+import { coupons as couponsApi, getApiErrorMessage } from '../../services/api.js'
 import {
   FREE_DELIVERY_THRESHOLD,
   getDeliveryFee,
-  getDiscountAmount,
 } from '../../utils/cartPricing.js'
 import formatCurrency from '../../utils/formatCurrency.js'
 
-const supportedPromoCodes = ['WELCOME10', 'FRESH100', 'FREEDEL']
-
 function Cart() {
-  const { cart, promoCode, setPromoCode, totalPrice } = useCart()
+  const toast = useToast()
+  const { cart, promoCode, setPromoCode, coupon, setCoupon, totalPrice } = useCart()
   const [promoInput, setPromoInput] = useState(promoCode)
   const [promoError, setPromoError] = useState('')
   const [promoMessage, setPromoMessage] = useState('')
-  const discount = getDiscountAmount(promoCode, totalPrice)
-  const deliveryFee = getDeliveryFee(promoCode, totalPrice)
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false)
+  const discount = coupon?.discountType === 'PERCENTAGE'
+    ? Math.min(totalPrice, totalPrice * Number(coupon.value) / 100)
+    : coupon?.discountType === 'FIXED'
+      ? Math.min(totalPrice, Number(coupon.value))
+      : 0
+  const deliveryFee = getDeliveryFee(
+    coupon?.discountType === 'FREE_DELIVERY' ? 'FREEDEL' : '',
+    totalPrice,
+  )
   const total = Math.max(0, totalPrice - discount) + deliveryFee
 
-  const applyPromoCode = (event) => {
+  const applyPromoCode = async (event) => {
     event.preventDefault()
     const normalizedCode = promoInput.trim().toUpperCase()
 
-    if (!supportedPromoCodes.includes(normalizedCode)) {
-      setPromoError('That promo code is not valid. Check the code and try again.')
+    if (!normalizedCode) {
+      const message = 'Enter a promo code first.'
+      setPromoError(message)
       setPromoMessage('')
+      toast.error(message)
       return
     }
 
-    if (normalizedCode === 'FRESH100' && totalPrice <= 800) {
-      setPromoError('FRESH100 is available on orders over 800 ETB.')
+    setIsValidatingPromo(true)
+    try {
+      const { data } = await couponsApi.validate({ code: normalizedCode, subtotal: totalPrice })
+      setCoupon(data.coupon)
+      setPromoCode(normalizedCode)
+      setPromoInput(normalizedCode)
+      setPromoError('')
+      setPromoMessage(`${normalizedCode} applied successfully.`)
+      toast.success(`${normalizedCode} applied successfully.`)
+    } catch (error) {
+      const message = getApiErrorMessage(error, 'That promo code is not valid.')
+      setPromoError(message)
       setPromoMessage('')
-      return
+      toast.error(message)
+    } finally {
+      setIsValidatingPromo(false)
     }
-
-    setPromoCode(normalizedCode)
-    setPromoInput(normalizedCode)
-    setPromoError('')
-    setPromoMessage(`${normalizedCode} applied successfully.`)
   }
 
   const removePromoCode = () => {
     setPromoCode('')
+    setCoupon(null)
     setPromoInput('')
     setPromoError('')
     setPromoMessage('')
+    toast.info('Promo code removed.')
   }
 
   if (cart.length === 0) {
@@ -110,10 +129,11 @@ function Cart() {
               />
               <button
                 type="submit"
+                disabled={isValidatingPromo}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-[#0B4B8C] px-3 py-2.5 text-sm font-bold text-white transition hover:bg-[#083c70]"
               >
                 <Tag aria-hidden="true" size={15} />
-                Apply
+                {isValidatingPromo ? 'Checking…' : 'Apply'}
               </button>
             </div>
             {promoError && (
@@ -137,7 +157,7 @@ function Cart() {
             )}
             {!promoCode && (
               <p className="mt-2 text-xs text-slate-500">
-                Try WELCOME10, FRESH100 (over 800 ETB), or FREEDEL.
+                Apply a coupon code from our current offers.
               </p>
             )}
           </form>
